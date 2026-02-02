@@ -70,10 +70,10 @@ CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_subscription_id ON subscript
 CREATE INDEX IF NOT EXISTS idx_hosting_connections_user_id ON hosting_connections(user_id);
 
 -- Insert default user for single-user mode
--- Email can be configured via environment or left null for generic single-user mode
+-- Using placeholder email since existing schema has NOT NULL constraint
 INSERT INTO users (id, email, subscription_tier)
-VALUES ('00000000-0000-0000-0000-000000000001', NULL, 'free')
-ON CONFLICT (id) DO NOTHING;
+VALUES ('00000000-0000-0000-0000-000000000001', 'default@podbrain.local', 'free')
+ON CONFLICT (id) DO UPDATE SET subscription_tier = COALESCE(users.subscription_tier, 'free');
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;

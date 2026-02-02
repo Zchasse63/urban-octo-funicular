@@ -82,34 +82,91 @@ export function CreateShowModal({ isOpen, onClose, onCreate }: CreateShowModalPr
     onClose()
   }
 
+  // Focus trap and escape key handler
+  React.useEffect(() => {
+    if (!isOpen) return
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose()
+      }
+    }
+
+    // Focus trap: trap Tab key within modal
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return
+
+      const focusableElements = document.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+      const focusableArray = Array.from(focusableElements).filter((el) => {
+        const rect = el.getBoundingClientRect()
+        return rect.width > 0 && rect.height > 0
+      })
+
+      const firstElement = focusableArray[0] as HTMLElement
+      const lastElement = focusableArray[focusableArray.length - 1] as HTMLElement
+
+      if (e.shiftKey && document.activeElement === firstElement) {
+        e.preventDefault()
+        lastElement?.focus()
+      } else if (!e.shiftKey && document.activeElement === lastElement) {
+        e.preventDefault()
+        firstElement?.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleEscape)
+    document.addEventListener('keydown', handleTab)
+
+    // Focus first input when modal opens
+    const firstInput = document.querySelector('#show-name') as HTMLInputElement
+    firstInput?.focus()
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape)
+      document.removeEventListener('keydown', handleTab)
+    }
+  }, [isOpen])
+
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+    >
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={handleClose}
+        aria-hidden="true"
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-lg mx-4 bg-[var(--bg-elevated)] rounded-xl shadow-2xl animate-in">
+      <div className="relative w-full max-w-full sm:max-w-lg bg-[var(--bg-elevated)] rounded-xl shadow-2xl animate-in max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-soft)]">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[var(--border-soft)]">
+          <h2
+            id="modal-title"
+            className="text-lg font-semibold text-[var(--text-primary)]"
+          >
             Create New Show
           </h2>
           <button
             onClick={handleClose}
-            className="p-1 rounded-md hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] transition-colors"
+            className="p-2 rounded-md hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] transition-colors min-h-[44px] min-w-[44px]"
+            aria-label="Close modal"
           >
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit}>
-          <div className="px-6 py-5 space-y-5">
+          <div className="px-4 sm:px-6 py-5 space-y-5">
             {/* Artwork Upload */}
             <div>
               <label className="block font-mono text-xs font-medium uppercase tracking-[0.05em] text-[var(--text-secondary)] mb-2">
@@ -118,17 +175,19 @@ export function CreateShowModal({ isOpen, onClose, onCreate }: CreateShowModalPr
               <div className="flex items-start gap-4">
                 {artworkPreview ? (
                   <div className="relative">
-                    <img
-                      src={artworkPreview}
-                      alt="Show artwork preview"
-                      className="w-20 h-20 rounded-lg object-cover"
+                    <div
+                      className="w-20 h-20 rounded-lg bg-gradient-to-br from-[var(--bg-subtle)] to-[var(--border-soft)]"
+                      style={{ backgroundImage: `url(${artworkPreview})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                      role="img"
+                      aria-label="Show artwork preview"
                     />
                     <button
                       type="button"
                       onClick={handleRemoveArtwork}
-                      className="absolute -top-2 -right-2 p-1 bg-[var(--accent-red)] text-white rounded-full hover:opacity-90"
+                      className="absolute -top-2 -right-2 p-1 bg-[var(--accent-red)] text-white rounded-full hover:opacity-90 min-h-[24px] min-w-[24px]"
+                      aria-label="Remove artwork"
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-3 w-3" aria-hidden="true" />
                     </button>
                   </div>
                 ) : (
@@ -150,8 +209,10 @@ export function CreateShowModal({ isOpen, onClose, onCreate }: CreateShowModalPr
                     variant="secondary"
                     size="sm"
                     onClick={() => fileInputRef.current?.click()}
+                    className="min-h-[44px]"
+                    aria-label="Upload show artwork"
                   >
-                    <Upload className="h-4 w-4" />
+                    <Upload className="h-4 w-4" aria-hidden="true" />
                     Upload Image
                   </Button>
                   <p className="text-xs text-[var(--text-tertiary)] mt-2">
@@ -176,13 +237,15 @@ export function CreateShowModal({ isOpen, onClose, onCreate }: CreateShowModalPr
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter your podcast name"
                 className={cn(
-                  'w-full px-4 py-2.5',
+                  'w-full px-4 py-3 sm:py-2.5',
                   'bg-[var(--bg-elevated)] border border-[var(--border-soft)] rounded-lg',
                   'text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]',
                   'focus:outline-none focus:border-[var(--accent-blue)] focus:shadow-[var(--shadow-focus)]',
                   'transition-all duration-200'
                 )}
                 required
+                aria-required="true"
+                aria-invalid="false"
               />
             </div>
 
@@ -201,7 +264,7 @@ export function CreateShowModal({ isOpen, onClose, onCreate }: CreateShowModalPr
                 placeholder="Brief description of your podcast"
                 rows={3}
                 className={cn(
-                  'w-full px-4 py-2.5 resize-none',
+                  'w-full px-4 py-3 sm:py-2.5 resize-none',
                   'bg-[var(--bg-elevated)] border border-[var(--border-soft)] rounded-lg',
                   'text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]',
                   'focus:outline-none focus:border-[var(--accent-blue)] focus:shadow-[var(--shadow-focus)]',
@@ -223,7 +286,7 @@ export function CreateShowModal({ isOpen, onClose, onCreate }: CreateShowModalPr
                 value={defaultLanguage}
                 onChange={(e) => setDefaultLanguage(e.target.value)}
                 className={cn(
-                  'w-full px-4 py-2.5',
+                  'w-full px-4 py-3 sm:py-2.5',
                   'bg-[var(--bg-elevated)] border border-[var(--border-soft)] rounded-lg',
                   'text-sm text-[var(--text-primary)]',
                   'focus:outline-none focus:border-[var(--accent-blue)] focus:shadow-[var(--shadow-focus)]',
@@ -240,11 +303,20 @@ export function CreateShowModal({ isOpen, onClose, onCreate }: CreateShowModalPr
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[var(--border-soft)] bg-[var(--bg-subtle)]">
-            <Button type="button" variant="secondary" onClick={handleClose}>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 px-4 sm:px-6 py-4 border-t border-[var(--border-soft)] bg-[var(--bg-subtle)]">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleClose}
+              className="min-h-[44px] order-2 sm:order-1"
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={!name.trim()}>
+            <Button
+              type="submit"
+              disabled={!name.trim()}
+              className="min-h-[44px] order-1 sm:order-2"
+            >
               Create Show
             </Button>
           </div>

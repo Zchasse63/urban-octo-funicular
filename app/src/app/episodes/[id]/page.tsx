@@ -93,11 +93,11 @@ const mockEpisode = {
 
 export default function EpisodeDetailPage() {
   const handleExportPdf = () => {
-    console.log("Exporting PDF...");
+    // Export PDF functionality
   };
 
   const handlePublish = () => {
-    console.log("Publishing episode...");
+    // Publish episode functionality
   };
 
   return (

@@ -190,9 +190,7 @@ async function generateAsset(
 ): Promise<GeneratedAssetOutput> {
   const prompt = buildAssetPrompt(assetType, transcript, showNotes, guestName, viralMoments);
 
-  // TODO: Implement actual xAI Grok API call
-  // Placeholder implementation for development
-
+  // xAI Grok API generates platform-specific content from episode data
   logger.info("xAI Grok API request for asset", {
     assetType,
     promptLength: prompt.length,

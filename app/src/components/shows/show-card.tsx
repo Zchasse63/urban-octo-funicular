@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Podcast, Mic } from 'lucide-react'
 import { TopoCard } from '@/components/ui/card'
 
@@ -43,11 +44,15 @@ export function ShowCard({ show, onClick }: ShowCardProps) {
           {/* Artwork */}
           <div className="flex items-start gap-4 mb-4">
             {show.artworkUrl ? (
-              <img
-                src={show.artworkUrl}
-                alt={`${show.name} artwork`}
-                className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
-              />
+              <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                <Image
+                  src={show.artworkUrl}
+                  alt={`${show.name} artwork`}
+                  fill
+                  className="object-cover"
+                  sizes="64px"
+                />
+              </div>
             ) : (
               <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-[var(--bg-subtle)] to-[var(--border-soft)] flex items-center justify-center flex-shrink-0">
                 <Podcast className="h-8 w-8 text-[var(--text-tertiary)]" />

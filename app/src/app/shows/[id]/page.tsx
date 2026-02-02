@@ -82,19 +82,13 @@ export default function ShowDetailPage() {
     setIsSaving(true)
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1000))
-    console.log('Saving show:', {
-      name,
-      description,
-      defaultLanguage,
-      tone,
-      artworkFile,
-    })
+    // In real app: save show data via API
     setIsSaving(false)
   }
 
   const handleDelete = async () => {
     // Simulate delete API call
-    console.log('Deleting show:', showId)
+    // In real app: delete show via API
     router.push('/shows')
   }
 
@@ -113,17 +107,12 @@ export default function ShowDetailPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            {artworkPreview ? (
-              <img
-                src={artworkPreview}
-                alt={`${name} artwork`}
-                className="w-16 h-16 rounded-lg object-cover"
-              />
-            ) : (
-              <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-[var(--bg-subtle)] to-[var(--border-soft)] flex items-center justify-center">
-                <Podcast className="h-8 w-8 text-[var(--text-tertiary)]" />
-              </div>
-            )}
+            <div
+              className="w-16 h-16 rounded-lg bg-gradient-to-br from-[var(--bg-subtle)] to-[var(--border-soft)] flex items-center justify-center"
+              style={artworkPreview ? { backgroundImage: `url(${artworkPreview})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+            >
+              {!artworkPreview && <Podcast className="h-8 w-8 text-[var(--text-tertiary)]" />}
+            </div>
             <div>
               <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
                 {name}
@@ -153,17 +142,14 @@ export default function ShowDetailPage() {
                 Artwork
               </label>
               <div className="flex items-start gap-4">
-                {artworkPreview ? (
-                  <img
-                    src={artworkPreview}
-                    alt="Show artwork preview"
-                    className="w-24 h-24 rounded-lg object-cover"
-                  />
-                ) : (
-                  <div className="w-24 h-24 rounded-lg bg-gradient-to-br from-[var(--bg-subtle)] to-[var(--border-soft)] flex items-center justify-center">
-                    <Podcast className="h-10 w-10 text-[var(--text-tertiary)]" />
-                  </div>
-                )}
+                <div
+                  className="w-24 h-24 rounded-lg bg-gradient-to-br from-[var(--bg-subtle)] to-[var(--border-soft)] flex items-center justify-center"
+                  style={artworkPreview ? { backgroundImage: `url(${artworkPreview})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+                  role="img"
+                  aria-label={artworkPreview ? "Show artwork preview" : "No artwork"}
+                >
+                  {!artworkPreview && <Podcast className="h-10 w-10 text-[var(--text-tertiary)]" />}
+                </div>
                 <div className="flex-1">
                   <input
                     ref={fileInputRef}

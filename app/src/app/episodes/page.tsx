@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { EpisodeList } from '@/components/episodes/episode-list'
 import type { EpisodeRowData } from '@/components/episodes/episode-row'
+import { TableRowSkeleton } from '@/components/LoadingStates'
 
 // Mock data for demonstration - showing different episode states
 const mockEpisodes: EpisodeRowData[] = [
@@ -61,37 +62,49 @@ const mockEpisodes: EpisodeRowData[] = [
 ]
 
 export default function EpisodesPage() {
+  const [isLoading, setIsLoading] = React.useState(false)
+
   const handleEpisodeClick = (id: string) => {
     // Navigate to episode detail page
-    console.log('Navigate to episode:', id)
     // In a real app: router.push(`/episodes/${id}`)
   }
 
   const handleNewTransformation = () => {
     // Open new transformation modal or navigate to upload page
-    console.log('New transformation clicked')
     // In a real app: router.push('/episodes/new') or open modal
   }
 
   return (
     <div className="min-h-screen bg-[var(--bg-base)]">
-      <main className="max-w-6xl mx-auto px-6 py-8 animate-in">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 animate-in">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
           <h1 className="font-mono text-xs font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)]">
             Episodes
           </h1>
-          <Button onClick={handleNewTransformation}>
-            <Plus className="h-4 w-4" />
+          <Button
+            onClick={handleNewTransformation}
+            className="min-h-[44px]"
+            aria-label="Create new transformation"
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
             New Transformation
           </Button>
         </div>
 
         {/* Episode List */}
-        <EpisodeList
-          episodes={mockEpisodes}
-          onEpisodeClick={handleEpisodeClick}
-        />
+        {isLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <TableRowSkeleton key={i} />
+            ))}
+          </div>
+        ) : (
+          <EpisodeList
+            episodes={mockEpisodes}
+            onEpisodeClick={handleEpisodeClick}
+          />
+        )}
       </main>
     </div>
   )

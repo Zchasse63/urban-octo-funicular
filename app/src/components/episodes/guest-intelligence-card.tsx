@@ -47,17 +47,13 @@ export function GuestIntelligenceCard({ guest }: GuestIntelligenceCardProps) {
       <CardContent>
         {/* Guest Info */}
         <div className="flex items-center gap-4 mb-5">
-          <div className="guest-avatar w-14 h-14">
-            {guest.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={guest.avatarUrl}
-                alt={guest.name}
-                className="w-full h-full rounded-full object-cover"
-              />
-            ) : (
-              <User className="w-6 h-6" />
-            )}
+          <div
+            className="w-14 h-14 rounded-full bg-gradient-to-br from-[var(--bg-subtle)] to-[var(--border-soft)] flex items-center justify-center"
+            style={guest.avatarUrl ? { backgroundImage: `url(${guest.avatarUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+            role="img"
+            aria-label={`${guest.name} avatar`}
+          >
+            {!guest.avatarUrl && <User className="w-6 h-6 text-[var(--text-tertiary)]" />}
           </div>
           <div>
             <h4 className="font-semibold text-[var(--text-primary)]">

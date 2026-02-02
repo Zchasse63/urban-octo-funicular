@@ -53,6 +53,7 @@ export function StepContext({
           value={localData.title}
           onChange={(e) => handleChange('title', e.target.value)}
           className="input"
+          aria-label="Episode title"
         />
         <div className="flex items-start gap-2 mt-2">
           <Lightbulb className="w-4 h-4 text-[var(--accent-amber)] flex-shrink-0 mt-0.5" />
@@ -74,6 +75,7 @@ export function StepContext({
           value={localData.guestNames}
           onChange={(e) => handleChange('guestNames', e.target.value)}
           className="input"
+          aria-label="Guest names"
         />
         <div className="flex items-start gap-2 mt-2">
           <Lightbulb className="w-4 h-4 text-[var(--accent-amber)] flex-shrink-0 mt-0.5" />
@@ -95,6 +97,7 @@ export function StepContext({
           value={localData.targetKeywords}
           onChange={(e) => handleChange('targetKeywords', e.target.value)}
           className="input"
+          aria-label="Target keywords for SEO"
         />
         <div className="flex items-start gap-2 mt-2">
           <Lightbulb className="w-4 h-4 text-[var(--accent-amber)] flex-shrink-0 mt-0.5" />

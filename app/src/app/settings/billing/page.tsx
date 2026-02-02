@@ -55,11 +55,11 @@ export default function BillingPage() {
 
   if (loading) {
     return (
-      <div className="rounded-lg border bg-white p-6 shadow-sm">
+      <div className="rounded-lg border border-[var(--border-soft)] bg-[var(--bg-elevated)] p-6 shadow-sm">
         <div className="animate-pulse space-y-4">
-          <div className="h-6 w-48 rounded bg-gray-200"></div>
-          <div className="h-4 w-64 rounded bg-gray-200"></div>
-          <div className="h-4 w-56 rounded bg-gray-200"></div>
+          <div className="h-6 w-48 rounded bg-[var(--bg-subtle)]"></div>
+          <div className="h-4 w-64 rounded bg-[var(--bg-subtle)]"></div>
+          <div className="h-4 w-56 rounded bg-[var(--bg-subtle)]"></div>
         </div>
       </div>
     );
@@ -73,22 +73,25 @@ export default function BillingPage() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-xl font-semibold text-gray-900">
+      <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
+        Billing
+      </h1>
+      <div className="rounded-lg border border-[var(--border-soft)] bg-[var(--bg-elevated)] p-4 sm:p-6 shadow-sm">
+        <h2 className="mb-4 text-xl sm:text-2xl font-semibold text-[var(--text-primary)]">
           Current Plan
         </h2>
 
         <div className="mb-6">
-          <div className="mb-2 text-3xl font-bold text-gray-900">{tierName}</div>
+          <div className="mb-2 text-3xl font-bold text-[var(--text-primary)]">{tierName}</div>
           {subscription?.status && (
-            <div className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800">
+            <div className="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" style={{ backgroundColor: 'var(--accent-green-bg)', color: 'var(--accent-green)' }}>
               {subscription.status === 'active' ? 'Active' : subscription.status}
             </div>
           )}
         </div>
 
         {hasActiveSubscription && subscription?.current_period_end && (
-          <div className="mb-6 space-y-2 text-sm text-gray-600">
+          <div className="mb-6 space-y-2 text-sm text-[var(--text-secondary)]">
             <p>
               <span className="font-medium">Billing cycle:</span>{' '}
               {new Date(subscription.current_period_start!).toLocaleDateString()} -{' '}
@@ -106,14 +109,17 @@ export default function BillingPage() {
             <button
               onClick={handleManageSubscription}
               disabled={portalLoading}
-              className="rounded-lg bg-blue-500 px-6 py-2 text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg px-6 py-3 text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 min-h-[44px]"
+              style={{ backgroundColor: 'var(--accent-blue)' }}
+              aria-label="Manage subscription in Stripe portal"
             >
               {portalLoading ? 'Loading...' : 'Manage Subscription'}
             </button>
           ) : (
             <Link
               href="/pricing"
-              className="rounded-lg bg-blue-500 px-6 py-2 text-white transition-colors hover:bg-blue-600"
+              className="rounded-lg px-6 py-3 text-white transition-colors min-h-[44px] inline-flex items-center"
+              style={{ backgroundColor: 'var(--accent-blue)' }}
             >
               Upgrade Plan
             </Link>
@@ -121,11 +127,11 @@ export default function BillingPage() {
         </div>
       </div>
 
-      <div className="rounded-lg border bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-xl font-semibold text-gray-900">
+      <div className="rounded-lg border border-[var(--border-soft)] bg-[var(--bg-elevated)] p-4 sm:p-6 shadow-sm">
+        <h3 className="mb-4 text-xl font-semibold text-[var(--text-primary)]">
           Payment Information
-        </h2>
-        <p className="text-gray-600">
+        </h3>
+        <p className="text-[var(--text-secondary)]">
           {hasActiveSubscription
             ? 'Manage your payment methods in the Stripe billing portal.'
             : 'Subscribe to a paid plan to add payment information.'}

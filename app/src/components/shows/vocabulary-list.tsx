@@ -63,6 +63,7 @@ export function VocabularyList({ terms, onAddTerm, onDeleteTerm }: VocabularyLis
             placeholder="Search vocabulary terms..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search vocabulary terms"
             className={cn(
               'w-full pl-10 pr-4 py-2.5',
               'bg-[var(--bg-subtle)] border border-[var(--border-soft)] rounded-lg',
@@ -85,10 +86,11 @@ export function VocabularyList({ terms, onAddTerm, onDeleteTerm }: VocabularyLis
         <div className="p-4 rounded-xl border border-[var(--accent-blue)] bg-[rgba(0,122,255,0.02)]">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block font-mono text-xs font-medium uppercase tracking-[0.05em] text-[var(--text-secondary)] mb-2">
+              <label htmlFor="vocab-term" className="block font-mono text-xs font-medium uppercase tracking-[0.05em] text-[var(--text-secondary)] mb-2">
                 Term *
               </label>
               <input
+                id="vocab-term"
                 type="text"
                 value={newTerm}
                 onChange={(e) => setNewTerm(e.target.value)}
@@ -100,14 +102,17 @@ export function VocabularyList({ terms, onAddTerm, onDeleteTerm }: VocabularyLis
                   'focus:outline-none focus:border-[var(--accent-blue)] focus:shadow-[var(--shadow-focus)]',
                   'transition-all duration-200'
                 )}
+                required
+                aria-required="true"
                 autoFocus
               />
             </div>
             <div>
-              <label className="block font-mono text-xs font-medium uppercase tracking-[0.05em] text-[var(--text-secondary)] mb-2">
+              <label htmlFor="vocab-alternatives" className="block font-mono text-xs font-medium uppercase tracking-[0.05em] text-[var(--text-secondary)] mb-2">
                 Alternatives
               </label>
               <input
+                id="vocab-alternatives"
                 type="text"
                 value={newAlternatives}
                 onChange={(e) => setNewAlternatives(e.target.value)}

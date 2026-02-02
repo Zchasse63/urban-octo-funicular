@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import {
   ArrowLeft,
@@ -18,8 +19,9 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { TopoCard, CardHeader, CardTitle } from '@/components/ui/card'
-import { AssetGrid, createAssetList, getCategoryCounts, getReadyCounts, type AssetWithContent } from '@/components/assets/asset-grid'
+import { createAssetList, getCategoryCounts, getReadyCounts, type AssetWithContent } from '@/components/assets/asset-grid'
 import { AssetEditor } from '@/components/assets/asset-editor'
+import { ListSkeleton } from '@/components/LoadingStates'
 import {
   ASSET_TYPE_DEFINITIONS,
   ASSET_CATEGORIES,
@@ -29,6 +31,14 @@ import {
   getAssetDefinition,
 } from '@/lib/assets/asset-types'
 import type { GeneratedAsset } from '@/types/database'
+
+// Lazy load AssetGrid
+const AssetGrid = dynamic(
+  () => import('@/components/assets/asset-grid').then((mod) => ({ default: mod.AssetGrid })),
+  {
+    loading: () => <ListSkeleton count={6} />,
+  }
+)
 
 // Mock data - in real app this would come from the database
 const mockGeneratedAssets: GeneratedAsset[] = [
@@ -429,7 +439,6 @@ export default function AssetsPage() {
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
     // In real app, update the asset in the database
-    console.log('Saving asset:', editingAssetId, content)
 
     setIsSaving(false)
     setEditorOpen(false)

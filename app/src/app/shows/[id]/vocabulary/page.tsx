@@ -90,12 +90,12 @@ export default function VocabularyPage() {
       occurrenceCount: 0,
     }
     setTerms([newTerm, ...terms])
-    console.log('Added term:', { term, alternatives })
+    // In real app: save term to database
   }
 
   const handleDeleteTerm = (id: string) => {
     setTerms(terms.filter((t) => t.id !== id))
-    console.log('Deleted term:', id)
+    // In real app: delete term from database
   }
 
   return (

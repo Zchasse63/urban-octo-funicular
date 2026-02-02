@@ -83,44 +83,89 @@ export function EpisodeRow({ episode, onClick }: EpisodeRowProps) {
   }
 
   return (
-    <tr
-      className={cn(
-        'group border-b border-[var(--border-soft)] transition-colors duration-150',
-        'hover:bg-[var(--bg-subtle)] cursor-pointer',
-        'focus-visible:outline-none focus-visible:bg-[var(--bg-subtle)]'
-      )}
-      onClick={handleClick}
-      onKeyDown={handleKeyDown}
-      tabIndex={0}
-      role="button"
-      aria-label={`View episode ${episode.episodeNumber}: ${episode.title}`}
-    >
-      <td className="py-4 px-4">
-        <div className="flex flex-col gap-1">
-          <span className="font-mono text-xs text-[var(--text-tertiary)]">
-            EP {episode.episodeNumber.toString().padStart(3, '0')}
+    <>
+      {/* Desktop table row */}
+      <tr
+        className={cn(
+          'hidden sm:table-row group border-b border-[var(--border-soft)] transition-colors duration-150',
+          'hover:bg-[var(--bg-subtle)] cursor-pointer',
+          'focus-visible:outline-none focus-visible:bg-[var(--bg-subtle)]'
+        )}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        tabIndex={0}
+        role="button"
+        aria-label={`View episode ${episode.episodeNumber}: ${episode.title}`}
+      >
+        <td className="py-4 px-4">
+          <div className="flex flex-col gap-1">
+            <span className="font-mono text-xs text-[var(--text-tertiary)]">
+              EP {episode.episodeNumber.toString().padStart(3, '0')}
+            </span>
+            <span className="font-medium text-[var(--text-primary)] group-hover:text-[var(--accent-blue)] transition-colors">
+              {episode.title}
+            </span>
+          </div>
+        </td>
+        <td className="py-4 px-4">
+          <span className="text-sm text-[var(--text-secondary)]">
+            {episode.date}
           </span>
-          <span className="font-medium text-[var(--text-primary)] group-hover:text-[var(--accent-blue)] transition-colors">
-            {episode.title}
+        </td>
+        <td className="py-4 px-4">
+          <span className={cn(
+            'font-mono text-sm font-semibold',
+            getHealthScoreColor(episode.healthScore)
+          )}>
+            {episode.healthScore !== null ? episode.healthScore : '--'}
           </span>
-        </div>
-      </td>
-      <td className="py-4 px-4">
-        <span className="text-sm text-[var(--text-secondary)]">
-          {episode.date}
-        </span>
-      </td>
-      <td className="py-4 px-4">
-        <span className={cn(
-          'font-mono text-sm font-semibold',
-          getHealthScoreColor(episode.healthScore)
-        )}>
-          {episode.healthScore !== null ? episode.healthScore : '--'}
-        </span>
-      </td>
-      <td className="py-4 px-4">
-        <StatusBadge status={episode.status} alertCount={episode.alertCount} />
-      </td>
-    </tr>
+        </td>
+        <td className="py-4 px-4">
+          <StatusBadge status={episode.status} alertCount={episode.alertCount} />
+        </td>
+      </tr>
+
+      {/* Mobile card view */}
+      <tr className="sm:hidden">
+        <td colSpan={4} className="p-0">
+          <div
+            className={cn(
+              'p-4 border-b border-[var(--border-soft)] cursor-pointer',
+              'active:bg-[var(--bg-subtle)] transition-colors min-h-[100px]'
+            )}
+            onClick={handleClick}
+            onKeyDown={handleKeyDown}
+            tabIndex={0}
+            role="button"
+            aria-label={`View episode ${episode.episodeNumber}: ${episode.title}`}
+          >
+            <div className="flex flex-col gap-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <span className="font-mono text-xs text-[var(--text-tertiary)] block mb-1">
+                    EP {episode.episodeNumber.toString().padStart(3, '0')}
+                  </span>
+                  <span className="font-medium text-[var(--text-primary)] block">
+                    {episode.title}
+                  </span>
+                </div>
+                <StatusBadge status={episode.status} alertCount={episode.alertCount} />
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-[var(--text-secondary)]">
+                  {episode.date}
+                </span>
+                <span className={cn(
+                  'font-mono font-semibold',
+                  getHealthScoreColor(episode.healthScore)
+                )}>
+                  Score: {episode.healthScore !== null ? episode.healthScore : '--'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </>
   )
 }

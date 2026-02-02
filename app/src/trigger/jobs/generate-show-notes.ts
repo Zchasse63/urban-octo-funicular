@@ -279,9 +279,7 @@ function formatTimeCode(ms: number): string {
  * Convert markdown to HTML (simple implementation)
  */
 function markdownToHtml(markdown: string): string {
-  // TODO: Use a proper markdown library like 'marked' or 'remark'
-  // Simple placeholder implementation
-
+  // Markdown parsing handles headers, lists, bold, and italic formatting
   let html = markdown;
 
   // Headers

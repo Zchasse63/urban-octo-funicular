@@ -1,15 +1,59 @@
 'use client'
 
 import * as React from 'react'
-import { Search } from 'lucide-react'
+import { Search, Check, AlertTriangle, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
 import { EpisodeRow, type EpisodeRowData } from './episode-row'
+import type { EpisodeStatus } from '@/types/database'
 
 type FilterTab = 'all' | 'last30days' | 'hasAlerts' | 'processing'
 
 interface EpisodeListProps {
   episodes: EpisodeRowData[]
   onEpisodeClick?: (id: string) => void
+}
+
+function StatusBadge({ status, alertCount }: { status: EpisodeStatus; alertCount?: number }) {
+  switch (status) {
+    case 'completed':
+      return (
+        <Badge variant="success" className="gap-1">
+          <Check className="h-3 w-3" />
+          Complete
+        </Badge>
+      )
+    case 'processing':
+      return (
+        <Badge variant="new" className="gap-1">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Processing
+        </Badge>
+      )
+    case 'failed':
+      return (
+        <Badge variant="error" className="gap-1">
+          <AlertTriangle className="h-3 w-3" />
+          Failed
+        </Badge>
+      )
+    case 'pending':
+      if (alertCount && alertCount > 0) {
+        return (
+          <Badge variant="warning" className="gap-1">
+            <AlertTriangle className="h-3 w-3" />
+            {alertCount} Alert{alertCount > 1 ? 's' : ''}
+          </Badge>
+        )
+      }
+      return (
+        <Badge variant="default">
+          Pending
+        </Badge>
+      )
+    default:
+      return null
+  }
 }
 
 const filterTabs: { key: FilterTab; label: string }[] = [
@@ -71,14 +115,15 @@ export function EpisodeList({ episodes, onEpisodeClick }: EpisodeListProps) {
     <div className="flex flex-col gap-4">
       {/* Search Bar */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-tertiary)]" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-tertiary)]" aria-hidden="true" />
         <input
-          type="text"
+          type="search"
           placeholder="Search episodes..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          aria-label="Search episodes"
           className={cn(
-            'w-full pl-10 pr-4 py-2.5',
+            'w-full pl-10 pr-4 py-3 sm:py-2.5',
             'bg-[var(--bg-subtle)] border border-[var(--border-soft)] rounded-lg',
             'text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]',
             'focus:outline-none focus:border-[var(--accent-blue)] focus:shadow-[var(--shadow-focus)]',
@@ -88,27 +133,31 @@ export function EpisodeList({ episodes, onEpisodeClick }: EpisodeListProps) {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex gap-1 border-b border-[var(--border-soft)]">
+      <div className="flex gap-1 border-b border-[var(--border-soft)] overflow-x-auto">
         {filterTabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveFilter(tab.key)}
             className={cn(
-              'px-4 py-2.5 text-sm font-medium transition-colors duration-150',
-              'border-b-2 -mb-px',
+              'px-3 sm:px-4 py-3 sm:py-2.5 text-sm font-medium transition-colors duration-150',
+              'border-b-2 -mb-px whitespace-nowrap min-h-[44px] sm:min-h-0',
               activeFilter === tab.key
                 ? 'border-[var(--text-primary)] text-[var(--text-primary)]'
                 : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             )}
+            role="tab"
+            aria-selected={activeFilter === tab.key}
+            aria-label={`Filter by ${tab.label}`}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
-      {/* Episodes Table */}
+      {/* Episodes Table/Cards */}
       <div className="overflow-hidden rounded-xl border border-[var(--border-soft)] bg-[var(--bg-elevated)]">
-        <table className="w-full">
+        {/* Desktop: Table */}
+        <table className="w-full hidden sm:table">
           <thead>
             <tr className="border-b border-[var(--border-soft)] bg-[var(--bg-subtle)]">
               <th className="py-3 px-4 text-left">
@@ -154,6 +203,53 @@ export function EpisodeList({ episodes, onEpisodeClick }: EpisodeListProps) {
             )}
           </tbody>
         </table>
+
+        {/* Mobile: Card Layout */}
+        <div className="sm:hidden divide-y divide-[var(--border-soft)]">
+          {filteredEpisodes.length > 0 ? (
+            filteredEpisodes.map((episode) => (
+              <button
+                key={episode.id}
+                onClick={() => onEpisodeClick?.(episode.id)}
+                className="w-full p-4 text-left hover:bg-[var(--bg-subtle)] transition-colors min-h-[100px]"
+                aria-label={`View episode ${episode.episodeNumber}: ${episode.title}`}
+              >
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <span className="font-mono text-xs text-[var(--text-tertiary)] block mb-1">
+                        EP {episode.episodeNumber.toString().padStart(3, '0')}
+                      </span>
+                      <h3 className="font-medium text-[var(--text-primary)] text-sm leading-snug">
+                        {episode.title}
+                      </h3>
+                    </div>
+                    <StatusBadge status={episode.status} alertCount={episode.alertCount} />
+                  </div>
+                  <div className="flex items-center gap-4 text-sm">
+                    <span className="text-[var(--text-secondary)]">{episode.date}</span>
+                    <span className={cn(
+                      'font-mono font-semibold',
+                      episode.healthScore !== null && episode.healthScore > 80 ? 'text-[var(--accent-green)]' :
+                      episode.healthScore !== null && episode.healthScore >= 60 ? 'text-[var(--accent-amber)]' :
+                      episode.healthScore !== null ? 'text-[var(--accent-red)]' :
+                      'text-[var(--text-tertiary)]'
+                    )}>
+                      {episode.healthScore !== null ? `Score: ${episode.healthScore}` : 'No score'}
+                    </span>
+                  </div>
+                </div>
+              </button>
+            ))
+          ) : (
+            <div className="py-12 text-center px-4">
+              <p className="text-[var(--text-secondary)]">No episodes found</p>
+              <p className="text-sm text-[var(--text-tertiary)] mt-1">
+                {searchQuery ? 'Try adjusting your search query' : 'Upload your first episode to get started'}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Results Count */}

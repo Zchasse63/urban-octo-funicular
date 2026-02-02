@@ -19,18 +19,22 @@ interface NavItemProps {
   icon: React.ElementType;
   label: string;
   isActive?: boolean;
+  onClick?: () => void;
 }
 
-function NavItem({ href, icon: Icon, label, isActive }: NavItemProps) {
+function NavItem({ href, icon: Icon, label, isActive, onClick }: NavItemProps) {
   return (
     <Link
       href={href}
+      onClick={onClick}
       className={cn(
-        "flex items-center gap-3 px-3 py-2 rounded-[var(--radius-lg)] text-sm font-medium transition-all duration-[var(--duration-normal)]",
+        "flex items-center gap-3 px-3 py-3 md:py-2 rounded-[var(--radius-lg)] text-sm font-medium transition-all duration-[var(--duration-normal)]",
+        "min-h-[44px] md:min-h-0",
         isActive
           ? "bg-[var(--text-primary)] text-white"
           : "text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
       )}
+      aria-current={isActive ? "page" : undefined}
     >
       <Icon className="w-[18px] h-[18px]" strokeWidth={1.75} />
       <span>{label}</span>
@@ -84,7 +88,12 @@ function PodBrainLogo() {
   );
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  isMobileOpen?: boolean;
+  onMobileClose?: () => void;
+}
+
+export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
 
   const workspaceItems = [
@@ -105,54 +114,75 @@ export function Sidebar() {
   ];
 
   return (
-    <aside
-      className="fixed left-0 top-0 h-screen w-[240px] flex flex-col py-6 border-r"
-      style={{
-        backgroundColor: "var(--bg-elevated)",
-        borderColor: "var(--border-soft)",
-      }}
-    >
-      <PodBrainLogo />
+    <>
+      {/* Mobile Backdrop */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden"
+          onClick={onMobileClose}
+          aria-hidden="true"
+        />
+      )}
 
-      <div className="flex-1 overflow-y-auto px-3">
-        <NavSection title="Workspace">
-          {workspaceItems.map((item) => (
-            <NavItem
-              key={item.href}
-              href={item.href}
-              icon={item.icon}
-              label={item.label}
-              isActive={pathname === item.href || pathname.startsWith(item.href + "/")}
-            />
-          ))}
-        </NavSection>
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          "fixed left-0 top-0 h-screen w-[280px] md:w-[240px] flex flex-col py-6 border-r z-50",
+          "transition-transform duration-300 ease-in-out",
+          "md:translate-x-0",
+          isMobileOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+        style={{
+          backgroundColor: "var(--bg-elevated)",
+          borderColor: "var(--border-soft)",
+        }}
+        aria-label="Main navigation"
+      >
+        <PodBrainLogo />
 
-        <NavSection title="Discover">
-          {discoverItems.map((item) => (
-            <NavItem
-              key={item.href}
-              href={item.href}
-              icon={item.icon}
-              label={item.label}
-              isActive={pathname === item.href || pathname.startsWith(item.href + "/")}
-            />
-          ))}
-        </NavSection>
-      </div>
+        <div className="flex-1 overflow-y-auto px-3">
+          <NavSection title="Workspace">
+            {workspaceItems.map((item) => (
+              <NavItem
+                key={item.href}
+                href={item.href}
+                icon={item.icon}
+                label={item.label}
+                isActive={pathname === item.href || pathname.startsWith(item.href + "/")}
+                onClick={onMobileClose}
+              />
+            ))}
+          </NavSection>
 
-      <div className="px-3 pt-4 border-t" style={{ borderColor: "var(--border-soft)" }}>
-        <nav className="flex flex-col gap-1">
-          {bottomItems.map((item) => (
-            <NavItem
-              key={item.href}
-              href={item.href}
-              icon={item.icon}
-              label={item.label}
-              isActive={pathname === item.href || pathname.startsWith(item.href + "/")}
-            />
-          ))}
-        </nav>
-      </div>
-    </aside>
+          <NavSection title="Discover">
+            {discoverItems.map((item) => (
+              <NavItem
+                key={item.href}
+                href={item.href}
+                icon={item.icon}
+                label={item.label}
+                isActive={pathname === item.href || pathname.startsWith(item.href + "/")}
+                onClick={onMobileClose}
+              />
+            ))}
+          </NavSection>
+        </div>
+
+        <div className="px-3 pt-4 border-t" style={{ borderColor: "var(--border-soft)" }}>
+          <nav className="flex flex-col gap-1">
+            {bottomItems.map((item) => (
+              <NavItem
+                key={item.href}
+                href={item.href}
+                icon={item.icon}
+                label={item.label}
+                isActive={pathname === item.href || pathname.startsWith(item.href + "/")}
+                onClick={onMobileClose}
+              />
+            ))}
+          </nav>
+        </div>
+      </aside>
+    </>
   );
 }
