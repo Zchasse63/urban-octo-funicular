@@ -1,24 +1,24 @@
 'use client';
 
 import React from 'react';
-import type { Expert } from '@/lib/experts/types';
+import type { Expert, ExpertCategory } from '@/lib/experts/types';
 
 interface ExpertCardProps {
   expert: Expert;
 }
 
-const categoryStyles: Record<string, { badge: string; meter: string }> = {
+const categoryStyles: Record<ExpertCategory, { badge: string; meter: string }> = {
   fresh: {
-    badge: 'bg-green-100 text-green-700 border-green-200',
-    meter: 'bg-green-500',
+    badge: 'badge-success',
+    meter: 'bg-[var(--accent-green)]',
   },
   established: {
-    badge: 'bg-blue-100 text-blue-700 border-blue-200',
-    meter: 'bg-blue-500',
+    badge: 'badge-new',
+    meter: 'bg-[var(--accent-blue)]',
   },
   oversaturated: {
-    badge: 'bg-amber-100 text-amber-700 border-amber-200',
-    meter: 'bg-amber-500',
+    badge: 'badge-warning',
+    meter: 'bg-[var(--accent-amber)]',
   },
 };
 
@@ -52,13 +52,13 @@ export default function ExpertCard({ expert }: ExpertCardProps) {
   return (
     <div className="guest-item">
       <div className="guest-avatar flex items-center justify-center text-2xl">
-        👤
+        {expert.name.charAt(0)}
       </div>
 
       <div className="guest-info flex-1">
-        <h4 className="text-base font-semibold mb-1">{expert.name}</h4>
+        <h4 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>{expert.name}</h4>
         {expert.metadata.affiliation && (
-          <p className="text-xs text-secondary mb-2">{expert.metadata.affiliation}</p>
+          <p className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>{expert.metadata.affiliation}</p>
         )}
 
         <div className="flex items-center gap-2 mb-2">
@@ -72,7 +72,7 @@ export default function ExpertCard({ expert }: ExpertCardProps) {
 
         <div className="freshness-meter">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-mono text-secondary">FRESHNESS</span>
+            <span className="text-xs font-mono" style={{ color: 'var(--text-tertiary)' }}>FRESHNESS</span>
             <span className="freshness-value text-xs font-mono">{expert.freshnessScore}%</span>
           </div>
           <div className="freshness-bar">
@@ -83,7 +83,7 @@ export default function ExpertCard({ expert }: ExpertCardProps) {
           </div>
         </div>
 
-        <div className="mt-2 text-xs text-secondary">
+        <div className="mt-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
           <p>
             {expert.recentAppearances} appearances (last 12 months) • {expert.appearanceCount}{' '}
             total

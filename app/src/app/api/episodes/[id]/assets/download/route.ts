@@ -71,14 +71,8 @@ export async function GET(
     const assetsForDownload: AssetForDownload[] = assets.map((asset) => {
       const definition = getAssetDefinition(asset.asset_type)
 
-      // Find the category for this asset type
-      let category = 'other'
-      for (const [cat, types] of Object.entries(ASSET_CATEGORIES)) {
-        if (types.includes(asset.asset_type)) {
-          category = cat
-          break
-        }
-      }
+      // Get category from the asset definition
+      const category = definition?.category || 'other'
 
       return {
         id: asset.id,
@@ -90,7 +84,9 @@ export async function GET(
     })
 
     // Generate ZIP
-    const showData = episode.shows as { id: string; name: string } | null
+    const showData = Array.isArray(episode.shows)
+      ? episode.shows[0] as { id: string; name: string } | undefined
+      : episode.shows as { id: string; name: string } | null
     const zipBuffer = await generateAssetsZipServer({
       episodeTitle: episode.title || 'Untitled Episode',
       showName: showData?.name || 'Unknown Show',
@@ -105,7 +101,7 @@ export async function GET(
     const filename = `${safeTitle}-assets-${Date.now()}.zip`
 
     // Return ZIP file
-    return new NextResponse(zipBuffer, {
+    return new NextResponse(new Uint8Array(zipBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/zip',

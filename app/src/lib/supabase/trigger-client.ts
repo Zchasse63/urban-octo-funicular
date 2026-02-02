@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
 /**
  * Creates a Supabase client for use in Trigger.dev jobs.
@@ -22,7 +22,7 @@ export function createTriggerClient() {
 }
 
 // Export a singleton instance for reuse
-let triggerClient: ReturnType<typeof createClient> | null = null
+let triggerClient: SupabaseClient | null = null
 
 export function getTriggerClient() {
   if (!triggerClient) {

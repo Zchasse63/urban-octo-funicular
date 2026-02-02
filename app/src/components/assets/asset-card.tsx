@@ -34,7 +34,7 @@ const categoryColors: Record<AssetCategory, string> = {
   social: 'text-[var(--accent-blue)]',
   long_form: 'text-[var(--accent-green)]',
   video: 'text-[var(--accent-amber)]',
-  visual: 'text-purple-600',
+  visual: 'text-[var(--accent-blue)]',
 }
 
 export function AssetCard({

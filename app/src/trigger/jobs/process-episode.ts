@@ -351,7 +351,7 @@ async function saveProcessingResults(
   if (results.assets.length > 0) {
     const assetsToInsert = results.assets.map((asset) => ({
       episode_id: episodeId,
-      asset_type: asset.type,
+      asset_type: asset.assetType,
       content: asset.content,
       metadata: asset.metadata || {},
       created_at: new Date().toISOString(),

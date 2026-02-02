@@ -146,7 +146,8 @@ export function StepUpload({ uploadData, setUploadData, onContinue }: StepUpload
       try {
         new URL(uploadData.rssUrl)
         setError(null)
-        simulateUpload()
+        // For RSS imports, mark as complete since no file upload is needed
+        setUploadData(prev => ({ ...prev, uploadProgress: 100 }))
       } catch {
         setError('Please enter a valid URL')
       }

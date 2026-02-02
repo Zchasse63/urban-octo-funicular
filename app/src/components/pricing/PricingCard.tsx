@@ -26,24 +26,31 @@ export function PricingCard({
   return (
     <div
       className={cn(
-        'relative rounded-lg border bg-white p-8 shadow-sm transition-all hover:shadow-lg',
-        highlighted && 'border-blue-500 shadow-md ring-2 ring-blue-500'
+        'topo-card relative transition-all',
+        highlighted && 'ring-2'
       )}
+      style={highlighted ? {
+        borderColor: 'var(--accent-blue)',
+        '--tw-ring-color': 'var(--accent-blue)'
+      } as React.CSSProperties : undefined}
     >
       {highlighted && (
-        <div className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-blue-500 px-4 py-1 text-sm font-medium text-white">
+        <div
+          className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full px-4 py-1 text-sm font-medium text-white"
+          style={{ backgroundColor: 'var(--accent-blue)' }}
+        >
           Most Popular
         </div>
       )}
 
       <div className="mb-4">
-        <h3 className="text-2xl font-bold text-gray-900">{name}</h3>
+        <h3 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{name}</h3>
       </div>
 
       <div className="mb-6">
         <div className="flex items-baseline">
-          <span className="text-5xl font-bold text-gray-900">${price}</span>
-          {price > 0 && <span className="ml-2 text-gray-500">/month</span>}
+          <span className="text-5xl font-bold" style={{ color: 'var(--text-primary)' }}>${price}</span>
+          {price > 0 && <span className="ml-2" style={{ color: 'var(--text-tertiary)' }}>/month</span>}
         </div>
       </div>
 
@@ -51,7 +58,8 @@ export function PricingCard({
         {features.map((feature, index) => (
           <li key={index} className="flex items-start">
             <svg
-              className="mr-3 h-5 w-5 flex-shrink-0 text-green-500"
+              className="mr-3 h-5 w-5 flex-shrink-0"
+              style={{ color: 'var(--accent-green)' }}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -63,7 +71,7 @@ export function PricingCard({
                 d="M5 13l4 4L19 7"
               />
             </svg>
-            <span className="text-gray-700">{feature}</span>
+            <span style={{ color: 'var(--text-secondary)' }}>{feature}</span>
           </li>
         ))}
       </ul>
@@ -72,12 +80,16 @@ export function PricingCard({
         onClick={onSubscribe}
         disabled={loading}
         className={cn(
-          'w-full rounded-lg px-6 py-3 font-medium transition-colors',
-          highlighted
-            ? 'bg-blue-500 text-white hover:bg-blue-600 disabled:bg-blue-300'
-            : 'bg-gray-900 text-white hover:bg-gray-800 disabled:bg-gray-400',
+          'w-full rounded-[var(--radius-lg)] px-6 py-3 font-medium transition-colors',
           loading && 'cursor-not-allowed opacity-50'
         )}
+        style={highlighted ? {
+          backgroundColor: 'var(--accent-blue)',
+          color: 'white'
+        } : {
+          backgroundColor: 'var(--text-primary)',
+          color: 'white'
+        }}
       >
         {loading ? 'Loading...' : buttonText}
       </button>

@@ -116,31 +116,35 @@ export function BuzzsproutConnect() {
 
   if (checking) {
     return (
-      <div className="animate-pulse rounded-lg border bg-white p-6 shadow-sm">
-        <div className="h-6 w-48 rounded bg-gray-200"></div>
+      <div className="animate-pulse topo-card">
+        <div className="h-6 w-48 rounded" style={{ backgroundColor: 'var(--bg-subtle)' }}></div>
       </div>
     );
   }
 
   if (connection) {
     return (
-      <div className="rounded-lg border bg-white p-6 shadow-sm">
+      <div className="topo-card">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Buzzsprout</h3>
-            <div className="mt-1 inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800">
+            <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Buzzsprout</h3>
+            <div className="mt-1 badge badge-success">
               Connected
             </div>
           </div>
           <button
             onClick={handleDisconnect}
             disabled={loading}
-            className="rounded-lg border border-red-500 px-4 py-2 text-red-500 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-[var(--radius-lg)] border px-4 py-2 transition-colors hover:bg-[var(--bg-subtle)] disabled:cursor-not-allowed disabled:opacity-50"
+            style={{
+              borderColor: 'var(--accent-red)',
+              color: 'var(--accent-red)'
+            }}
           >
             {loading ? 'Disconnecting...' : 'Disconnect'}
           </button>
         </div>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
           Connected on {new Date(connection.created_at).toLocaleDateString()}
         </p>
       </div>
@@ -148,8 +152,8 @@ export function BuzzsproutConnect() {
   }
 
   return (
-    <div className="rounded-lg border bg-white p-6 shadow-sm">
-      <h3 className="mb-4 text-lg font-semibold text-gray-900">
+    <div className="topo-card">
+      <h3 className="mb-4 text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
         Connect Buzzsprout
       </h3>
 
@@ -157,9 +161,10 @@ export function BuzzsproutConnect() {
         <div>
           <label
             htmlFor="apiToken"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium"
+            style={{ color: 'var(--text-secondary)' }}
           >
-            API Token <span className="text-red-500">*</span>
+            API Token <span style={{ color: 'var(--accent-red)' }}>*</span>
           </label>
           <input
             type="password"
@@ -167,10 +172,10 @@ export function BuzzsproutConnect() {
             value={apiToken}
             onChange={(e) => setApiToken(e.target.value)}
             placeholder="Enter your Buzzsprout API token"
-            className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="input mt-1"
             required
           />
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm" style={{ color: 'var(--text-tertiary)' }}>
             Find your API token in your Buzzsprout account settings
           </p>
         </div>
@@ -178,7 +183,8 @@ export function BuzzsproutConnect() {
         <div>
           <label
             htmlFor="showId"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium"
+            style={{ color: 'var(--text-secondary)' }}
           >
             Show ID (Optional)
           </label>
@@ -188,14 +194,14 @@ export function BuzzsproutConnect() {
             value={showId}
             onChange={(e) => setShowId(e.target.value)}
             placeholder="Enter show ID (optional)"
-            className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="input mt-1"
           />
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-blue-500 px-6 py-3 font-medium text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+          className="btn-primary w-full justify-center disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? 'Connecting...' : 'Connect'}
         </button>
