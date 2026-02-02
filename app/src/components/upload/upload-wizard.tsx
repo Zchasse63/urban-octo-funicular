@@ -10,6 +10,8 @@ export interface UploadData {
   file: File | null
   rssUrl: string
   uploadProgress: number
+  audioUrl?: string
+  signedUrl?: string
 }
 
 export interface ContextData {

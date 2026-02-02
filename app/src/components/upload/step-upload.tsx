@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
-import { Upload, FileAudio, Link } from 'lucide-react'
+import { Upload, FileAudio, Link, AlertCircle } from 'lucide-react'
 import type { UploadData } from './upload-wizard'
 
 interface StepUploadProps {
@@ -18,6 +18,7 @@ export function StepUpload({ uploadData, setUploadData, onContinue }: StepUpload
   const [error, setError] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const xhrRef = useRef<XMLHttpRequest | null>(null)
 
   const validateFile = (file: File): boolean => {
     // Check file type
@@ -42,28 +43,76 @@ export function StepUpload({ uploadData, setUploadData, onContinue }: StepUpload
     return true
   }
 
-  const handleFile = useCallback((file: File) => {
+  const uploadFile = async (file: File) => {
+    setIsUploading(true)
+    setError(null)
+    setUploadData(prev => ({ ...prev, uploadProgress: 0 }))
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    return new Promise<{ publicUrl: string; signedUrl: string }>((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      xhrRef.current = xhr
+
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const progress = Math.round((event.loaded / event.total) * 100)
+          setUploadData(prev => ({ ...prev, uploadProgress: progress }))
+        }
+      })
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const response = JSON.parse(xhr.responseText)
+            resolve(response)
+          } catch {
+            reject(new Error('Invalid response from server'))
+          }
+        } else {
+          try {
+            const errorResponse = JSON.parse(xhr.responseText)
+            reject(new Error(errorResponse.error || 'Upload failed'))
+          } catch {
+            reject(new Error(`Upload failed with status ${xhr.status}`))
+          }
+        }
+      })
+
+      xhr.addEventListener('error', () => {
+        reject(new Error('Network error during upload'))
+      })
+
+      xhr.addEventListener('abort', () => {
+        reject(new Error('Upload cancelled'))
+      })
+
+      xhr.open('POST', '/api/upload')
+      xhr.send(formData)
+    })
+  }
+
+  const handleFile = useCallback(async (file: File) => {
     if (validateFile(file)) {
       setUploadData(prev => ({ ...prev, file, rssUrl: '' }))
-      simulateUpload()
+
+      try {
+        const { publicUrl, signedUrl } = await uploadFile(file)
+        setUploadData(prev => ({
+          ...prev,
+          uploadProgress: 100,
+          audioUrl: publicUrl,
+          signedUrl: signedUrl
+        }))
+        setIsUploading(false)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Upload failed')
+        setUploadData(prev => ({ ...prev, uploadProgress: 0, file: null }))
+        setIsUploading(false)
+      }
     }
   }, [setUploadData])
-
-  const simulateUpload = () => {
-    setIsUploading(true)
-    let progress = 0
-    const interval = setInterval(() => {
-      progress += Math.random() * 15
-      if (progress >= 100) {
-        progress = 100
-        clearInterval(interval)
-        setIsUploading(false)
-        setUploadData(prev => ({ ...prev, uploadProgress: 100 }))
-      } else {
-        setUploadData(prev => ({ ...prev, uploadProgress: Math.floor(progress) }))
-      }
-    }, 200)
-  }
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()

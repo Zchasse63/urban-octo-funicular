@@ -1,8 +1,10 @@
-import { task, logger, wait } from "@trigger.dev/sdk";
+import { task, logger } from "@trigger.dev/sdk";
 import type { Episode, ProcessingStep, VocabularyTerm } from "@/types/database";
 import { transcribeAudioTask, type TranscriptionResult } from "./transcribe-audio";
 import { generateShowNotesTask, type ShowNotesResult } from "./generate-show-notes";
 import { generateAssetsTask, type AssetsResult } from "./generate-assets";
+import { getTriggerClient } from "@/lib/supabase/trigger-client";
+import { analyzeSEO } from "@/lib/seo/analyzer";
 
 /**
  * Input payload for the process-episode job
@@ -115,7 +117,10 @@ export const processEpisodeTask = task({
     await updateEpisodeStatus(episodeId, "processing", "seo_analysis", 70);
     logger.info("Running SEO analysis", { episodeId });
 
-    const seoAnalysis = await performSEOAnalysis(showNotesResult.output.showNotes);
+    const seoAnalysis = await performSEOAnalysis(
+      showNotesResult.output.showNotes,
+      showNotesResult.output.showNotesHtml
+    );
 
     // Step 6: Generate all content assets
     await updateEpisodeStatus(episodeId, "processing", "generating_assets", 80);
@@ -178,43 +183,54 @@ async function updateEpisodeStatus(
   progress: number,
   errorMessage?: string
 ): Promise<void> {
-  // Supabase update will be connected when database client is initialized
+  const supabase = getTriggerClient();
+
   logger.info("Status update", { episodeId, status, step, progress, errorMessage });
 
-  // Placeholder for database update
-  // const { error } = await supabase
-  //   .from("episodes")
-  //   .update({
-  //     status,
-  //     metadata: {
-  //       processing_step: step,
-  //       processing_progress: progress,
-  //       ...(errorMessage && { error_message: errorMessage }),
-  //     },
-  //     updated_at: new Date().toISOString(),
-  //   })
-  //   .eq("id", episodeId);
+  const { error } = await supabase
+    .from("episodes")
+    .update({
+      status,
+      metadata: {
+        processing_step: step,
+        processing_progress: progress,
+        ...(errorMessage && { error_message: errorMessage }),
+      },
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", episodeId);
+
+  if (error) {
+    logger.error("Failed to update episode status", { episodeId, error: error.message });
+  }
 }
 
 /**
  * Fetch vocabulary terms for the show
  */
 async function fetchVocabularyTerms(showId: string): Promise<VocabularyTerm[]> {
-  // Database fetch to be implemented when Supabase client is configured
+  const supabase = getTriggerClient();
+
   logger.info("Fetching vocabulary terms", { showId });
 
-  // Placeholder - will return terms from database
-  // const { data, error } = await supabase
-  //   .from("vocabulary_terms")
-  //   .select("*")
-  //   .eq("show_id", showId)
-  //   .order("occurrence_count", { ascending: false });
+  const { data, error } = await supabase
+    .from("vocabulary_terms")
+    .select("*")
+    .eq("show_id", showId)
+    .order("occurrence_count", { ascending: false })
+    .limit(1000);
 
-  return [];
+  if (error) {
+    logger.error("Failed to fetch vocabulary terms", { showId, error: error.message });
+    return [];
+  }
+
+  return (data || []) as VocabularyTerm[];
 }
 
 /**
- * Apply vocabulary corrections to transcript using LLM post-processing
+ * Apply vocabulary corrections to transcript using pattern matching
+ * Replaces known alternative spellings with correct terms
  */
 async function applyVocabularyCorrections(
   transcript: string,
@@ -224,21 +240,45 @@ async function applyVocabularyCorrections(
     return transcript;
   }
 
-  // Vocabulary correction with xAI Grok uses fuzzy matching and LLM post-processing
   logger.info("Applying vocabulary corrections", {
     termCount: vocabularyTerms.length,
     transcriptLength: transcript.length,
   });
 
-  // For now, return the transcript unchanged
-  // In production, this will use fuzzy matching and LLM post-processing
-  return transcript;
+  let correctedTranscript = transcript;
+  let correctionCount = 0;
+
+  // Apply corrections for each vocabulary term with alternatives
+  for (const term of vocabularyTerms) {
+    if (term.alternatives && term.alternatives.length > 0) {
+      for (const alternative of term.alternatives) {
+        // Case-insensitive replacement while preserving word boundaries
+        const regex = new RegExp(`\\b${escapeRegExp(alternative)}\\b`, "gi");
+        const matches = correctedTranscript.match(regex);
+        if (matches) {
+          correctedTranscript = correctedTranscript.replace(regex, term.term);
+          correctionCount += matches.length;
+        }
+      }
+    }
+  }
+
+  logger.info("Vocabulary corrections applied", { correctionCount });
+
+  return correctedTranscript;
+}
+
+/**
+ * Escape special regex characters in a string
+ */
+function escapeRegExp(string: string): string {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /**
  * Perform SEO analysis on the generated show notes
  */
-async function performSEOAnalysis(showNotes: string): Promise<{
+async function performSEOAnalysis(showNotes: string, showNotesHtml?: string): Promise<{
   score: number;
   keyword_density: Record<string, number>;
   readability_score: number;
@@ -246,17 +286,17 @@ async function performSEOAnalysis(showNotes: string): Promise<{
   suggestions: string[];
   estimated_position: number | null;
 }> {
-  // SEO analyzer from src/lib/seo/analyzer.ts processes keyword density and readability
   logger.info("Performing SEO analysis", { showNotesLength: showNotes.length });
 
-  // Placeholder SEO analysis
-  // Will be replaced with actual analyzer from src/lib/seo/analyzer.ts
+  // Use the real SEO analyzer
+  const analysis = analyzeSEO(showNotes, showNotesHtml);
+
   return {
-    score: 75,
-    keyword_density: {},
-    readability_score: 80,
-    header_structure: true,
-    suggestions: ["Add more internal links", "Include a call-to-action"],
+    score: analysis.overallScore,
+    keyword_density: analysis.keywordDensityMap,
+    readability_score: analysis.factors.readability.score,
+    header_structure: analysis.factors.headerStructure.score >= 80,
+    suggestions: analysis.suggestions.map(s => s.description),
     estimated_position: null,
   };
 }
@@ -278,18 +318,83 @@ async function saveProcessingResults(
     assets: AssetsResult["assets"];
   }
 ): Promise<void> {
-  // Database update persists episode record, generated_assets, and episode_sections
+  const supabase = getTriggerClient();
+
   logger.info("Saving processing results", {
     episodeId,
     transcriptLength: results.transcript.length,
     assetsCount: results.assets.length,
   });
 
-  // Placeholder for database update
-  // This will:
-  // 1. Update the episode record with transcript, show_notes, etc.
-  // 2. Insert generated_assets records
-  // 3. Create episode_sections for semantic search
+  // 1. Update the episode record with all processing results
+  const { error: episodeError } = await supabase
+    .from("episodes")
+    .update({
+      transcript: results.transcript,
+      transcript_segments: results.segments,
+      show_notes: results.showNotes,
+      show_notes_html: results.showNotesHtml,
+      schema_markup: results.schemaMarkup,
+      seo_score: results.seoScore,
+      seo_analysis: results.seoAnalysis,
+      viral_moments: results.viralMoments,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", episodeId);
+
+  if (episodeError) {
+    logger.error("Failed to update episode", { episodeId, error: episodeError.message });
+    throw new Error(`Failed to save episode: ${episodeError.message}`);
+  }
+
+  // 2. Insert generated assets
+  if (results.assets.length > 0) {
+    const assetsToInsert = results.assets.map((asset) => ({
+      episode_id: episodeId,
+      asset_type: asset.type,
+      content: asset.content,
+      metadata: asset.metadata || {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }));
+
+    const { error: assetsError } = await supabase
+      .from("generated_assets")
+      .insert(assetsToInsert);
+
+    if (assetsError) {
+      logger.error("Failed to insert assets", { episodeId, error: assetsError.message });
+      // Don't throw - assets are not critical
+    } else {
+      logger.info("Assets saved", { episodeId, count: results.assets.length });
+    }
+  }
+
+  // 3. Create episode sections for semantic search
+  if (results.segments.length > 0) {
+    const sectionsToInsert = results.segments.map((segment) => ({
+      episode_id: episodeId,
+      content: segment.text,
+      start_time: segment.start,
+      end_time: segment.end,
+      speaker: segment.speaker || null,
+      metadata: {},
+      created_at: new Date().toISOString(),
+    }));
+
+    const { error: sectionsError } = await supabase
+      .from("episode_sections")
+      .insert(sectionsToInsert);
+
+    if (sectionsError) {
+      logger.error("Failed to insert sections", { episodeId, error: sectionsError.message });
+      // Don't throw - sections are not critical for basic functionality
+    } else {
+      logger.info("Sections saved", { episodeId, count: results.segments.length });
+    }
+  }
+
+  logger.info("Processing results saved successfully", { episodeId });
 }
 
 export default processEpisodeTask;

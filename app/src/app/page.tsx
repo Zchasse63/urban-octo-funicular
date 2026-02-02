@@ -379,6 +379,11 @@ export default function LandingPage() {
                     Terms of Service
                   </Link>
                 </li>
+                <li>
+                  <Link href="/cookies" style={{ color: "var(--text-secondary)" }}>
+                    Cookie Policy
+                  </Link>
+                </li>
               </ul>
             </div>
             <div>

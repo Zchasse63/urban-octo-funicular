@@ -402,32 +402,48 @@ export default function AssetsPage() {
     setIsGeneratingAll(false)
   }
 
-  const handleBulkDownload = () => {
+  const [isDownloading, setIsDownloading] = React.useState(false)
+
+  const handleBulkDownload = async () => {
     const readyAssets = assets.filter((a) => a.status === 'completed' && a.generatedAsset?.content)
 
     if (readyAssets.length === 0) return
 
-    // Create a combined file
-    let combinedContent = `# Generated Assets for Episode\n\n`
-    combinedContent += `Generated at: ${new Date().toLocaleString()}\n`
-    combinedContent += `Total assets: ${readyAssets.length}\n\n`
-    combinedContent += `---\n\n`
+    setIsDownloading(true)
 
-    readyAssets.forEach((asset) => {
-      combinedContent += `## ${asset.definition.name}\n\n`
-      combinedContent += asset.generatedAsset?.content || ''
-      combinedContent += `\n\n---\n\n`
-    })
+    try {
+      // Get episode ID from URL
+      const pathParts = window.location.pathname.split('/')
+      const episodeId = pathParts[pathParts.indexOf('episodes') + 1]
 
-    const blob = new Blob([combinedContent], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `episode-assets-${Date.now()}.txt`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+      // Fetch ZIP from API
+      const response = await fetch(`/api/episodes/${episodeId}/assets/download`)
+
+      if (!response.ok) {
+        throw new Error('Failed to generate download')
+      }
+
+      // Get the blob and trigger download
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+
+      // Get filename from Content-Disposition header or generate one
+      const contentDisposition = response.headers.get('Content-Disposition')
+      const filenameMatch = contentDisposition?.match(/filename="(.+)"/)
+      link.download = filenameMatch?.[1] || `episode-assets-${Date.now()}.zip`
+
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Download failed:', error)
+      // Could add toast notification here
+    } finally {
+      setIsDownloading(false)
+    }
   }
 
   const handleSaveEdit = async (content: string) => {
@@ -481,10 +497,19 @@ export default function AssetsPage() {
             <Button
               variant="secondary"
               onClick={handleBulkDownload}
-              disabled={readyCounts.all === 0}
+              disabled={readyCounts.all === 0 || isDownloading}
             >
-              <Download className="h-4 w-4" />
-              <span className="ml-2">Download All ({readyCounts.all})</span>
+              {isDownloading ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span className="ml-2">Preparing ZIP...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
+                  <span className="ml-2">Download All ({readyCounts.all})</span>
+                </>
+              )}
             </Button>
             <Button
               onClick={handleGenerateAll}
