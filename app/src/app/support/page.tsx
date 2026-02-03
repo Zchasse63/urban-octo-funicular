@@ -109,9 +109,8 @@ function FAQAccordion({ item }: { item: FAQItem }) {
 
 export default function SupportPage() {
   return (
-    <div className="min-h-screen bg-[var(--bg-base)]">
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 animate-in">
-        {/* Header */}
+    <div className="animate-in">
+      {/* Header */}
         <div className="text-center mb-8 sm:mb-12">
           <div
             className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
@@ -243,12 +242,11 @@ export default function SupportPage() {
           <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
             Our support team typically responds within 24 hours
           </p>
-          <a href="mailto:support@podbrain.ai" className="btn-primary inline-flex">
-            <Mail className="w-4 h-4" />
-            Contact Support
-          </a>
-        </div>
-      </main>
+        <a href="mailto:support@podbrain.ai" className="btn-primary inline-flex">
+          <Mail className="w-4 h-4" />
+          Contact Support
+        </a>
+      </div>
     </div>
   );
 }

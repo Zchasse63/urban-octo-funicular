@@ -51,7 +51,7 @@ function NavSection({
 }) {
   return (
     <div className="mb-6">
-      <span className="mono px-3 mb-2 block">{title}</span>
+      <span className="mono mb-2 block">{title}</span>
       <nav className="flex flex-col gap-1">{children}</nav>
     </div>
   );
@@ -129,8 +129,8 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
         className={cn(
           "fixed left-0 top-0 h-screen w-[280px] md:w-[240px] flex flex-col py-6 border-r z-50",
           "transition-transform duration-300 ease-in-out",
-          "md:translate-x-0",
-          isMobileOpen ? "translate-x-0" : "-translate-x-full"
+          "md:translate-x-0 md:pointer-events-auto",
+          isMobileOpen ? "translate-x-0 pointer-events-auto" : "-translate-x-full pointer-events-none"
         )}
         style={{
           backgroundColor: "var(--bg-elevated)",

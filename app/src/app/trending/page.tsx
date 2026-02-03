@@ -190,9 +190,8 @@ function TrendingCard({ topic }: { topic: TrendingTopic }) {
 
 export default function TrendingPage() {
   return (
-    <div className="min-h-screen bg-[var(--bg-base)]">
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 animate-in">
-        {/* Header */}
+    <div className="animate-in">
+      {/* Header */}
         <div className="mb-6 sm:mb-8">
           <h1 className="font-mono text-xs font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)] mb-2">
             Trending
@@ -269,11 +268,10 @@ export default function TrendingPage() {
               >
                 {index + 1}
               </div>
-              <TrendingCard topic={topic} />
-            </div>
-          ))}
-        </div>
-      </main>
+            <TrendingCard topic={topic} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

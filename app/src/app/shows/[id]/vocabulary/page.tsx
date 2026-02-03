@@ -99,9 +99,8 @@ export default function VocabularyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-base)]">
-      <main className="max-w-5xl mx-auto px-6 py-8 animate-in">
-        {/* Back Link */}
+    <div className="animate-in">
+      {/* Back Link */}
         <Link
           href={`/shows/${showId}`}
           className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors mb-6"
@@ -148,13 +147,12 @@ export default function VocabularyPage() {
           </ul>
         </div>
 
-        {/* Vocabulary List */}
-        <VocabularyList
-          terms={terms}
-          onAddTerm={handleAddTerm}
-          onDeleteTerm={handleDeleteTerm}
-        />
-      </main>
+      {/* Vocabulary List */}
+      <VocabularyList
+        terms={terms}
+        onAddTerm={handleAddTerm}
+        onDeleteTerm={handleDeleteTerm}
+      />
     </div>
   )
 }

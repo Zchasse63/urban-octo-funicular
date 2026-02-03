@@ -75,9 +75,8 @@ export default function EpisodesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-base)]">
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 animate-in">
-        {/* Header */}
+    <div className="animate-in">
+      {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
           <h1 className="font-mono text-xs font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)]">
             Episodes
@@ -100,12 +99,11 @@ export default function EpisodesPage() {
             ))}
           </div>
         ) : (
-          <EpisodeList
-            episodes={mockEpisodes}
-            onEpisodeClick={handleEpisodeClick}
-          />
-        )}
-      </main>
+        <EpisodeList
+          episodes={mockEpisodes}
+          onEpisodeClick={handleEpisodeClick}
+        />
+      )}
     </div>
   )
 }

@@ -271,136 +271,134 @@ export default function ExpertFinderPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-base)]">
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 animate-in">
-        {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <h1 className="font-mono text-xs font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)] mb-2">
-            Expert Finder
-          </h1>
-          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-            Discover fresh voices and industry experts for your podcast
-          </p>
-        </div>
+    <div className="animate-in">
+      {/* Header */}
+      <div className="mb-6 sm:mb-8">
+        <h1 className="font-mono text-xs font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)] mb-2">
+          Expert Finder
+        </h1>
+        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+          Discover fresh voices and industry experts for your podcast
+        </p>
+      </div>
 
-        {/* Search and Filters */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="relative flex-1">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-              style={{ color: 'var(--text-tertiary)' }}
-            />
-            <input
-              type="text"
-              placeholder="Search by name, topic, or expertise..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="search-bar pl-10"
-            />
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+            style={{ color: 'var(--text-tertiary)' }}
+          />
+          <input
+            type="text"
+            placeholder="Search by name, topic, or expertise..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="search-bar pl-10"
+          />
+        </div>
+        <div className="flex gap-2">
+          {(['all', 'fresh', 'established', 'oversaturated'] as const).map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setCategoryFilter(cat)}
+              className={`px-4 py-2 rounded-[var(--radius-md)] text-sm font-medium transition-colors ${
+                categoryFilter === cat
+                  ? 'bg-[var(--text-primary)] text-white'
+                  : 'bg-[var(--bg-elevated)] border border-[var(--border-soft)] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]'
+              }`}
+            >
+              {cat === 'all' ? 'All' : categoryConfig[cat].label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Results Count */}
+      <div className="mb-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
+        Found {filteredExperts.length} experts
+      </div>
+
+      {/* Results */}
+      {filteredExperts.length > 0 ? (
+        categoryFilter === 'all' ? (
+          // Grouped view when showing all
+          <div className="space-y-8">
+            {categoryGroups.fresh.length > 0 && (
+              <div>
+                <h2 className="mono mb-4 flex items-center gap-2">
+                  <span
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: 'var(--accent-green)' }}
+                  />
+                  Fresh Voices ({categoryGroups.fresh.length})
+                </h2>
+                <div className="grid gap-4">
+                  {categoryGroups.fresh.map((expert) => (
+                    <ExpertResultCard key={expert.id} expert={expert} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {categoryGroups.established.length > 0 && (
+              <div>
+                <h2 className="mono mb-4 flex items-center gap-2">
+                  <span
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: 'var(--accent-blue)' }}
+                  />
+                  Established ({categoryGroups.established.length})
+                </h2>
+                <div className="grid gap-4">
+                  {categoryGroups.established.map((expert) => (
+                    <ExpertResultCard key={expert.id} expert={expert} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {categoryGroups.oversaturated.length > 0 && (
+              <div>
+                <h2 className="mono mb-4 flex items-center gap-2">
+                  <span
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: 'var(--accent-amber)' }}
+                  />
+                  Over-interviewed ({categoryGroups.oversaturated.length})
+                </h2>
+                <div className="grid gap-4">
+                  {categoryGroups.oversaturated.map((expert) => (
+                    <ExpertResultCard key={expert.id} expert={expert} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-          <div className="flex gap-2">
-            {(['all', 'fresh', 'established', 'oversaturated'] as const).map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setCategoryFilter(cat)}
-                className={`px-4 py-2 rounded-[var(--radius-md)] text-sm font-medium transition-colors ${
-                  categoryFilter === cat
-                    ? 'bg-[var(--text-primary)] text-white'
-                    : 'bg-[var(--bg-elevated)] border border-[var(--border-soft)] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]'
-                }`}
-              >
-                {cat === 'all' ? 'All' : categoryConfig[cat].label}
-              </button>
+        ) : (
+          // Flat list when filtering by category
+          <div className="grid gap-4">
+            {filteredExperts.map((expert) => (
+              <ExpertResultCard key={expert.id} expert={expert} />
             ))}
           </div>
-        </div>
-
-        {/* Results Count */}
-        <div className="mb-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
-          Found {filteredExperts.length} experts
-        </div>
-
-        {/* Results */}
-        {filteredExperts.length > 0 ? (
-          categoryFilter === 'all' ? (
-            // Grouped view when showing all
-            <div className="space-y-8">
-              {categoryGroups.fresh.length > 0 && (
-                <div>
-                  <h2 className="mono mb-4 flex items-center gap-2">
-                    <span
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: 'var(--accent-green)' }}
-                    />
-                    Fresh Voices ({categoryGroups.fresh.length})
-                  </h2>
-                  <div className="grid gap-4">
-                    {categoryGroups.fresh.map((expert) => (
-                      <ExpertResultCard key={expert.id} expert={expert} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {categoryGroups.established.length > 0 && (
-                <div>
-                  <h2 className="mono mb-4 flex items-center gap-2">
-                    <span
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: 'var(--accent-blue)' }}
-                    />
-                    Established ({categoryGroups.established.length})
-                  </h2>
-                  <div className="grid gap-4">
-                    {categoryGroups.established.map((expert) => (
-                      <ExpertResultCard key={expert.id} expert={expert} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {categoryGroups.oversaturated.length > 0 && (
-                <div>
-                  <h2 className="mono mb-4 flex items-center gap-2">
-                    <span
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: 'var(--accent-amber)' }}
-                    />
-                    Over-interviewed ({categoryGroups.oversaturated.length})
-                  </h2>
-                  <div className="grid gap-4">
-                    {categoryGroups.oversaturated.map((expert) => (
-                      <ExpertResultCard key={expert.id} expert={expert} />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            // Flat list when filtering by category
-            <div className="grid gap-4">
-              {filteredExperts.map((expert) => (
-                <ExpertResultCard key={expert.id} expert={expert} />
-              ))}
-            </div>
-          )
-        ) : (
-          <div className="topo-card text-center py-12">
-            <div
-              className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
-              style={{ backgroundColor: 'var(--bg-subtle)' }}
-            >
-              <Users className="w-8 h-8" style={{ color: 'var(--text-tertiary)' }} />
-            </div>
-            <h3 className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-              No experts found
-            </h3>
-            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              Try adjusting your search terms or filters
-            </p>
+        )
+      ) : (
+        <div className="topo-card text-center py-12">
+          <div
+            className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
+            style={{ backgroundColor: 'var(--bg-subtle)' }}
+          >
+            <Users className="w-8 h-8" style={{ color: 'var(--text-tertiary)' }} />
           </div>
-        )}
-      </main>
+          <h3 className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+            No experts found
+          </h3>
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+            Try adjusting your search terms or filters
+          </p>
+        </div>
+      )}
     </div>
   );
 }

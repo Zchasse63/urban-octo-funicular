@@ -228,95 +228,93 @@ function CompetitorCard({ competitor }: { competitor: Competitor }) {
 
 export default function CompetitorsPage() {
   return (
-    <div className="min-h-screen bg-[var(--bg-base)]">
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 animate-in">
-        {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <h1 className="font-mono text-xs font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)] mb-2">
-            Competitors
-          </h1>
-          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-            Analyze competitor podcasts and find opportunities to differentiate
-          </p>
-        </div>
+    <div className="animate-in">
+      {/* Header */}
+      <div className="mb-6 sm:mb-8">
+        <h1 className="font-mono text-xs font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)] mb-2">
+          Competitors
+        </h1>
+        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+          Analyze competitor podcasts and find opportunities to differentiate
+        </p>
+      </div>
 
-        {/* Summary Card */}
-        <div className="topo-card mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div
-              className="w-10 h-10 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: 'var(--bg-subtle)' }}
-            >
-              <BarChart3 className="w-5 h-5" style={{ color: 'var(--accent-blue)' }} />
+      {/* Summary Card */}
+      <div className="topo-card mb-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div
+            className="w-10 h-10 rounded-lg flex items-center justify-center"
+            style={{ backgroundColor: 'var(--bg-subtle)' }}
+          >
+            <BarChart3 className="w-5 h-5" style={{ color: 'var(--accent-blue)' }} />
+          </div>
+          <div>
+            <h2 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+              Competitive Landscape
+            </h2>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+              Analysis based on {mockCompetitors.length} podcasts in your niche
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="text-center">
+            <div className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+              {mockCompetitors.length}
             </div>
-            <div>
-              <h2 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                Competitive Landscape
-              </h2>
-              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                Analysis based on {mockCompetitors.length} podcasts in your niche
-              </p>
+            <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+              Competitors Tracked
             </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-                {mockCompetitors.length}
-              </div>
-              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                Competitors Tracked
-              </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold" style={{ color: 'var(--accent-green)' }}>
+              {mockCompetitors.filter((c) => c.recentGrowth === 'up').length}
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold" style={{ color: 'var(--accent-green)' }}>
-                {mockCompetitors.filter((c) => c.recentGrowth === 'up').length}
-              </div>
-              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                Growing
-              </div>
+            <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+              Growing
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-                {Math.round(mockCompetitors.reduce((acc, c) => acc + c.overlap, 0) / mockCompetitors.length)}%
-              </div>
-              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                Avg Topic Overlap
-              </div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+              {Math.round(mockCompetitors.reduce((acc, c) => acc + c.overlap, 0) / mockCompetitors.length)}%
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-                {mockCompetitors.reduce((acc, c) => acc + c.opportunities.length, 0)}
-              </div>
-              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                Opportunities Found
-              </div>
+            <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+              Avg Topic Overlap
+            </div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+              {mockCompetitors.reduce((acc, c) => acc + c.opportunities.length, 0)}
+            </div>
+            <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+              Opportunities Found
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Opportunity Highlight */}
-        <div className="alert-card success mb-6">
-          <div className="flex items-start gap-3">
-            <Trophy className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--accent-green)' }} />
-            <div>
-              <h3 className="font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-                Top Opportunity
-              </h3>
-              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                Based on competitor analysis, there's a gap in <strong>bootstrapping stories</strong> and <strong>international founder perspectives</strong>.
-                Consider featuring more self-funded founders and entrepreneurs from outside the US.
-              </p>
-            </div>
+      {/* Opportunity Highlight */}
+      <div className="alert-card success mb-6">
+        <div className="flex items-start gap-3">
+          <Trophy className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--accent-green)' }} />
+          <div>
+            <h3 className="font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+              Top Opportunity
+            </h3>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+              Based on competitor analysis, there's a gap in <strong>bootstrapping stories</strong> and <strong>international founder perspectives</strong>.
+              Consider featuring more self-funded founders and entrepreneurs from outside the US.
+            </p>
           </div>
         </div>
+      </div>
 
-        {/* Competitor Cards */}
-        <div className="grid gap-6">
-          {mockCompetitors.map((competitor) => (
-            <CompetitorCard key={competitor.id} competitor={competitor} />
-          ))}
-        </div>
-      </main>
+      {/* Competitor Cards */}
+      <div className="grid gap-6">
+        {mockCompetitors.map((competitor) => (
+          <CompetitorCard key={competitor.id} competitor={competitor} />
+        ))}
+      </div>
     </div>
   );
 }

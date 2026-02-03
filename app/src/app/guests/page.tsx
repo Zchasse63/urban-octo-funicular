@@ -166,76 +166,74 @@ export default function GuestsPage() {
   }, [searchQuery]);
 
   return (
-    <div className="min-h-screen bg-[var(--bg-base)]">
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 animate-in">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
-          <div>
-            <h1 className="font-mono text-xs font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)] mb-2">
-              Guests
-            </h1>
-            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              Manage your podcast guests and their information
-            </p>
-          </div>
-          <Button className="min-h-[44px]" aria-label="Add new guest">
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Add Guest
-          </Button>
+    <div className="animate-in">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
+        <div>
+          <h1 className="font-mono text-xs font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)] mb-2">
+            Guests
+          </h1>
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+            Manage your podcast guests and their information
+          </p>
         </div>
+        <Button className="min-h-[44px]" aria-label="Add new guest">
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          Add Guest
+        </Button>
+      </div>
 
-        {/* Search */}
-        <div className="relative mb-6">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-            style={{ color: 'var(--text-tertiary)' }}
-          />
-          <input
-            type="text"
-            placeholder="Search guests by name, bio, or topic..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-bar pl-10"
-          />
+      {/* Search */}
+      <div className="relative mb-6">
+        <Search
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+          style={{ color: 'var(--text-tertiary)' }}
+        />
+        <input
+          type="text"
+          placeholder="Search guests by name, bio, or topic..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="search-bar pl-10"
+        />
+      </div>
+
+      {/* Guest Count */}
+      <div className="mb-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
+        Showing {filteredGuests.length} of {mockGuests.length} guests
+      </div>
+
+      {/* Guest Grid */}
+      {filteredGuests.length > 0 ? (
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2">
+          {filteredGuests.map((guest) => (
+            <GuestCard key={guest.id} guest={guest} />
+          ))}
         </div>
-
-        {/* Guest Count */}
-        <div className="mb-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
-          Showing {filteredGuests.length} of {mockGuests.length} guests
+      ) : (
+        <div className="topo-card text-center py-12">
+          <div
+            className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
+            style={{ backgroundColor: 'var(--bg-subtle)' }}
+          >
+            <Users className="w-8 h-8" style={{ color: 'var(--text-tertiary)' }} />
+          </div>
+          <h3 className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+            No guests found
+          </h3>
+          <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
+            {searchQuery
+              ? 'Try adjusting your search terms'
+              : 'Add your first guest to get started'}
+          </p>
+          {!searchQuery && (
+            <Button>
+              <Plus className="h-4 w-4" />
+              Add Guest
+            </Button>
+          )}
         </div>
-
-        {/* Guest Grid */}
-        {filteredGuests.length > 0 ? (
-          <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2">
-            {filteredGuests.map((guest) => (
-              <GuestCard key={guest.id} guest={guest} />
-            ))}
-          </div>
-        ) : (
-          <div className="topo-card text-center py-12">
-            <div
-              className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
-              style={{ backgroundColor: 'var(--bg-subtle)' }}
-            >
-              <Users className="w-8 h-8" style={{ color: 'var(--text-tertiary)' }} />
-            </div>
-            <h3 className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-              No guests found
-            </h3>
-            <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
-              {searchQuery
-                ? 'Try adjusting your search terms'
-                : 'Add your first guest to get started'}
-            </p>
-            {!searchQuery && (
-              <Button>
-                <Plus className="h-4 w-4" />
-                Add Guest
-              </Button>
-            )}
-          </div>
-        )}
-      </main>
+      )}
     </div>
   );
 }

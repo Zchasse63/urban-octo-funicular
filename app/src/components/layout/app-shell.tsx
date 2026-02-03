@@ -61,7 +61,7 @@ export function AppShell({ children }: AppShellProps) {
         />
 
         <main
-          className="md:ml-[240px] min-h-screen pt-[56px] md:pt-0"
+          className="md:ml-[240px] min-h-screen pt-[56px] md:pt-0 relative z-10"
           style={{ backgroundColor: "var(--bg-base)" }}
         >
           <div className="mx-auto max-w-[1400px] px-4 sm:px-6 md:px-8 py-6 md:py-8">
