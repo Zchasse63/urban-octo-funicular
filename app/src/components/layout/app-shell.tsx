@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "./sidebar";
 import { ToastProvider } from "@/components/ui/toast";
 import { Menu } from "lucide-react";
@@ -9,8 +10,15 @@ interface AppShellProps {
   children: React.ReactNode;
 }
 
+// Marketing/public routes that should NOT show the sidebar
+const MARKETING_ROUTES = ["/", "/pricing", "/privacy", "/terms", "/cookies"];
+
 export function AppShell({ children }: AppShellProps) {
+  const pathname = usePathname();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = React.useState(false);
+
+  // Check if current route is a marketing page
+  const isMarketingPage = MARKETING_ROUTES.includes(pathname);
 
   // Close sidebar on navigation (mobile)
   React.useEffect(() => {
@@ -31,6 +39,18 @@ export function AppShell({ children }: AppShellProps) {
     };
   }, [isMobileSidebarOpen]);
 
+  // Render marketing layout without sidebar
+  if (isMarketingPage) {
+    return (
+      <ToastProvider>
+        <div className="min-h-screen" style={{ backgroundColor: "var(--bg-base)" }}>
+          {children}
+        </div>
+      </ToastProvider>
+    );
+  }
+
+  // Render app layout with sidebar
   return (
     <ToastProvider>
       <div className="min-h-screen" style={{ backgroundColor: "var(--bg-base)" }}>

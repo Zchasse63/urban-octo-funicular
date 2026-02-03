@@ -28,12 +28,13 @@ function NavItem({ href, icon: Icon, label, isActive, onClick }: NavItemProps) {
       href={href}
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 px-3 py-3 md:py-2 rounded-[var(--radius-lg)] text-sm font-medium transition-all duration-[var(--duration-normal)]",
+        "flex items-center gap-3 px-3 py-3 md:py-2 rounded-[var(--radius-md)] text-sm font-medium transition-all duration-[var(--duration-normal)]",
         "min-h-[44px] md:min-h-0",
         isActive
-          ? "bg-[var(--text-primary)] text-white"
+          ? "bg-white text-[var(--text-primary)]"
           : "text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
       )}
+      style={isActive ? { boxShadow: "var(--shadow-topo)" } : undefined}
       aria-current={isActive ? "page" : undefined}
     >
       <Icon className="w-[18px] h-[18px]" strokeWidth={1.75} />
@@ -51,7 +52,7 @@ function NavSection({
 }) {
   return (
     <div className="mb-6">
-      <span className="mono mb-2 block">{title}</span>
+      <span className="mono mb-2 block ml-3">{title}</span>
       <nav className="flex flex-col gap-1">{children}</nav>
     </div>
   );
@@ -133,7 +134,7 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
           isMobileOpen ? "translate-x-0 pointer-events-auto" : "-translate-x-full pointer-events-none"
         )}
         style={{
-          backgroundColor: "var(--bg-elevated)",
+          backgroundColor: "var(--bg-base)",
           borderColor: "var(--border-soft)",
         }}
         aria-label="Main navigation"
