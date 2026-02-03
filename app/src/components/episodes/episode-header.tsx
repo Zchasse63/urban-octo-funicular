@@ -37,14 +37,13 @@ export function EpisodeHeader({
             Export PDF
           </Button>
           <Button size="sm" onClick={onPublish}>
-            <Send className="w-4 h-4" />
-            Publish
+            Publish to Notion
           </Button>
         </div>
       </div>
 
-      {/* Title */}
-      <h1 className="text-3xl font-semibold tracking-tight text-[var(--text-primary)]">
+      {/* Title - 2rem per design system */}
+      <h1 className="text-[2rem] font-semibold tracking-tight leading-tight text-[var(--text-primary)]">
         {title}
       </h1>
     </div>

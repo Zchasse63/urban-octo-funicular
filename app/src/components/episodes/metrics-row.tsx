@@ -27,7 +27,7 @@ export function MetricsRow({ metrics }: MetricsRowProps) {
   };
 
   return (
-    <div className="grid grid-cols-3 gap-4 mb-6">
+    <div className="grid grid-cols-3 gap-4 mb-8">
       {/* Retention Score */}
       <MetricCard>
         <MetricLabel>

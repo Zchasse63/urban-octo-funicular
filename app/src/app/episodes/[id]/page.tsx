@@ -114,8 +114,8 @@ export default function EpisodeDetailPage() {
       {/* Metrics Row */}
       <MetricsRow metrics={mockEpisode.metrics} />
 
-      {/* Two-Column Canvas Grid (1.6fr | 1fr) */}
-      <div className="grid gap-6" style={{ gridTemplateColumns: "1.6fr 1fr" }}>
+      {/* Two-Column Canvas Grid (1.6fr | 1fr) - 32px gap per design system */}
+      <div className="grid gap-8" style={{ gridTemplateColumns: "1.6fr 1fr" }}>
         {/* Left Column - Show Notes */}
         <div>
           <ShowNotesCard showNotes={mockEpisode.showNotes} />

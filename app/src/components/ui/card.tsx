@@ -59,7 +59,7 @@ const CardContent = React.forwardRef<
 ))
 CardContent.displayName = "CardContent"
 
-// Metric Card - For displaying scores and KPIs
+// Metric Card - For displaying scores and KPIs (with topo styling)
 const MetricCard = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -67,7 +67,9 @@ const MetricCard = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "rounded-lg border border-transparent bg-[var(--bg-subtle)] p-4",
+      "relative overflow-hidden rounded-xl border border-[var(--border-soft)] bg-[var(--bg-elevated)] p-4",
+      "shadow-[0_1px_2px_rgba(0,0,0,0.02),0_4px_12px_rgba(0,0,0,0.03),0_12px_32px_rgba(0,0,0,0.04)]",
+      "before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/80 before:to-transparent",
       className
     )}
     {...props}

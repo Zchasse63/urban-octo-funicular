@@ -28,15 +28,15 @@ function NavItem({ href, icon: Icon, label, isActive, onClick }: NavItemProps) {
       href={href}
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 px-3 py-3 md:py-2 rounded-[var(--radius-lg)] text-sm font-medium transition-all duration-[var(--duration-normal)]",
+        "flex items-center gap-3 px-3 py-3 md:py-2 rounded-[var(--radius-md)] text-sm transition-all duration-[var(--duration-normal)]",
         "min-h-[44px] md:min-h-0",
         isActive
-          ? "bg-[var(--text-primary)] text-white"
+          ? "bg-white text-[var(--text-primary)] shadow-[var(--shadow-topo)]"
           : "text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
       )}
       aria-current={isActive ? "page" : undefined}
     >
-      <Icon className="w-[18px] h-[18px]" strokeWidth={1.75} />
+      <Icon className="w-4 h-4" strokeWidth={1.5} />
       <span>{label}</span>
     </Link>
   );
@@ -50,8 +50,8 @@ function NavSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mb-6">
-      <span className="mono mb-2 block">{title}</span>
+    <div className="mb-8">
+      <span className="mono mb-2 ml-3 block">{title}</span>
       <nav className="flex flex-col gap-1">{children}</nav>
     </div>
   );
@@ -124,16 +124,20 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - Fixed on mobile, static in grid on desktop */}
       <aside
         className={cn(
-          "fixed left-0 top-0 h-screen w-[280px] md:w-[240px] flex flex-col py-6 border-r z-50",
+          // Mobile: fixed overlay with slide animation
+          "fixed left-0 top-0 h-screen w-[280px] z-50",
           "transition-transform duration-300 ease-in-out",
-          "md:translate-x-0 md:pointer-events-auto",
-          isMobileOpen ? "translate-x-0 pointer-events-auto" : "-translate-x-full pointer-events-none"
+          isMobileOpen ? "translate-x-0" : "-translate-x-full",
+          // Desktop: static within grid, no fixed positioning
+          "md:static md:translate-x-0 md:w-full md:h-auto md:min-h-screen md:z-auto",
+          // Common styles
+          "flex flex-col py-6 border-r"
         )}
         style={{
-          backgroundColor: "var(--bg-elevated)",
+          backgroundColor: "var(--bg-base)",
           borderColor: "var(--border-soft)",
         }}
         aria-label="Main navigation"

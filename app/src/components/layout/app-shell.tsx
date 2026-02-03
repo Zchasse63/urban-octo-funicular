@@ -33,38 +33,42 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <ToastProvider>
-      <div className="min-h-screen" style={{ backgroundColor: "var(--bg-base)" }}>
-        {/* Mobile Header with Hamburger */}
-        <header
-          className="md:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 border-b flex items-center gap-3"
-          style={{
-            backgroundColor: "var(--bg-elevated)",
-            borderColor: "var(--border-soft)",
-          }}
+      {/* Mobile Header with Hamburger - only shown on mobile */}
+      <header
+        className="md:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 border-b flex items-center gap-3"
+        style={{
+          backgroundColor: "var(--bg-elevated)",
+          borderColor: "var(--border-soft)",
+        }}
+      >
+        <button
+          onClick={() => setIsMobileSidebarOpen(true)}
+          className="p-2 rounded-lg hover:bg-[var(--bg-subtle)] transition-colors"
+          aria-label="Open menu"
+          aria-expanded={isMobileSidebarOpen}
         >
-          <button
-            onClick={() => setIsMobileSidebarOpen(true)}
-            className="p-2 rounded-lg hover:bg-[var(--bg-subtle)] transition-colors"
-            aria-label="Open menu"
-            aria-expanded={isMobileSidebarOpen}
-          >
-            <Menu className="w-5 h-5" style={{ color: "var(--text-primary)" }} />
-          </button>
-          <span className="text-[var(--text-primary)] font-semibold text-lg tracking-tight">
-            PodBrain
-          </span>
-        </header>
+          <Menu className="w-5 h-5" style={{ color: "var(--text-primary)" }} />
+        </button>
+        <span className="text-[var(--text-primary)] font-semibold text-lg tracking-tight">
+          PodBrain
+        </span>
+      </header>
 
+      {/* App Container - CSS Grid layout on desktop */}
+      <div
+        className="min-h-screen md:grid md:grid-cols-[240px_1fr]"
+        style={{ backgroundColor: "var(--bg-base)" }}
+      >
         <Sidebar
           isMobileOpen={isMobileSidebarOpen}
           onMobileClose={() => setIsMobileSidebarOpen(false)}
         />
 
         <main
-          className="md:ml-[240px] min-h-screen pt-[56px] md:pt-0 relative z-10"
+          className="min-h-screen pt-[56px] md:pt-0"
           style={{ backgroundColor: "var(--bg-base)" }}
         >
-          <div className="mx-auto max-w-[1400px] px-4 sm:px-6 md:px-8 py-6 md:py-8">
+          <div className="mx-auto max-w-[1400px] px-4 sm:px-6 md:px-16 py-6 md:py-10">
             <a
               href="#main-content"
               className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-[var(--bg-elevated)] focus:rounded-lg focus:shadow-lg"
