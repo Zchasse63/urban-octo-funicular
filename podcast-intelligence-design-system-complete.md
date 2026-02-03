@@ -1,4 +1,4 @@
-# Podcast Intelligence Platform — Complete Design System
+# Podcast Intelligence Platform — Complete Design System (v2)
 ## Visual Language: "Alabaster Topography"
 
 ---
@@ -64,11 +64,13 @@ This design system creates depth and hierarchy through subtle layering, shadows,
 ```css
 --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+
 ```
 
 #### Type Scale
+
 | Name | Size | Weight | Letter Spacing | Usage |
-|------|------|--------|----------------|-------|
+| --- | --- | --- | --- | --- |
 | Display | 2rem (32px) | 600 | -0.02em | Page titles, episode titles |
 | Heading 1 | 1.5rem (24px) | 600 | -0.02em | Section headers |
 | Heading 2 | 1.25rem (20px) | 600 | -0.02em | Card titles |
@@ -79,6 +81,7 @@ This design system creates depth and hierarchy through subtle layering, shadows,
 | Mono Label | 0.75rem (12px) | 500 | 0.05em | Section labels, status indicators |
 
 #### Mono Label Style (`.mono`)
+
 ```css
 .mono {
     font-family: 'JetBrains Mono', monospace;
@@ -88,6 +91,7 @@ This design system creates depth and hierarchy through subtle layering, shadows,
     letter-spacing: 0.05em;
     color: var(--text-secondary);
 }
+
 ```
 
 ---
@@ -95,6 +99,7 @@ This design system creates depth and hierarchy through subtle layering, shadows,
 ### 1.4 Shadows (Topographic Depth)
 
 #### Shadow Tokens
+
 ```css
 /* Primary card shadow - layered for depth */
 --shadow-topo: 
@@ -114,18 +119,7 @@ This design system creates depth and hierarchy through subtle layering, shadows,
 /* Focus ring */
 --shadow-focus: 
     0 0 0 3px rgba(0, 122, 255, 0.15);
-```
 
-#### Card Top Highlight
-Cards include a subtle top edge highlight for additional depth:
-```css
-.topo-card::before {
-    content: "";
-    position: absolute;
-    top: 0; left: 0; right: 0; 
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
-}
 ```
 
 ---
@@ -133,7 +127,7 @@ Cards include a subtle top edge highlight for additional depth:
 ### 1.5 Spacing System
 
 | Token | Value | Usage |
-|-------|-------|-------|
+| --- | --- | --- |
 | `--space-1` | 4px | Tight gaps, icon padding |
 | `--space-2` | 8px | Related element spacing |
 | `--space-3` | 12px | Component internal padding |
@@ -150,7 +144,7 @@ Cards include a subtle top edge highlight for additional depth:
 ### 1.6 Border Radius
 
 | Token | Value | Usage |
-|-------|-------|-------|
+| --- | --- | --- |
 | `--radius-sm` | 3px | Timestamp links, inline badges |
 | `--radius-md` | 6px | Buttons, inputs, nav items |
 | `--radius-lg` | 8px | Small cards, metric cards, badges |
@@ -166,9 +160,11 @@ Cards include a subtle top edge highlight for additional depth:
 --duration-normal: 0.2s;
 --duration-slow: 0.3s;
 --duration-enter: 0.8s;
+
 ```
 
 #### Page Enter Animation
+
 ```css
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
@@ -178,9 +174,11 @@ Cards include a subtle top edge highlight for additional depth:
 main {
     animation: fadeIn 0.8s var(--ease-out-expo);
 }
+
 ```
 
 #### Card Hover
+
 ```css
 .topo-card {
     transition: transform 0.3s var(--ease-out-expo), 
@@ -191,13 +189,16 @@ main {
     transform: translateY(-2px);
     box-shadow: var(--shadow-topo-hover);
 }
+
 ```
 
 ---
 
 ### 1.8 Background Pattern
 
-Subtle dot grid pattern on base background:
+Subtle dot grid pattern on base background.
+**CRITICAL:** Ensure background-size is 40px to match the grid.
+
 ```css
 body {
     background-color: var(--bg-base);
@@ -205,6 +206,7 @@ body {
         radial-gradient(circle at 2px 2px, var(--border-soft) 1px, transparent 0);
     background-size: 40px 40px;
 }
+
 ```
 
 ---
@@ -222,43 +224,63 @@ body {
     background: #E0E0DE; 
     border-radius: 10px; 
 }
+
 ```
 
 ---
 
 ## Part 2: Component Library
 
-### 2.1 Layout Components
+### 2.1 Layout Architecture (STRICT)
 
-#### App Container
+**CRITICAL LAYOUT RULE:** The application must use a CSS Grid shell to prevent sidebar overlap. Do not use `position: fixed` for the sidebar unless the main content has a matching margin.
+
+#### App Shell (Grid Container)
+
+This container wraps the entire application `<body>`.
+
 ```css
 .app-container {
     display: grid;
     grid-template-columns: 240px 1fr;
     min-height: 100vh;
 }
+
 ```
 
 #### Main Content Area
+
+Occupies the second column of the grid.
+
 ```css
 main {
     padding: 40px 64px;
     max-width: 1400px;
     margin: 0 auto;
     width: 100%;
+    /* Optional: for smooth fade-in */
+    animation: fadeIn 0.8s var(--ease-out-expo);
 }
+
 ```
 
 #### Canvas Grid (Two-Column Layout)
+
+Used inside `main` for side-by-side content (e.g., Show Notes + Guest Info).
+
 ```css
 .canvas-grid {
     display: grid;
     grid-template-columns: 1.6fr 1fr;
     gap: 32px;
 }
+
 ```
 
 #### Insight Grid (Three-Column Metrics)
+
+Used for the top row of KPIs.
+
 ```css
 .insight-grid {
     display: grid;
@@ -266,6 +288,7 @@ main {
     gap: 16px;
     margin-bottom: 32px;
 }
+
 ```
 
 ---
@@ -273,6 +296,9 @@ main {
 ### 2.2 Navigation
 
 #### Sidebar
+
+The sidebar sits in the first column of the grid. It is NOT absolute positioned.
+
 ```
 ┌─────────────────────────┐
 │  [Logo]                 │
@@ -296,9 +322,11 @@ main {
 │  Settings               │
 │  Support                │
 └─────────────────────────┘
+
 ```
 
 #### Sidebar Styles
+
 ```css
 aside {
     border-right: 1px solid var(--border-soft);
@@ -307,6 +335,10 @@ aside {
     flex-direction: column;
     gap: 32px;
     background: var(--bg-base);
+    /* Keeps sidebar visible if content scrolls */
+    position: sticky;
+    top: 0;
+    height: 100vh;
 }
 
 .nav-group { 
@@ -337,19 +369,24 @@ aside {
     box-shadow: var(--shadow-topo); 
     color: var(--text-primary); 
 }
+
 ```
 
 #### Nav Group Label
+
 ```html
 <span class="mono" style="margin-bottom: 8px; margin-left: 12px;">Workspace</span>
+
 ```
 
 ---
 
-### 2.3 Cards
+### 2.3 Cards (The "Alabaster" Look)
 
 #### Topo Card (Primary Card Component)
+
 The main elevated card used throughout the application.
+**CRITICAL:** Must include the `::before` pseudo-element to create the "glassy" top edge highlight.
 
 ```css
 .topo-card {
@@ -369,7 +406,7 @@ The main elevated card used throughout the application.
     box-shadow: var(--shadow-topo-hover);
 }
 
-/* Top edge highlight */
+/* THE ALABASTER HIGHLIGHT - ESSENTIAL */
 .topo-card::before {
     content: "";
     position: absolute;
@@ -377,9 +414,11 @@ The main elevated card used throughout the application.
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
 }
+
 ```
 
 #### Metric Card
+
 Used for displaying scores and KPIs.
 
 ```css
@@ -411,6 +450,7 @@ Used for displaying scores and KPIs.
 .trend-down {
     color: var(--accent-red);
 }
+
 ```
 
 ```
@@ -419,9 +459,11 @@ Used for displaying scores and KPIs.
 │ 84.2%                       │  ← metric-value
 │ ████████████████░░░░        │  ← progress bar
 └─────────────────────────────┘
+
 ```
 
 #### Guest Item Card
+
 ```css
 .guest-item {
     display: flex;
@@ -450,17 +492,11 @@ Used for displaying scores and KPIs.
     font-size: 0.75rem; 
     color: var(--text-secondary); 
 }
-```
 
-```
-┌─────────────────────────────────────────┐
-│  ┌────┐  Dr. Aris Thorne                │
-│  │ 👤 │  Spatial Design Lead at Ocular  │
-│  └────┘                                 │
-└─────────────────────────────────────────┘
 ```
 
 #### Alert Card
+
 For attention items and warnings.
 
 ```css
@@ -486,6 +522,7 @@ For attention items and warnings.
 .alert-card.info {
     border-left-color: var(--accent-blue);
 }
+
 ```
 
 ---
@@ -493,6 +530,7 @@ For attention items and warnings.
 ### 2.4 Buttons
 
 #### Primary Button (Glow Button)
+
 ```css
 .btn-primary {
     background: var(--text-primary);
@@ -509,9 +547,11 @@ For attention items and warnings.
 .btn-primary:hover { 
     opacity: 0.9; 
 }
+
 ```
 
 #### Secondary Button
+
 ```css
 .btn-secondary {
     background: white;
@@ -528,14 +568,7 @@ For attention items and warnings.
 .btn-secondary:hover {
     background: var(--bg-subtle);
 }
-```
 
-#### Button Group
-```html
-<div style="display: flex; gap: 12px;">
-    <button class="btn-secondary">Export PDF</button>
-    <button class="btn-primary">Publish to Notion</button>
-</div>
 ```
 
 ---
@@ -565,12 +598,7 @@ For attention items and warnings.
     border-color: rgba(245, 158, 11, 0.2);
     color: var(--accent-amber);
 }
-```
 
-```
-┌───────────────┐  ┌──────────────┐  ┌─────────────┐
-│ EPISODE #142  │  │ AI Assisted  │  │ 🆕 NEW      │
-└───────────────┘  └──────────────┘  └─────────────┘
 ```
 
 ---
@@ -578,6 +606,7 @@ For attention items and warnings.
 ### 2.6 Form Elements
 
 #### Search Bar
+
 ```css
 .search-bar {
     background: var(--bg-subtle);
@@ -598,9 +627,11 @@ For attention items and warnings.
     border-color: var(--accent-blue);
     box-shadow: var(--shadow-focus);
 }
+
 ```
 
 #### Text Input
+
 ```css
 .input {
     background: var(--bg-elevated);
@@ -618,6 +649,7 @@ For attention items and warnings.
     border-color: var(--accent-blue);
     box-shadow: var(--shadow-focus);
 }
+
 ```
 
 ---
@@ -625,6 +657,7 @@ For attention items and warnings.
 ### 2.7 Progress Bars
 
 #### Standard Progress Bar
+
 ```css
 .progress-track {
     width: 100%; 
@@ -644,9 +677,11 @@ For attention items and warnings.
 .progress-fill.success {
     background: var(--accent-green);
 }
+
 ```
 
 #### Thin Progress Bar (for metrics)
+
 ```css
 .progress-thin {
     width: 100%; 
@@ -655,13 +690,7 @@ For attention items and warnings.
     border-radius: 2px; 
     margin-top: 8px;
 }
-```
 
-```
-┌─────────────────────────────────────────┐
-│ Pacing Score                   OPTIMAL  │
-│ ████████████████████████████░░░░░░░░░░  │
-└─────────────────────────────────────────┘
 ```
 
 ---
@@ -669,6 +698,7 @@ For attention items and warnings.
 ### 2.8 Timestamps & Links
 
 #### Timestamp Link
+
 ```css
 .timestamp-link {
     color: var(--accent-blue);
@@ -685,12 +715,7 @@ For attention items and warnings.
 .timestamp-link:hover {
     background: rgba(0, 122, 255, 0.1);
 }
-```
 
-```
-04:12  Discussing the transition from skeuomorphism...
-└────┘
- timestamp-link
 ```
 
 ---
@@ -698,6 +723,7 @@ For attention items and warnings.
 ### 2.9 Content Areas
 
 #### Show Notes Area
+
 ```css
 .notes-area { 
     line-height: 1.6; 
@@ -722,6 +748,7 @@ For attention items and warnings.
 .notes-area li {
     margin-bottom: 12px;
 }
+
 ```
 
 ---
@@ -761,11 +788,7 @@ For expert discovery feature:
     font-size: 0.75rem;
     font-weight: 600;
 }
-```
 
-```
-FRESHNESS: 94%
-████████████████░░░░
 ```
 
 ---
@@ -802,15 +825,7 @@ For dashboard health scores:
 .health-score-trend.up { color: var(--accent-green); }
 .health-score-trend.down { color: var(--accent-red); }
 .health-score-trend.warning { color: var(--accent-amber); }
-```
 
-```
-┌─────────────┐
-│     78      │
-│   TOPIC     │
-│  COVERAGE   │
-│   ▲ +3      │
-└─────────────┘
 ```
 
 ---
@@ -833,6 +848,7 @@ For dashboard health scores:
         <button class="btn-primary">Publish to Notion</button>
     </div>
 </header>
+
 ```
 
 ```css
@@ -848,6 +864,7 @@ header {
     flex-direction: column; 
     gap: 8px; 
 }
+
 ```
 
 ---
@@ -859,6 +876,7 @@ header {
     <h3 class="mono">Generated Show Notes</h3>
     <span class="badge">AI Assisted</span>
 </div>
+
 ```
 
 ```css
@@ -868,6 +886,7 @@ header {
     align-items: center;
     margin-bottom: 24px;
 }
+
 ```
 
 ---
@@ -880,6 +899,7 @@ header {
     padding-top: 16px;
     border-top: 1px solid var(--border-soft);
 }
+
 ```
 
 ---
@@ -891,29 +911,40 @@ header {
 **Layout:** Two-column canvas grid
 
 **Left Column (1.6fr):**
-- Generated Show Notes card (editable)
-  - Summary paragraph
-  - Executive Summary with timestamps
-  - Key Discussion Points (bullet list)
-  - Action Items for Listeners
-  - Resources Mentioned
-  - Guest Bio
+
+* Generated Show Notes card (editable)
+* Summary paragraph
+* Executive Summary with timestamps
+* Key Discussion Points (bullet list)
+* Action Items for Listeners
+* Resources Mentioned
+* Guest Bio
+
+
 
 **Right Column (1fr):**
-- Guest Intelligence card
-  - Avatar + name + title
-  - Topics they discuss
-  - Social links (badges)
-- Content Health card
-  - Pacing Score (progress bar)
-  - Clarity Metric (progress bar)
-  - Recommendation text
+
+* Guest Intelligence card
+* Avatar + name + title
+* Topics they discuss
+* Social links (badges)
+
+
+* Content Health card
+* Pacing Score (progress bar)
+* Clarity Metric (progress bar)
+* Recommendation text
+
+
 
 **Top Section:**
-- Metric cards row (3 columns)
-  - Retention Score with trend
-  - Key Takeaways count
-  - Sentiment Analysis
+
+* Metric cards row (3 columns)
+* Retention Score with trend
+* Key Takeaways count
+* Sentiment Analysis
+
+
 
 ---
 
@@ -922,6 +953,7 @@ header {
 **Layout:** Single column with collapsible sections
 
 **Attention Needed Section:**
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ 🚨 ATTENTION NEEDED                               3 items   │
@@ -932,450 +964,16 @@ header {
 │ │ 8 episodes. Consider addressing concerns for credibility│ │
 │ │                                         [Learn more →]  │ │
 │ └─────────────────────────────────────────────────────────┘ │
-│ ┌─────────────────────────────────────────────────────────┐ │
-│ │ ⚠️ POTENTIAL CONTRADICTION                              │ │
-│ │ Your statement at 34:12 conflicts with Episode 45       │ │
-│ │                                    [View comparison →]  │ │
-│ └─────────────────────────────────────────────────────────┘ │
-│ ┌─────────────────────────────────────────────────────────┐ │
-│ │ ⚠️ TALK RATIO                                           │ │
-│ │ You spoke 68% vs guest 32%. Benchmark: Host 30-40%     │ │
-│ │                                    [See breakdown →]    │ │
-│ └─────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-```
+...
 
-**Insights Section:**
-- Topic Coverage (expandable)
-- Accessibility Score
-- Question Originality (for interview episodes)
-- Source Attribution
-- CTA Analysis
-
-Each insight uses alert-card styling with appropriate status colors.
-
----
-
-### 4.3 Content Health Dashboard
-
-**Layout:** Full width with grid sections
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│ CONTENT HEALTH DASHBOARD                                                │
-│ The Fitness Podcast • 147 episodes analyzed • Updated 2 hours ago       │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│ HEALTH SCORES (5-column grid of metric cards)                           │
-│ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐       │
-│ │   78     │ │   65     │ │   82     │ │   71     │ │   43     │       │
-│ │  TOPIC   │ │ BALANCE  │ │CONSISTENCY│ │  DEPTH   │ │ PROMISES │       │
-│ │  ▲ +3    │ │   ⚠️     │ │  ▲ +7    │ │   ─      │ │   ❌     │       │
-│ └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘       │
-│                                                                         │
-│ ┌─────────────────────────────────┐ ┌─────────────────────────────────┐ │
-│ │ 🚨 ATTENTION NEEDED             │ │ 💡 OPPORTUNITIES                │ │
-│ │ • 3 balance alerts              │ │ • 3 trending topics match you   │ │
-│ │ • 4 promises overdue            │ │ • 12 fresh experts identified   │ │
-│ │ • 2 stories told 5+ times       │ │ • 2 competitor gaps             │ │
-│ │              [View All →]       │ │              [View All →]       │ │
-│ └─────────────────────────────────┘ └─────────────────────────────────┘ │
-│                                                                         │
-│ ┌───────────────────────────────────────────────────────────────────┐   │
-│ │ 📈 TRENDS (Last 90 Days)                                          │   │
-│ │ [Line chart: episode length, sentiment, jargon over time]         │   │
-│ └───────────────────────────────────────────────────────────────────┘   │
-│                                                                         │
-│ ┌─────────────────────────────────┐ ┌─────────────────────────────────┐ │
-│ │ 📋 OPEN PROMISES                │ │ 🔄 REPEATED CONTENT             │ │
-│ │ ❌ "Full episode on Methylation"│ │ • "Running out of money" (8x)   │ │
-│ │ ❌ "Have Dr. Smith back"        │ │ • "Steve Jobs quote" (6x)       │ │
-│ │ ⏳ "Share protocol next week"   │ │                                 │ │
-│ └─────────────────────────────────┘ └─────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### 4.4 Pre-Interview Brief
-
-**Layout:** Single column, scannable sections
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│ ← Back to Guests                                        [Export PDF]    │
-│                                                                         │
-│ PRE-INTERVIEW BRIEF                                                     │
-│ ┌─────────────────────────────────────────────────────────────────────┐ │
-│ │  ┌────┐                                                             │ │
-│ │  │ 👤 │  Dr. Jane Smith                                             │ │
-│ │  └────┘  CEO, GutHealth Inc • PhD Microbiology, Stanford            │ │
-│ │                                                                     │ │
-│ │  📊 8 podcast appearances in last 18 months                         │ │
-│ │  📚 Author: "The Gut Solution" (2023)                               │ │
-│ │                                                                     │ │
-│ │  [LinkedIn]  [Twitter]  [Website]                                   │ │
-│ └─────────────────────────────────────────────────────────────────────┘ │
-│                                                                         │
-│ ❌ QUESTIONS TO SKIP (asked 5+ times)                          [Mono]  │
-│ ┌─────────────────────────────────────────────────────────────────────┐ │
-│ │  • "How did you get into gut health?" — asked 8 times               │ │
-│ │  • "What's the microbiome?" — asked 7 times                         │ │
-│ │  • "Best foods for gut health?" — asked 6 times                     │ │
-│ └─────────────────────────────────────────────────────────────────────┘ │
-│                                                                         │
-│ ✨ UNIQUE ANGLES (never or rarely asked)                       [Mono]  │
-│ ┌─────────────────────────────────────────────────────────────────────┐ │
-│ │  💡 Her time at [Previous Company] before founding GutHealth Inc    │ │
-│ │  💡 The failed first version of her product                         │ │
-│ │  💡 Her stance on personalized microbiome testing                   │ │
-│ └─────────────────────────────────────────────────────────────────────┘ │
-│                                                                         │
-│ 🔄 STORIES SHE REPEATS                                         [Mono]  │
-│ ┌─────────────────────────────────────────────────────────────────────┐ │
-│ │  • "The patient who changed everything" — told 6 times              │ │
-│ │  • "Almost gave up on the PhD" — told 4 times                       │ │
-│ └─────────────────────────────────────────────────────────────────────┘ │
-│                                                                         │
-│ 📌 POSITIONS SHE'S STATED                                      [Mono]  │
-│ ┌─────────────────────────────────────────────────────────────────────┐ │
-│ │  ✓ PRO: Personalized nutrition based on microbiome                  │ │
-│ │  ✗ SKEPTICAL: Generic probiotic supplements                         │ │
-│ │  ⚡ CONTROVERSIAL: Most gut tests are "useless"                      │ │
-│ │  🔄 EVOLVED: Changed stance on fasting                               │ │
-│ └─────────────────────────────────────────────────────────────────────┘ │
-│                                                                         │
-│ 🎯 SUGGESTED HOOKS                                             [Mono]  │
-│ ┌─────────────────────────────────────────────────────────────────────┐ │
-│ │  "You said on [Podcast X] that most gut tests are useless—          │ │
-│ │   what makes yours different?"                                       │ │
-│ │                                                                     │ │
-│ │  "Your view on fasting seems to have changed—what happened?"        │ │
-│ └─────────────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-### 4.5 Expert Discovery
-
-**Layout:** Search + results list
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│ DISCOVER EXPERTS                                                        │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│ ┌─────────────────────────────────────────────────────────┐ [Search]   │
-│ │ 🔍 gut health                                           │             │
-│ └─────────────────────────────────────────────────────────┘             │
-│                                                                         │
-│ Quick picks: [Nutrition] [Sleep] [Exercise] [Supplements]               │
-│                                                                         │
-│ ─────────────────────────────────────────────────────────────────────── │
-│                                                                         │
-│ ✅ FRESH VOICES                                                 [Mono]  │
-│                                                                         │
-│ ┌─────────────────────────────────────────────────────────────────────┐ │
-│ │  ┌────┐  Dr. Sarah Chen                        FRESHNESS: 94%       │ │
-│ │  │ 👤 │  MIT Research Lab                      ████████████████░░░░ │ │
-│ │  └────┘  Expertise: Microbiome, gut-brain axis                      │ │
-│ │          📊 2 appearances (both 2024)                               │ │
-│ │          📧 Contact available                                        │ │
-│ │                                    [View Profile] [Get Contact]     │ │
-│ └─────────────────────────────────────────────────────────────────────┘ │
-│                                                                         │
-│ ┌─────────────────────────────────────────────────────────────────────┐ │
-│ │  ┌────┐  Dr. Mike Johnson                      FRESHNESS: 87%       │ │
-│ │  │ 👤 │  Cleveland Clinic                      ██████████████░░░░░░ │ │
-│ │  └────┘  Expertise: Digestive disorders                             │ │
-│ │          📊 5 appearances (2023-2024)                               │ │
-│ │          📧 Contact available                                        │ │
-│ │                                    [View Profile] [Get Contact]     │ │
-│ └─────────────────────────────────────────────────────────────────────┘ │
-│                                                                         │
-│ 🟡 ESTABLISHED EXPERTS                                          [Mono]  │
-│                                                                         │
-│ ┌─────────────────────────────────────────────────────────────────────┐ │
-│ │  ┌────┐  Dr. Will Bulsiewicz                   FRESHNESS: 45%       │ │
-│ │  │ 👤 │  Gastroenterologist                    ████████░░░░░░░░░░░░ │ │
-│ │  └────┘  📊 34 appearances                                          │ │
-│ │          ⚠️ Last appeared: 2 weeks ago                               │ │
-│ └─────────────────────────────────────────────────────────────────────┘ │
-│                                                                         │
-│ ⚠️ OVER-INTERVIEWED                                             [Mono]  │
-│ ┌─────────────────────────────────────────────────────────────────────┐ │
-│ │  • Dr. Mark Hyman — 89 appearances                                  │ │
-│ │  • Dr. Steven Gundry — 67 appearances                               │ │
-│ │  • Dr. Rhonda Patrick — 156 appearances                             │ │
-│ │                                                                     │ │
-│ │  These experts are great but your audience has likely heard them.   │ │
-│ └─────────────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-### 4.6 Trending Topics
-
-**Layout:** Vertical card stack
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│ 🔥 TRENDING IN YOUR NICHE                                               │
-│ Health & Fitness • Updated 2 hours ago                          [Mono]  │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│ ┌─────────────────────────────────────────────────────────────────────┐ │
-│ │ #1  GLP-1 MEDICATIONS                              +340% search ↗   │ │
-│ │ ─────────────────────────────────────────────────────────────────── │ │
-│ │ Why trending: Ozempic, Wegovy mainstream adoption; FDA news         │ │
-│ │                                                                     │ │
-│ │ YOUR COVERAGE: ❌ Never discussed                                    │ │
-│ │                                                                     │ │
-│ │ FRESH EXPERTS:                                                      │ │
-│ │ • Dr. Caroline Apovian (3 appearances)                              │ │
-│ │ • Dr. Fatima Stanford (5 appearances)                               │ │
-│ │ • Dr. Spencer Nadolsky (7 appearances)                              │ │
-│ │                                                                     │ │
-│ │ ⚠️ Over-interviewed: Dr. Peter Attia (12+ episodes)                  │ │
-│ │                                                                     │ │
-│ │ [Find more experts →]              [Mark as not interested]         │ │
-│ └─────────────────────────────────────────────────────────────────────┘ │
-│                                                                         │
-│ ┌─────────────────────────────────────────────────────────────────────┐ │
-│ │ #2  CONTINUOUS GLUCOSE MONITORS                    +180% search ↗   │ │
-│ │ ─────────────────────────────────────────────────────────────────── │ │
-│ │ YOUR COVERAGE: ⚠️ Mentioned 3x but no deep dive                      │ │
-│ │                                                                     │ │
-│ │ SUGGESTION: You reference this often—audience may want full episode │ │
-│ │                                                                     │ │
-│ │ [Find experts →]                         [Mark as covered]          │ │
-│ └─────────────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-### 4.7 Upload Flow
-
-**Step 1: Upload**
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│ NEW TRANSFORMATION                                                      │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│     ┌─────────────────────────────────────────────────────────────┐     │
-│     │                                                             │     │
-│     │                     📁 Drop audio file                      │     │
-│     │                     or click to browse                      │     │
-│     │                                                             │     │
-│     │              MP3, WAV, M4A, MP4 • Max 4 hours               │     │
-│     │                                                             │     │
-│     └─────────────────────────────────────────────────────────────┘     │
-│                                                                         │
-│     ─────────────────────── OR ───────────────────────────              │
-│                                                                         │
-│     🔗 Import from RSS                                                  │
-│     ┌─────────────────────────────────────────────────────────────┐     │
-│     │ https://                                                    │     │
-│     └─────────────────────────────────────────────────────────────┘     │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-**Step 2: Context (Optional)**
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│ Help us nail the details                                        [Mono]  │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│ Episode Title                                                           │
-│ ┌─────────────────────────────────────────────────────────────────────┐ │
-│ │                                                                     │ │
-│ └─────────────────────────────────────────────────────────────────────┘ │
-│                                                                         │
-│ Guest Name(s)                                                           │
-│ ┌─────────────────────────────────────────────────────────────────────┐ │
-│ │                                                                     │ │
-│ └─────────────────────────────────────────────────────────────────────┘ │
-│ 💡 We'll pre-load their vocabulary and past appearances                 │
-│                                                                         │
-│ Target Keywords (optional)                                              │
-│ ┌─────────────────────────────────────────────────────────────────────┐ │
-│ │                                                                     │ │
-│ └─────────────────────────────────────────────────────────────────────┘ │
-│ 💡 Help us optimize for SEO                                             │
-│                                                                         │
-│                              [Skip for now]  [Start Processing →]       │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-**Step 3: Processing**
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│ Processing: "Episode 82 - Dr. Jane Smith"                               │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│     ████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░  60%                      │
-│                                                                         │
-│     ✓ Audio uploaded                                                    │
-│     ✓ Transcription complete                                            │
-│     ● Running intelligence analysis...                                  │
-│     ○ Generating show notes                                             │
-│     ○ Creating social posts                                             │
-│                                                                         │
-│     Estimated time remaining: 2 minutes                                 │
-│                                                                         │
-│     💡 We'll email you when ready, or wait here                         │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-### 4.8 Episodes List
-
-**Layout:** Table with filters
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│ EPISODES                                           [+ New Transformation]│
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│ ┌─────────────────────────────────────────────────────────┐             │
-│ │ 🔍 Search episodes...                                   │             │
-│ └─────────────────────────────────────────────────────────┘             │
-│                                                                         │
-│ [All] [Last 30 days] [Has alerts] [Processing]                          │
-│                                                                         │
-│ ┌─────────────────────────────────────────────────────────────────────┐ │
-│ │ Episode                           │ Date     │ Health │ Status      │ │
-│ ├───────────────────────────────────┼──────────┼────────┼─────────────┤ │
-│ │ #142 Future of Alabaster UI       │ Jan 30   │ 84/100 │ ✓ Complete  │ │
-│ │ #141 Sleep Science Deep Dive      │ Jan 23   │ 76/100 │ ⚠️ 2 alerts │ │
-│ │ #140 Gut Health Fundamentals      │ Jan 16   │ 91/100 │ ✓ Complete  │ │
-│ │ #139 Interview with Dr. Smith     │ Jan 9    │ 68/100 │ ⚠️ 3 alerts │ │
-│ │ #138 New Year Goals Episode       │ Jan 2    │ —      │ ● Processing│ │
-│ └─────────────────────────────────────────────────────────────────────┘ │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Part 5: Iconography
-
-### Icon Style
-- Line icons with 1.5px stroke weight
-- 16x16px standard size
-- Use `currentColor` for flexibility
-- Rounded line caps and joins
-
-### Required Icons
-| Icon | Usage |
-|------|-------|
-| Grid/squares | Episodes |
-| Plus | New/Add |
-| Person | Guest, Profile |
-| Fire/flame | Trending |
-| Search/magnifier | Search, Discover |
-| Chart/graph | Analytics, Dashboard |
-| Settings/gear | Settings |
-| Export/share | Export actions |
-| Check | Success, complete |
-| Warning triangle | Alerts |
-| X/close | Errors, dismiss |
-| Clock | Timestamps, processing |
-| Arrow up/down | Trends |
-| Link | External links |
-| Copy | Copy to clipboard |
-
-### Example Icon SVG
-```html
-<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-    <path d="M2 4.5A2.5 2.5 0 014.5 2h7A2.5 2.5 0 0114 4.5v7a2.5 2.5 0 01-2.5 2.5h-7A2.5 2.5 0 012 11.5v-7z" 
-          stroke="currentColor" 
-          stroke-width="1.5"/>
-</svg>
-```
-
----
-
-## Part 6: Responsive Behavior
-
-### Breakpoints
-| Name | Width | Layout Changes |
-|------|-------|----------------|
-| Desktop | 1280px+ | Full two-column layout, sidebar visible |
-| Tablet | 768px–1279px | Collapsed sidebar, single-column canvas grid |
-| Mobile | <768px | Hidden sidebar (hamburger), stacked cards |
-
-### Tablet Adjustments
-- Sidebar becomes collapsible icon-only rail
-- Canvas grid becomes single column
-- Insight grid becomes 2 columns then 1
-
-### Mobile Priorities
-1. Episode processing status
-2. Show notes viewing and copying
-3. Dashboard health scores
-4. Navigation to key sections
-
----
-
-## Part 7: Accessibility
-
-### Requirements
-- WCAG 2.1 AA compliance
-- Minimum contrast ratio 4.5:1 for text
-- Focus indicators on all interactive elements
-- Keyboard navigation support
-- Screen reader labels for icons
-- Alt text for charts (data tables as fallback)
-
-### Focus Styles
-```css
-:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.3);
-}
-```
-
-### Color Independence
-- Never use color alone to convey meaning
-- Include icons/text labels with status colors
-- Progress bars include numeric values
-
----
-
-## Part 8: Logo
-
-### Primary Logo Mark
-Audio waveform in a rounded square container.
-
-```html
-<svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-    <rect width="32" height="32" rx="8" fill="white"/>
-    <path d="M16 8V24M11 13V19M21 13V19M6 15V17M26 15V17" 
-          stroke="black" 
-          stroke-width="2" 
-          stroke-linecap="round"/>
-    <rect x="0.5" y="0.5" width="31" height="31" rx="7.5" stroke="#EDEDEC"/>
-</svg>
-```
-
-### Logo Specifications
-- Square format: 32x32px standard
-- Border radius: 8px (matches `--radius-lg`)
-- Stroke: 2px black lines
-- Background: White with soft border
-
----
-
-## Part 9: Implementation Notes
+## Part 9: Implementation Notes (Global Styles)
 
 ### CSS Custom Properties (Complete)
+
 ```css
 :root {
     /* Backgrounds */
@@ -1406,16 +1004,11 @@ Audio waveform in a rounded square container.
     /* Animation */
     --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
 }
-```
 
-### Font Loading
-```html
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 ```
 
 ### Base Styles
+
 ```css
 * {
     margin: 0;
@@ -1432,47 +1025,12 @@ body {
     background-size: 40px 40px;
 }
 
-h1, h2, h3 { 
-    font-weight: 600; 
-    letter-spacing: -0.02em; 
-}
 ```
 
 ---
 
-## Appendix: Component Checklist
+*End of Design System (v2)*
 
-### Core Components
-- [ ] App shell (sidebar + main)
-- [ ] Navigation items (default, hover, active)
-- [ ] Topo card (with hover effect)
-- [ ] Metric card (with progress bar)
-- [ ] Guest item card
-- [ ] Alert card (all status variants)
-- [ ] Buttons (primary, secondary)
-- [ ] Badges (default, status variants)
-- [ ] Search bar
-- [ ] Text input
-- [ ] Progress bars (standard, thin)
-- [ ] Timestamp links
-- [ ] Health score displays
-- [ ] Freshness meter
-- [ ] Section headers (mono labels)
-- [ ] Page headers
-- [ ] Card headers
-- [ ] Dividers
+```
 
-### Page Templates
-- [ ] Episode detail (Show Notes tab)
-- [ ] Episode detail (Intelligence tab)
-- [ ] Content Health Dashboard
-- [ ] Pre-Interview Brief
-- [ ] Expert Discovery
-- [ ] Trending Topics
-- [ ] Upload flow (3 steps)
-- [ ] Episodes list
-- [ ] Empty states
-
----
-
-*End of Design System*
+```

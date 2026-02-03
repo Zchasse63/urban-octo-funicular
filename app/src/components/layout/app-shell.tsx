@@ -54,21 +54,15 @@ export function AppShell({ children }: AppShellProps) {
         </span>
       </header>
 
-      {/* App Container - CSS Grid layout on desktop */}
-      <div
-        className="min-h-screen md:grid md:grid-cols-[240px_1fr]"
-        style={{ backgroundColor: "var(--bg-base)" }}
-      >
+      {/* App Container - CSS Grid layout */}
+      <div className="app-container">
         <Sidebar
           isMobileOpen={isMobileSidebarOpen}
           onMobileClose={() => setIsMobileSidebarOpen(false)}
         />
 
-        <main
-          className="min-h-screen pt-[56px] md:pt-0"
-          style={{ backgroundColor: "var(--bg-base)" }}
-        >
-          <div className="mx-auto max-w-[1400px] px-4 sm:px-6 md:px-16 py-6 md:py-10">
+        <main className="main-content">
+          <div className="mx-auto max-w-[1400px] w-full px-4 sm:px-6 md:px-16 py-6 md:py-10">
             <a
               href="#main-content"
               className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-[var(--bg-elevated)] focus:rounded-lg focus:shadow-lg"

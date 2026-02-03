@@ -27,13 +27,7 @@ function NavItem({ href, icon: Icon, label, isActive, onClick }: NavItemProps) {
     <Link
       href={href}
       onClick={onClick}
-      className={cn(
-        "flex items-center gap-3 px-3 py-3 md:py-2 rounded-[var(--radius-md)] text-sm transition-all duration-[var(--duration-normal)]",
-        "min-h-[44px] md:min-h-0",
-        isActive
-          ? "bg-white text-[var(--text-primary)] shadow-[var(--shadow-topo)]"
-          : "text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
-      )}
+      className={cn("nav-item", isActive && "active")}
       aria-current={isActive ? "page" : undefined}
     >
       <Icon className="w-4 h-4" strokeWidth={1.5} />
@@ -113,6 +107,55 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
     { href: "/support", icon: HelpCircle, label: "Support" },
   ];
 
+  const sidebarContent = (
+    <>
+      <PodBrainLogo />
+
+      <div className="flex-1 overflow-y-auto px-4">
+        <NavSection title="Workspace">
+          {workspaceItems.map((item) => (
+            <NavItem
+              key={item.href}
+              href={item.href}
+              icon={item.icon}
+              label={item.label}
+              isActive={pathname === item.href || pathname.startsWith(item.href + "/")}
+              onClick={onMobileClose}
+            />
+          ))}
+        </NavSection>
+
+        <NavSection title="Discover">
+          {discoverItems.map((item) => (
+            <NavItem
+              key={item.href}
+              href={item.href}
+              icon={item.icon}
+              label={item.label}
+              isActive={pathname === item.href || pathname.startsWith(item.href + "/")}
+              onClick={onMobileClose}
+            />
+          ))}
+        </NavSection>
+      </div>
+
+      <div className="px-4 pt-4 border-t" style={{ borderColor: "var(--border-soft)" }}>
+        <nav className="flex flex-col gap-1">
+          {bottomItems.map((item) => (
+            <NavItem
+              key={item.href}
+              href={item.href}
+              icon={item.icon}
+              label={item.label}
+              isActive={pathname === item.href || pathname.startsWith(item.href + "/")}
+              onClick={onMobileClose}
+            />
+          ))}
+        </nav>
+      </div>
+    </>
+  );
+
   return (
     <>
       {/* Mobile Backdrop */}
@@ -124,68 +167,23 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
         />
       )}
 
-      {/* Sidebar - Fixed on mobile, static in grid on desktop */}
+      {/* Mobile Sidebar - Fixed overlay with slide animation */}
       <aside
         className={cn(
-          // Mobile: fixed overlay with slide animation
-          "fixed left-0 top-0 h-screen w-[280px] z-50",
-          "transition-transform duration-300 ease-in-out",
-          isMobileOpen ? "translate-x-0" : "-translate-x-full",
-          // Desktop: static within grid, no fixed positioning
-          "md:static md:translate-x-0 md:w-full md:h-auto md:min-h-screen md:z-auto",
-          // Common styles
-          "flex flex-col py-6 border-r"
+          "sidebar-mobile md:hidden",
+          isMobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
-        style={{
-          backgroundColor: "var(--bg-base)",
-          borderColor: "var(--border-soft)",
-        }}
         aria-label="Main navigation"
       >
-        <PodBrainLogo />
+        {sidebarContent}
+      </aside>
 
-        <div className="flex-1 overflow-y-auto px-3">
-          <NavSection title="Workspace">
-            {workspaceItems.map((item) => (
-              <NavItem
-                key={item.href}
-                href={item.href}
-                icon={item.icon}
-                label={item.label}
-                isActive={pathname === item.href || pathname.startsWith(item.href + "/")}
-                onClick={onMobileClose}
-              />
-            ))}
-          </NavSection>
-
-          <NavSection title="Discover">
-            {discoverItems.map((item) => (
-              <NavItem
-                key={item.href}
-                href={item.href}
-                icon={item.icon}
-                label={item.label}
-                isActive={pathname === item.href || pathname.startsWith(item.href + "/")}
-                onClick={onMobileClose}
-              />
-            ))}
-          </NavSection>
-        </div>
-
-        <div className="px-3 pt-4 border-t" style={{ borderColor: "var(--border-soft)" }}>
-          <nav className="flex flex-col gap-1">
-            {bottomItems.map((item) => (
-              <NavItem
-                key={item.href}
-                href={item.href}
-                icon={item.icon}
-                label={item.label}
-                isActive={pathname === item.href || pathname.startsWith(item.href + "/")}
-                onClick={onMobileClose}
-              />
-            ))}
-          </nav>
-        </div>
+      {/* Desktop Sidebar - Static within CSS Grid */}
+      <aside
+        className="sidebar-desktop hidden md:flex"
+        aria-label="Main navigation"
+      >
+        {sidebarContent}
       </aside>
     </>
   );

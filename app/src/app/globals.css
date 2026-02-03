@@ -107,6 +107,90 @@ body {
   line-height: 1.5;
 }
 
+/* ============================================
+   LAYOUT - CSS Grid App Shell
+   ============================================ */
+
+/* App Container - Grid layout on desktop, stacked on mobile */
+.app-container {
+  display: block;
+  min-height: 100vh;
+  background-color: var(--bg-base);
+}
+
+@media (min-width: 768px) {
+  .app-container {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+  }
+}
+
+/* Mobile Sidebar - Fixed overlay */
+.sidebar-mobile {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  width: 280px;
+  z-index: 50;
+  background-color: var(--bg-base);
+  border-right: 1px solid var(--border-soft);
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease-in-out;
+}
+
+/* Desktop Sidebar - Static within grid */
+.sidebar-desktop {
+  background-color: var(--bg-base);
+  border-right: 1px solid var(--border-soft);
+  padding: 24px 16px;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Main Content Area */
+.main-content {
+  min-height: 100vh;
+  padding-top: 56px; /* Account for mobile header */
+  background-color: var(--bg-base);
+}
+
+@media (min-width: 768px) {
+  .main-content {
+    padding-top: 0;
+    padding: 40px 64px;
+  }
+}
+
+/* ============================================
+   NAVIGATION - Nav Item Styling
+   ============================================ */
+
+.nav-item {
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s;
+}
+
+.nav-item:hover {
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+}
+
+.nav-item.active {
+  background: #fff;
+  box-shadow: var(--shadow-topo);
+  color: var(--text-primary);
+}
+
 /* Typography */
 h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
