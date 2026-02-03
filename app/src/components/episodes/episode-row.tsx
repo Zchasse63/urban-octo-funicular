@@ -23,9 +23,34 @@ interface EpisodeRowProps {
 
 function getHealthScoreColor(score: number | null): string {
   if (score === null) return 'text-[var(--text-tertiary)]'
-  if (score > 80) return 'text-[var(--accent-green)]'
-  if (score >= 60) return 'text-[var(--accent-amber)]'
+  if (score >= 80) return 'text-[var(--accent-green)]'
+  if (score >= 50) return 'text-[var(--accent-amber)]'
   return 'text-[var(--accent-red)]'
+}
+
+function getHealthScoreGradient(score: number | null): { background: string; border: string } {
+  if (score === null) {
+    return {
+      background: 'transparent',
+      border: 'var(--border-soft)'
+    }
+  }
+  if (score >= 80) {
+    return {
+      background: 'linear-gradient(135deg, rgba(52,199,89,0.1) 0%, rgba(52,199,89,0.05) 100%)',
+      border: 'rgba(52,199,89,0.2)'
+    }
+  }
+  if (score >= 50) {
+    return {
+      background: 'linear-gradient(135deg, rgba(245,158,11,0.1) 0%, rgba(245,158,11,0.05) 100%)',
+      border: 'rgba(245,158,11,0.2)'
+    }
+  }
+  return {
+    background: 'linear-gradient(135deg, rgba(239,68,68,0.1) 0%, rgba(239,68,68,0.05) 100%)',
+    border: 'rgba(239,68,68,0.2)'
+  }
 }
 
 function StatusBadge({ status, alertCount }: { status: EpisodeStatus; alertCount?: number }) {
@@ -82,13 +107,15 @@ export function EpisodeRow({ episode, onClick }: EpisodeRowProps) {
     }
   }
 
+  const scoreGradient = getHealthScoreGradient(episode.healthScore)
+
   return (
     <>
-      {/* Desktop table row */}
+      {/* Desktop table row with enhanced hover states */}
       <tr
         className={cn(
-          'hidden sm:table-row group border-b border-[var(--border-soft)] transition-colors duration-150',
-          'hover:bg-[var(--bg-subtle)] cursor-pointer',
+          'hidden sm:table-row group border-b border-[var(--border-soft)] transition-all duration-200 ease-out',
+          'hover:border-[rgba(0,0,0,0.08)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.04),0_4px_16px_rgba(0,0,0,0.04)] hover:-translate-y-px cursor-pointer',
           'focus-visible:outline-none focus-visible:bg-[var(--bg-subtle)]'
         )}
         onClick={handleClick}
@@ -113,12 +140,20 @@ export function EpisodeRow({ episode, onClick }: EpisodeRowProps) {
           </span>
         </td>
         <td className="py-4 px-4">
-          <span className={cn(
-            'font-mono text-sm font-semibold',
-            getHealthScoreColor(episode.healthScore)
-          )}>
-            {episode.healthScore !== null ? episode.healthScore : '--'}
-          </span>
+          <div
+            className="inline-flex items-center justify-center w-12 h-12 rounded-full border"
+            style={{
+              background: scoreGradient.background,
+              borderColor: scoreGradient.border
+            }}
+          >
+            <span className={cn(
+              'font-mono text-sm font-semibold tabular-nums',
+              getHealthScoreColor(episode.healthScore)
+            )}>
+              {episode.healthScore !== null ? episode.healthScore : '--'}
+            </span>
+          </div>
         </td>
         <td className="py-4 px-4">
           <StatusBadge status={episode.status} alertCount={episode.alertCount} />
@@ -155,12 +190,20 @@ export function EpisodeRow({ episode, onClick }: EpisodeRowProps) {
                 <span className="text-[var(--text-secondary)]">
                   {episode.date}
                 </span>
-                <span className={cn(
-                  'font-mono font-semibold',
-                  getHealthScoreColor(episode.healthScore)
-                )}>
-                  Score: {episode.healthScore !== null ? episode.healthScore : '--'}
-                </span>
+                <div
+                  className="inline-flex items-center justify-center w-10 h-10 rounded-full border"
+                  style={{
+                    background: scoreGradient.background,
+                    borderColor: scoreGradient.border
+                  }}
+                >
+                  <span className={cn(
+                    'font-mono text-xs font-semibold tabular-nums',
+                    getHealthScoreColor(episode.healthScore)
+                  )}>
+                    {episode.healthScore !== null ? episode.healthScore : '--'}
+                  </span>
+                </div>
               </div>
             </div>
           </div>

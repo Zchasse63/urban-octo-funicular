@@ -27,11 +27,50 @@ function NavItem({ href, icon: Icon, label, isActive, onClick }: NavItemProps) {
     <Link
       href={href}
       onClick={onClick}
-      className={cn("nav-item", isActive && "active")}
+      className={cn(
+        // Base styles
+        "group relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium",
+        "transition-all duration-200 ease-out",
+        // Default state
+        !isActive && "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--hover-overlay)]",
+        // Active state with accent indicator
+        isActive && [
+          "text-[var(--text-primary)] bg-white",
+          "shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.03)]",
+        ]
+      )}
       aria-current={isActive ? "page" : undefined}
     >
-      <Icon className="w-4 h-4" strokeWidth={1.5} />
-      <span>{label}</span>
+      {/* Active indicator bar */}
+      {isActive && (
+        <div
+          className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-[var(--accent-blue)]"
+          style={{
+            boxShadow: "0 0 8px rgba(0, 122, 255, 0.4)",
+          }}
+        />
+      )}
+
+      {/* Icon with color transition */}
+      <Icon
+        className={cn(
+          "w-[18px] h-[18px] transition-colors duration-200",
+          isActive ? "text-[var(--accent-blue)]" : "text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]"
+        )}
+        strokeWidth={1.75}
+      />
+
+      {/* Label */}
+      <span className="flex-1">{label}</span>
+
+      {/* Hover highlight (subtle) */}
+      <div
+        className={cn(
+          "absolute inset-0 rounded-lg opacity-0 transition-opacity duration-200",
+          !isActive && "group-hover:opacity-100"
+        )}
+        style={{ background: "var(--hover-overlay)" }}
+      />
     </Link>
   );
 }
@@ -44,9 +83,14 @@ function NavSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mb-8">
-      <span className="mono mb-2 ml-3 block">{title}</span>
-      <nav className="flex flex-col gap-1">{children}</nav>
+    <div className="mb-6">
+      <div className="flex items-center gap-2 mb-2 ml-3">
+        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
+          {title}
+        </span>
+        <div className="flex-1 h-px bg-gradient-to-r from-[var(--border-soft)] to-transparent" />
+      </div>
+      <nav className="flex flex-col gap-0.5">{children}</nav>
     </div>
   );
 }
@@ -54,12 +98,21 @@ function NavSection({
 function PodBrainLogo() {
   return (
     <div className="flex items-center gap-3 px-3 mb-8">
+      {/* Logo container with gradient background and subtle glow */}
       <div
-        className="w-9 h-9 rounded-[var(--radius-lg)] flex items-center justify-center"
+        className="relative w-9 h-9 rounded-[10px] flex items-center justify-center overflow-hidden"
         style={{
-          background: "var(--text-primary)",
+          background: "linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)",
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
         }}
       >
+        {/* Shine overlay */}
+        <div
+          className="absolute inset-0 opacity-30"
+          style={{
+            background: "linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%)",
+          }}
+        />
         {/* Audio waveform icon */}
         <svg
           width="20"
@@ -67,7 +120,7 @@ function PodBrainLogo() {
           viewBox="0 0 20 20"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="text-white"
+          className="text-white relative z-10"
         >
           <rect x="2" y="8" width="2" height="4" rx="1" fill="currentColor" />
           <rect x="6" y="5" width="2" height="10" rx="1" fill="currentColor" />
@@ -75,9 +128,14 @@ function PodBrainLogo() {
           <rect x="14" y="6" width="2" height="8" rx="1" fill="currentColor" />
         </svg>
       </div>
-      <span className="text-[var(--text-primary)] font-semibold text-lg tracking-tight">
-        PodBrain
-      </span>
+      <div className="flex flex-col">
+        <span className="text-[var(--text-primary)] font-semibold text-[15px] tracking-tight leading-tight">
+          PodBrain
+        </span>
+        <span className="text-[10px] text-[var(--text-tertiary)] font-medium tracking-wide uppercase">
+          Intelligence
+        </span>
+      </div>
     </div>
   );
 }

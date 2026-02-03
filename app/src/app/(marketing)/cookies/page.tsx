@@ -30,8 +30,8 @@ export default function CookiePolicyPage() {
         {/* Introduction */}
         <section>
           <p style={{ color: "var(--text-primary)", lineHeight: "1.8" }}>
-            This Cookie Policy explains how PodBrain Inc. ("we", "us", or "our") uses cookies and
-            similar tracking technologies when you visit getpodbrain.ai (the "Service"). This policy
+            This Cookie Policy explains how PodBrain Inc. (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) uses cookies and
+            similar tracking technologies when you visit getpodbrain.ai (the &quot;Service&quot;). This policy
             should be read alongside our Privacy Policy.
           </p>
         </section>
@@ -48,7 +48,7 @@ export default function CookiePolicyPage() {
             Cookies are small text files that are stored on your device (computer, tablet, or mobile)
             when you visit a website. They help the website remember your actions and preferences
             (such as login credentials, language settings, and display preferences) over a period of
-            time, so you don't have to re-enter them whenever you come back to the site or browse
+            time, so you don&apos;t have to re-enter them whenever you come back to the site or browse
             from one page to another.
           </p>
         </section>
@@ -220,7 +220,7 @@ export default function CookiePolicyPage() {
               their settings. You can set your browser to refuse cookies or delete existing cookies.
             </li>
             <li>
-              <strong>Private browsing:</strong> Using your browser's private/incognito mode will
+              <strong>Private browsing:</strong> Using your browser&apos;s private/incognito mode will
               limit cookie storage to your current session.
             </li>
           </ul>
@@ -239,7 +239,7 @@ export default function CookiePolicyPage() {
             Do Not Track Signals
           </h2>
           <p style={{ color: "var(--text-primary)", lineHeight: "1.8" }}>
-            Our Service currently does not respond to "Do Not Track" (DNT) signals. However, you can
+            Our Service currently does not respond to &quot;Do Not Track&quot; (DNT) signals. However, you can
             configure your browser or use privacy-focused browser extensions to limit tracking as
             described above.
           </p>
@@ -256,7 +256,7 @@ export default function CookiePolicyPage() {
           <p style={{ color: "var(--text-primary)", lineHeight: "1.8" }}>
             We may update this Cookie Policy from time to time to reflect changes in our practices or
             for legal, operational, or regulatory reasons. When we make changes, we will update the
-            "Last updated" date at the top of this policy. We encourage you to review this policy
+            &quot;Last updated&quot; date at the top of this policy. We encourage you to review this policy
             periodically.
           </p>
         </section>

@@ -4,21 +4,37 @@ import { cn } from "@/lib/utils"
 // Topo Card - Primary elevated card with layered shadow
 const TopoCard = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & { hover?: boolean }
->(({ className, hover = true, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "relative overflow-hidden rounded-xl border border-[var(--border-soft)] bg-[var(--bg-elevated)] p-6",
-      "shadow-[0_1px_2px_rgba(0,0,0,0.02),0_4px_12px_rgba(0,0,0,0.03),0_12px_32px_rgba(0,0,0,0.04)]",
-      hover && "transition-all duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] hover:-translate-y-0.5 hover:shadow-[0_4px_6px_rgba(0,0,0,0.02),0_15px_45px_rgba(0,0,0,0.06)]",
-      // Top edge highlight
-      "before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/80 before:to-transparent",
-      className
-    )}
-    {...props}
-  />
-))
+  React.HTMLAttributes<HTMLDivElement> & {
+    hover?: boolean
+    glow?: boolean
+    accentColor?: 'blue' | 'green' | 'amber' | 'none'
+  }
+>(({ className, hover = true, glow = false, accentColor = 'none', ...props }, ref) => {
+  const glowColors = {
+    blue: 'hover:shadow-[0_4px_6px_rgba(0,0,0,0.02),0_15px_45px_rgba(0,122,255,0.1)]',
+    green: 'hover:shadow-[0_4px_6px_rgba(0,0,0,0.02),0_15px_45px_rgba(52,199,89,0.1)]',
+    amber: 'hover:shadow-[0_4px_6px_rgba(0,0,0,0.02),0_15px_45px_rgba(245,158,11,0.1)]',
+    none: 'hover:shadow-[0_4px_6px_rgba(0,0,0,0.02),0_15px_45px_rgba(0,0,0,0.06)]'
+  }
+
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "relative overflow-hidden rounded-xl border border-[var(--border-soft)] bg-[var(--bg-elevated)] p-6",
+        "shadow-[0_1px_2px_rgba(0,0,0,0.02),0_2px_4px_rgba(0,0,0,0.02),0_4px_8px_rgba(0,0,0,0.02),0_8px_16px_rgba(0,0,0,0.02)]",
+        hover && "transition-all duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] hover:-translate-y-1",
+        hover && (glow ? glowColors[accentColor] : glowColors.none),
+        // Top edge highlight
+        "before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/80 before:to-transparent",
+        // Inner top shine
+        "after:absolute after:inset-x-0 after:top-0 after:h-[1px] after:bg-gradient-to-r after:from-transparent after:via-white/40 after:to-transparent",
+        className
+      )}
+      {...props}
+    />
+  )
+})
 TopoCard.displayName = "TopoCard"
 
 // Card Header with mono label
@@ -59,22 +75,51 @@ const CardContent = React.forwardRef<
 ))
 CardContent.displayName = "CardContent"
 
-// Metric Card - For displaying scores and KPIs (with topo styling)
-const MetricCard = React.forwardRef<
+// Card Footer with border separator
+const CardFooter = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
     className={cn(
-      "relative overflow-hidden rounded-xl border border-[var(--border-soft)] bg-[var(--bg-elevated)] p-4",
-      "shadow-[0_1px_2px_rgba(0,0,0,0.02),0_4px_12px_rgba(0,0,0,0.03),0_12px_32px_rgba(0,0,0,0.04)]",
-      "before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/80 before:to-transparent",
+      "mt-5 pt-4 border-t border-[var(--border-soft)] flex items-center justify-between",
       className
     )}
     {...props}
   />
 ))
+CardFooter.displayName = "CardFooter"
+
+// Metric Card - For displaying scores and KPIs (with topo styling)
+const MetricCard = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & {
+    trend?: 'up' | 'down' | 'neutral'
+    interactive?: boolean
+  }
+>(({ className, trend, interactive = false, ...props }, ref) => {
+  const trendColors = {
+    up: 'hover:border-[var(--accent-green)]/30',
+    down: 'hover:border-[var(--accent-red)]/30',
+    neutral: 'hover:border-[var(--accent-blue)]/30'
+  }
+
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "relative overflow-hidden rounded-xl border border-[var(--border-soft)] bg-[var(--bg-elevated)] p-4",
+        "shadow-[0_1px_2px_rgba(0,0,0,0.02),0_2px_4px_rgba(0,0,0,0.02),0_4px_8px_rgba(0,0,0,0.02),0_8px_16px_rgba(0,0,0,0.02)]",
+        "before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/80 before:to-transparent",
+        interactive && "transition-all duration-300 hover:-translate-y-0.5",
+        interactive && trend && trendColors[trend],
+        className
+      )}
+      {...props}
+    />
+  )
+})
 MetricCard.displayName = "MetricCard"
 
 // Metric Value
@@ -140,6 +185,7 @@ export {
   CardHeader,
   CardTitle,
   CardContent,
+  CardFooter,
   MetricCard,
   MetricValue,
   MetricLabel,

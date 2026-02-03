@@ -30,9 +30,9 @@ export default function TermsPage() {
         {/* Introduction */}
         <section>
           <p style={{ color: "var(--text-primary)", lineHeight: "1.8" }}>
-            These Terms of Service ("Terms") govern your access to and use of PodBrain Inc.'s
-            ("we", "us", or "our") website, services, and applications (collectively, the
-            "Service"). By accessing or using the Service, you agree to be bound by these Terms. If
+            These Terms of Service (&quot;Terms&quot;) govern your access to and use of PodBrain Inc.&apos;s
+            (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) website, services, and applications (collectively, the
+            &quot;Service&quot;). By accessing or using the Service, you agree to be bound by these Terms. If
             you disagree with any part of the Terms, you may not access the Service.
           </p>
         </section>
@@ -174,7 +174,7 @@ export default function TermsPage() {
               content
             </li>
             <li>Distribute malware, viruses, or other malicious code</li>
-            <li>Attempt to gain unauthorized access to our systems or other users' accounts</li>
+            <li>Attempt to gain unauthorized access to our systems or other users&apos; accounts</li>
             <li>Interfere with or disrupt the Service or servers</li>
             <li>Use automated systems to scrape or data mine the Service</li>
             <li>Resell or redistribute the Service without authorization</li>
@@ -238,7 +238,7 @@ export default function TermsPage() {
           >
             <strong>Billing:</strong> By subscribing to a paid plan, you authorize us to charge your
             payment method on a recurring basis. Subscription fees are non-refundable except as
-            required by law. We reserve the right to change pricing with 30 days' notice.
+            required by law. We reserve the right to change pricing with 30 days&apos; notice.
           </p>
           <p
             style={{
@@ -289,7 +289,7 @@ export default function TermsPage() {
             Disclaimer of Warranties
           </h2>
           <p style={{ color: "var(--text-primary)", lineHeight: "1.8" }}>
-            THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND,
+            THE SERVICE IS PROVIDED &quot;AS IS&quot; AND &quot;AS AVAILABLE&quot; WITHOUT WARRANTIES OF ANY KIND,
             WHETHER EXPRESS OR IMPLIED. WE DISCLAIM ALL WARRANTIES, INCLUDING IMPLIED WARRANTIES OF
             MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT
             WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, SECURE, OR ERROR-FREE, OR THAT DEFECTS
@@ -330,7 +330,7 @@ export default function TermsPage() {
           <p style={{ color: "var(--text-primary)", lineHeight: "1.8" }}>
             You agree to indemnify, defend, and hold harmless PodBrain Inc., its officers,
             directors, employees, and agents from any claims, liabilities, damages, losses, and
-            expenses, including reasonable attorneys' fees, arising out of or in any way connected
+            expenses, including reasonable attorneys&apos; fees, arising out of or in any way connected
             with your access to or use of the Service, your violation of these Terms, or your
             infringement of any intellectual property or other rights of any person or entity.
           </p>
@@ -364,7 +364,7 @@ export default function TermsPage() {
           </h2>
           <p style={{ color: "var(--text-primary)", lineHeight: "1.8" }}>
             We reserve the right to modify these Terms at any time. We will notify you of material
-            changes by posting the updated Terms on this page and updating the "Last updated" date.
+            changes by posting the updated Terms on this page and updating the &quot;Last updated&quot; date.
             Your continued use of the Service after changes become effective constitutes acceptance
             of the revised Terms. If you disagree with the changes, you must stop using the Service
             and cancel your account.

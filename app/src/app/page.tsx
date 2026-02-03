@@ -18,7 +18,7 @@ export default function LandingPage() {
           style={{ color: "var(--text-secondary)" }}
         >
           AI-powered platform that converts your podcast episodes into SEO-optimized show notes,
-          promotional content, and guest packages. Let AI learn your show's vocabulary for
+          promotional content, and guest packages. Let AI learn your show&apos;s vocabulary for
           unmatched accuracy.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
@@ -71,7 +71,7 @@ export default function LandingPage() {
             </h3>
             <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
               Automatic keyword analysis, schema markup generation, and SEO scoring to maximize your
-              podcast's discoverability.
+              podcast&apos;s discoverability.
             </p>
           </div>
 
@@ -273,8 +273,8 @@ export default function LandingPage() {
               </div>
             </div>
             <p style={{ color: "var(--text-secondary)" }}>
-              "PodBrain cut my post-production time by 80%. The AI actually understands technical
-              jargon and gets the transcriptions perfect. Game changer."
+              &quot;PodBrain cut my post-production time by 80%. The AI actually understands technical
+              jargon and gets the transcriptions perfect. Game changer.&quot;
             </p>
           </div>
 
@@ -299,8 +299,8 @@ export default function LandingPage() {
               </div>
             </div>
             <p style={{ color: "var(--text-secondary)" }}>
-              "I used to spend hours creating social posts. Now I get 30+ assets instantly. My
-              LinkedIn engagement has tripled since using PodBrain."
+              &quot;I used to spend hours creating social posts. Now I get 30+ assets instantly. My
+              LinkedIn engagement has tripled since using PodBrain.&quot;
             </p>
           </div>
 
@@ -325,8 +325,8 @@ export default function LandingPage() {
               </div>
             </div>
             <p style={{ color: "var(--text-secondary)" }}>
-              "The guest promo packages are incredible. My guests love sharing their episodes
-              because everything is ready to go. Worth every penny."
+              &quot;The guest promo packages are incredible. My guests love sharing their episodes
+              because everything is ready to go. Worth every penny.&quot;
             </p>
           </div>
         </div>

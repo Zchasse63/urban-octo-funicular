@@ -66,6 +66,17 @@ export function AssetEditor({
     }
   }, [editedContent])
 
+  const handleContentChange = (value: string) => {
+    setEditedContent(value)
+    setHasChanges(value !== content)
+  }
+
+  const handleSave = () => {
+    if (!isSaving && hasChanges) {
+      onSave(editedContent)
+    }
+  }
+
   // Handle keyboard shortcuts
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -92,18 +103,7 @@ export function AssetEditor({
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, hasChanges, editedContent])
-
-  const handleContentChange = (value: string) => {
-    setEditedContent(value)
-    setHasChanges(value !== content)
-  }
-
-  const handleSave = () => {
-    if (!isSaving && hasChanges) {
-      onSave(editedContent)
-    }
-  }
+  }, [isOpen, hasChanges, editedContent, handleSave])
 
   const handleCopy = async () => {
     try {

@@ -136,21 +136,32 @@ export function UploadWizard() {
 
   return (
     <div className="w-full max-w-2xl mx-auto">
-      {/* Step Indicator */}
+      {/* Enhanced Step Indicator with progress line */}
       <div className="mb-8">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between relative">
+          {/* Progress line background */}
+          <div className="absolute top-5 left-0 right-0 h-[2px] bg-[var(--border-soft)]" style={{ zIndex: 0 }} />
+          {/* Filled progress line */}
+          <div
+            className="absolute top-5 left-0 h-[2px] bg-[var(--accent-green)] transition-all duration-300"
+            style={{
+              width: `${((currentStep - 1) / (steps.length - 1)) * 100}%`,
+              zIndex: 0
+            }}
+          />
+
           {steps.map((step, index) => (
-            <div key={step.id} className="flex items-center flex-1">
-              <div className="flex flex-col items-center">
+            <div key={step.id} className="flex items-center flex-1" style={{ zIndex: 1 }}>
+              <div className="flex flex-col items-center relative">
                 <div
                   className={`
                     w-10 h-10 rounded-full flex items-center justify-center
                     font-medium text-sm transition-all duration-300
                     ${currentStep > step.id
-                      ? 'bg-[var(--accent-green)] text-white'
+                      ? 'bg-[var(--accent-green)] border-[var(--accent-green)] text-white shadow-[0_2px_8px_rgba(52,199,89,0.3)]'
                       : currentStep === step.id
-                        ? 'bg-[var(--text-primary)] text-white'
-                        : 'bg-[var(--bg-subtle)] text-[var(--text-tertiary)] border border-[var(--border-soft)]'
+                        ? 'bg-[var(--text-primary)] border-[var(--text-primary)] text-white shadow-[0_2px_8px_rgba(0,0,0,0.2)]'
+                        : 'bg-white border-[var(--border-soft)] text-[var(--text-tertiary)] border'
                     }
                   `}
                 >
@@ -173,15 +184,7 @@ export function UploadWizard() {
                 </span>
               </div>
               {index < steps.length - 1 && (
-                <div
-                  className={`
-                    flex-1 h-[2px] mx-4 mt-[-20px]
-                    ${currentStep > step.id
-                      ? 'bg-[var(--accent-green)]'
-                      : 'bg-[var(--border-soft)]'
-                    }
-                  `}
-                />
+                <div className="flex-1" />
               )}
             </div>
           ))}

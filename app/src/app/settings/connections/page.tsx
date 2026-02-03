@@ -19,7 +19,7 @@ export default function ConnectionsPage() {
           Coming Soon
         </h2>
         <p className="text-sm text-[var(--text-secondary)]">
-          We're working on integrations with more podcast hosting platforms including
+          We&apos;re working on integrations with more podcast hosting platforms including
           Transistor, Libsyn, and Podbean.
         </p>
       </div>

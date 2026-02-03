@@ -30,9 +30,9 @@ export default function PrivacyPage() {
         {/* Introduction */}
         <section>
           <p style={{ color: "var(--text-primary)", lineHeight: "1.8" }}>
-            This Privacy Policy describes how PodBrain Inc. ("we", "us", or "our") collects, uses,
+            This Privacy Policy describes how PodBrain Inc. (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) collects, uses,
             and shares your personal information when you use our services at getpodbrain.ai (the
-            "Service"). By using the Service, you agree to the collection and use of information in
+            &quot;Service&quot;). By using the Service, you agree to the collection and use of information in
             accordance with this policy.
           </p>
         </section>
@@ -243,7 +243,7 @@ export default function PrivacyPage() {
             className="text-2xl font-bold mb-4"
             style={{ color: "var(--text-primary)", letterSpacing: "-0.02em" }}
           >
-            Children's Privacy
+            Children&apos;s Privacy
           </h2>
           <p style={{ color: "var(--text-primary)", lineHeight: "1.8" }}>
             Our Service is not directed to individuals under the age of 18. We do not knowingly
@@ -262,7 +262,7 @@ export default function PrivacyPage() {
           </h2>
           <p style={{ color: "var(--text-primary)", lineHeight: "1.8" }}>
             We may update our Privacy Policy from time to time. We will notify you of any changes by
-            posting the new Privacy Policy on this page and updating the "Last updated" date. You
+            posting the new Privacy Policy on this page and updating the &quot;Last updated&quot; date. You
             are advised to review this Privacy Policy periodically for any changes. Changes are
             effective when posted on this page.
           </p>

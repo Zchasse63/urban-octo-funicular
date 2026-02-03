@@ -40,8 +40,8 @@ export default function NotFound() {
           className="mb-8"
           style={{ color: 'var(--text-secondary)', lineHeight: '1.6' }}
         >
-          Looks like this episode got lost in the feed. The page you're looking for
-          doesn't exist or has been moved.
+          Looks like this episode got lost in the feed. The page you&apos;re looking for
+          doesn&apos;t exist or has been moved.
         </p>
 
         {/* Action Buttons */}

@@ -112,7 +112,7 @@ export function StepUpload({ uploadData, setUploadData, onContinue }: StepUpload
         setIsUploading(false)
       }
     }
-  }, [setUploadData])
+  }, [setUploadData, uploadFile])
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -168,7 +168,7 @@ export function StepUpload({ uploadData, setUploadData, onContinue }: StepUpload
         </p>
       </div>
 
-      {/* Drag and Drop Zone */}
+      {/* Drag and Drop Zone with enhanced states */}
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -179,10 +179,11 @@ export function StepUpload({ uploadData, setUploadData, onContinue }: StepUpload
           flex flex-col items-center justify-center gap-4
           cursor-pointer transition-all duration-200
           ${isDragging
-            ? 'border-[var(--accent-blue)] bg-[rgba(0,122,255,0.05)]'
-            : 'border-[var(--border-soft)] hover:border-[var(--text-tertiary)]'
+            ? 'border-[var(--accent-blue)] bg-[rgba(0,122,255,0.05)] shadow-[0_0_0_4px_rgba(0,122,255,0.1)]'
+            : uploadData.file
+              ? 'border-[var(--accent-green)] bg-[rgba(52,199,89,0.05)]'
+              : 'border-[var(--border-soft)] bg-[var(--bg-subtle)] hover:border-[var(--accent-blue)] hover:bg-[rgba(0,122,255,0.02)]'
           }
-          ${uploadData.file ? 'bg-[var(--bg-subtle)]' : ''}
         `}
       >
         <input
@@ -195,7 +196,12 @@ export function StepUpload({ uploadData, setUploadData, onContinue }: StepUpload
 
         {uploadData.file ? (
           <>
-            <div className="w-16 h-16 rounded-full bg-[var(--accent-green)] bg-opacity-10 flex items-center justify-center">
+            <div
+              className="w-16 h-16 rounded-full flex items-center justify-center shadow-md transition-transform duration-200"
+              style={{
+                background: 'linear-gradient(135deg, rgba(52,199,89,0.15) 0%, rgba(52,199,89,0.05) 100%)'
+              }}
+            >
               <FileAudio className="w-8 h-8 text-[var(--accent-green)]" />
             </div>
             <div className="text-center">
@@ -209,8 +215,19 @@ export function StepUpload({ uploadData, setUploadData, onContinue }: StepUpload
           </>
         ) : (
           <>
-            <div className="w-16 h-16 rounded-full bg-[var(--bg-subtle)] flex items-center justify-center">
-              <Upload className="w-8 h-8 text-[var(--text-secondary)]" />
+            <div
+              className={`
+                w-16 h-16 rounded-full flex items-center justify-center shadow-sm transition-all duration-200
+                ${isDragging ? 'scale-110' : 'scale-100'}
+              `}
+              style={{
+                background: isDragging
+                  ? 'linear-gradient(135deg, rgba(0,122,255,0.15) 0%, rgba(0,122,255,0.05) 100%)'
+                  : 'linear-gradient(135deg, #F5F5F4 0%, #E5E5E4 100%)',
+                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.06)'
+              }}
+            >
+              <Upload className={`w-8 h-8 ${isDragging ? 'text-[var(--accent-blue)]' : 'text-[var(--text-secondary)]'}`} />
             </div>
             <div className="text-center">
               <p className="font-medium text-[var(--text-primary)]">

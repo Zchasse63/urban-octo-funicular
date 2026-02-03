@@ -212,7 +212,7 @@ export default function TrendingPage() {
             </div>
             <div>
               <h2 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                This Week's Insights
+                This Week&apos;s Insights
               </h2>
               <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                 Based on analysis of 500+ podcasts in your niche

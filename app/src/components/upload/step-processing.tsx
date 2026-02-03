@@ -43,20 +43,32 @@ function StatusIcon({ status }: { status: StepStatus }) {
   switch (status) {
     case 'complete':
       return (
-        <div className="w-6 h-6 rounded-full bg-[var(--accent-green)] flex items-center justify-center">
+        <div
+          className="w-6 h-6 rounded-full flex items-center justify-center"
+          style={{
+            background: 'var(--accent-green)',
+            boxShadow: '0 2px 4px rgba(52,199,89,0.2)'
+          }}
+        >
           <Check className="w-4 h-4 text-white" />
         </div>
       )
     case 'active':
       return (
-        <div className="w-6 h-6 rounded-full bg-[var(--accent-blue)] flex items-center justify-center">
+        <div
+          className="w-6 h-6 rounded-full flex items-center justify-center"
+          style={{
+            background: 'var(--accent-blue)',
+            boxShadow: '0 0 0 4px rgba(0,122,255,0.2)'
+          }}
+        >
           <Loader2 className="w-4 h-4 text-white animate-spin" />
         </div>
       )
     case 'pending':
     default:
       return (
-        <div className="w-6 h-6 rounded-full border-2 border-[var(--border-soft)] flex items-center justify-center">
+        <div className="w-6 h-6 rounded-full border-2 flex items-center justify-center" style={{ borderColor: 'var(--border-soft)', backgroundColor: 'white' }}>
           <Circle className="w-3 h-3 text-[var(--text-tertiary)]" />
         </div>
       )

@@ -4,6 +4,19 @@
  */
 
 import * as React from 'react'
+import { cn } from '@/lib/utils'
+
+/**
+ * Base Skeleton component with shimmer animation
+ */
+export function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn("animate-shimmer rounded-lg bg-[var(--bg-subtle)]", className)}
+      {...props}
+    />
+  )
+}
 
 /**
  * Animated skeleton placeholder for individual cards
@@ -11,13 +24,13 @@ import * as React from 'react'
 export function CardSkeleton() {
   return (
     <div
-      className="topo-card animate-pulse"
+      className="topo-card"
       role="status"
       aria-label="Loading content"
     >
-      <div className="h-4 bg-[var(--bg-subtle)] rounded w-3/4 mb-3" />
-      <div className="h-3 bg-[var(--bg-subtle)] rounded w-full mb-2" />
-      <div className="h-3 bg-[var(--bg-subtle)] rounded w-5/6" />
+      <Skeleton className="h-4 w-3/4 mb-3" />
+      <Skeleton className="h-3 w-full mb-2" />
+      <Skeleton className="h-3 w-5/6" />
     </div>
   )
 }
@@ -84,14 +97,31 @@ export function PageLoader({ message }: { message?: string }) {
 export function TableRowSkeleton() {
   return (
     <div
-      className="flex items-center gap-4 px-4 py-3 border-b border-[var(--border-soft)] animate-pulse"
+      className="flex items-center gap-4 px-4 py-3 border-b border-[var(--border-soft)]"
       role="status"
       aria-label="Loading row"
     >
-      <div className="h-3 bg-[var(--bg-subtle)] rounded w-12" />
-      <div className="h-3 bg-[var(--bg-subtle)] rounded flex-1" />
-      <div className="h-3 bg-[var(--bg-subtle)] rounded w-24" />
-      <div className="h-3 bg-[var(--bg-subtle)] rounded w-16" />
+      <Skeleton className="h-3 w-12" />
+      <Skeleton className="h-3 flex-1" />
+      <Skeleton className="h-3 w-24" />
+      <Skeleton className="h-3 w-16" />
+    </div>
+  )
+}
+
+/**
+ * Metric card skeleton for dashboard KPIs
+ */
+export function MetricSkeleton() {
+  return (
+    <div
+      className="relative overflow-hidden rounded-xl border border-[var(--border-soft)] bg-[var(--bg-elevated)] p-4"
+      role="status"
+      aria-label="Loading metric"
+    >
+      <Skeleton className="h-3 w-20 mb-2" />
+      <Skeleton className="h-8 w-16 mb-1" />
+      <Skeleton className="h-3 w-12" />
     </div>
   )
 }

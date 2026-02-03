@@ -302,7 +302,7 @@ export default function CompetitorsPage() {
               Top Opportunity
             </h3>
             <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              Based on competitor analysis, there's a gap in <strong>bootstrapping stories</strong> and <strong>international founder perspectives</strong>.
+              Based on competitor analysis, there&apos;s a gap in <strong>bootstrapping stories</strong> and <strong>international founder perspectives</strong>.
               Consider featuring more self-funded founders and entrepreneurs from outside the US.
             </p>
           </div>

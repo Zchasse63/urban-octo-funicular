@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import Link from 'next/link'
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
 
 interface GlobalErrorProps {
@@ -118,7 +119,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                 Try Again
               </button>
 
-              <a
+              <Link
                 href="/"
                 style={{
                   display: 'inline-flex',
@@ -139,7 +140,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
               >
                 <Home style={{ width: '1rem', height: '1rem' }} />
                 Go Home
-              </a>
+              </Link>
             </div>
 
             {/* Error ID */}
