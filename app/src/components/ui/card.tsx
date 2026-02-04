@@ -11,24 +11,20 @@ const TopoCard = React.forwardRef<
   }
 >(({ className, hover = true, glow = false, accentColor = 'none', ...props }, ref) => {
   const glowColors = {
-    blue: 'hover:shadow-[0_4px_6px_rgba(0,0,0,0.02),0_15px_45px_rgba(0,122,255,0.1)]',
-    green: 'hover:shadow-[0_4px_6px_rgba(0,0,0,0.02),0_15px_45px_rgba(52,199,89,0.1)]',
-    amber: 'hover:shadow-[0_4px_6px_rgba(0,0,0,0.02),0_15px_45px_rgba(245,158,11,0.1)]',
-    none: 'hover:shadow-[0_4px_6px_rgba(0,0,0,0.02),0_15px_45px_rgba(0,0,0,0.06)]'
+    blue: 'hover:shadow-[0_4px_8px_rgba(0,0,0,0.06),0_15px_45px_rgba(0,122,255,0.15)]',
+    green: 'hover:shadow-[0_4px_8px_rgba(0,0,0,0.06),0_15px_45px_rgba(52,199,89,0.15)]',
+    amber: 'hover:shadow-[0_4px_8px_rgba(0,0,0,0.06),0_15px_45px_rgba(245,158,11,0.15)]',
+    none: 'hover:shadow-[0_4px_8px_rgba(0,0,0,0.06),0_15px_45px_rgba(0,0,0,0.10)]'
   }
 
   return (
     <div
       ref={ref}
       className={cn(
-        "relative overflow-hidden rounded-xl border border-[var(--border-soft)] bg-[var(--bg-elevated)] p-6",
-        "shadow-[0_1px_2px_rgba(0,0,0,0.02),0_2px_4px_rgba(0,0,0,0.02),0_4px_8px_rgba(0,0,0,0.02),0_8px_16px_rgba(0,0,0,0.02)]",
+        "relative overflow-hidden rounded-xl border border-[#E5E5E5] bg-white p-6",
+        "shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.08)]",
         hover && "transition-all duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] hover:-translate-y-1",
         hover && (glow ? glowColors[accentColor] : glowColors.none),
-        // Top edge highlight
-        "before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/80 before:to-transparent",
-        // Inner top shine
-        "after:absolute after:inset-x-0 after:top-0 after:h-[1px] after:bg-gradient-to-r after:from-transparent after:via-white/40 after:to-transparent",
         className
       )}
       {...props}
@@ -109,9 +105,8 @@ const MetricCard = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        "relative overflow-hidden rounded-xl border border-[var(--border-soft)] bg-[var(--bg-elevated)] p-4",
-        "shadow-[0_1px_2px_rgba(0,0,0,0.02),0_2px_4px_rgba(0,0,0,0.02),0_4px_8px_rgba(0,0,0,0.02),0_8px_16px_rgba(0,0,0,0.02)]",
-        "before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/80 before:to-transparent",
+        "relative overflow-hidden rounded-xl border border-[#E5E5E5] bg-white p-4",
+        "shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.08)]",
         interactive && "transition-all duration-300 hover:-translate-y-0.5",
         interactive && trend && trendColors[trend],
         className

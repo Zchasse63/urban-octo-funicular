@@ -5,13 +5,14 @@
    ============================================ */
 
 :root {
-  /* Backgrounds */
-  --bg-base: #FDFDFD;
-  --bg-subtle: #F7F7F6;
+  /* Backgrounds - slightly darker base so white cards pop */
+  --bg-base: #F5F5F4;
+  --bg-subtle: #EFEFEE;
   --bg-elevated: #FFFFFF;
+  --bg-surface: #F8F8F7;
 
-  /* Borders */
-  --border-soft: #EDEDEC;
+  /* Borders - more visible */
+  --border-soft: #E0E0DE;
   --border-focus: #007AFF;
 
   /* Text */
@@ -40,38 +41,38 @@
   --selected-bg: rgba(0, 122, 255, 0.06);
   --selected-border: rgba(0, 122, 255, 0.2);
 
-  /* Shadows - Topographic Depth */
+  /* Shadows - Topographic Depth (VISIBLE) */
   --shadow-topo:
-    0 1px 2px rgba(0,0,0,0.02),
-    0 4px 12px rgba(0,0,0,0.03),
-    0 12px 32px rgba(0,0,0,0.04);
+    0 1px 3px rgba(0,0,0,0.08),
+    0 4px 12px rgba(0,0,0,0.08),
+    0 12px 32px rgba(0,0,0,0.10);
   --shadow-topo-hover:
-    0 4px 6px rgba(0,0,0,0.02),
-    0 15px 45px rgba(0,0,0,0.06);
+    0 4px 8px rgba(0,0,0,0.08),
+    0 15px 45px rgba(0,0,0,0.12);
   --shadow-subtle:
-    0 1px 3px rgba(0,0,0,0.04);
+    0 1px 3px rgba(0,0,0,0.08);
   --shadow-focus:
-    0 0 0 3px rgba(0, 122, 255, 0.15);
+    0 0 0 3px rgba(0, 122, 255, 0.25);
 
-  /* Enhanced Shadow System - 4 Elevation Levels */
+  /* Enhanced Shadow System - 4 Elevation Levels (VISIBLE) */
   --shadow-elevation-1:
-    0 1px 2px rgba(0, 0, 0, 0.04),
-    0 1px 3px rgba(0, 0, 0, 0.02);
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 2px 4px rgba(0, 0, 0, 0.06);
 
   --shadow-elevation-2:
-    0 2px 4px rgba(0, 0, 0, 0.04),
-    0 4px 8px rgba(0, 0, 0, 0.04),
-    0 8px 16px rgba(0, 0, 0, 0.02);
+    0 2px 4px rgba(0, 0, 0, 0.06),
+    0 4px 8px rgba(0, 0, 0, 0.08),
+    0 8px 16px rgba(0, 0, 0, 0.06);
 
   --shadow-elevation-3:
-    0 4px 8px rgba(0, 0, 0, 0.04),
-    0 8px 16px rgba(0, 0, 0, 0.06),
-    0 16px 32px rgba(0, 0, 0, 0.04);
+    0 4px 8px rgba(0, 0, 0, 0.08),
+    0 8px 16px rgba(0, 0, 0, 0.10),
+    0 16px 32px rgba(0, 0, 0, 0.08);
 
   --shadow-elevation-4:
-    0 8px 16px rgba(0, 0, 0, 0.06),
-    0 16px 32px rgba(0, 0, 0, 0.08),
-    0 32px 64px rgba(0, 0, 0, 0.04);
+    0 8px 16px rgba(0, 0, 0, 0.10),
+    0 16px 32px rgba(0, 0, 0, 0.12),
+    0 32px 64px rgba(0, 0, 0, 0.08);
 
   /* Colored Accent Shadows */
   --shadow-accent-blue: 0 4px 14px rgba(0, 122, 255, 0.15);
@@ -171,12 +172,12 @@ html {
 
 body {
   font-family: var(--font-sans);
-  color: var(--text-primary);
-  background-color: var(--bg-base);
-  /* Refined dot pattern - smaller, more subtle */
+  color: #121212;
+  background-color: #F5F5F4;
+  /* Subtle dot pattern for texture */
   background-image:
-    radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.03) 1px, transparent 0);
-  background-size: 24px 24px;
+    radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.05) 1px, transparent 0);
+  background-size: 20px 20px;
   line-height: 1.5;
   /* Smooth text rendering */
   text-rendering: optimizeLegibility;
@@ -190,7 +191,7 @@ body {
 .app-container {
   display: block;
   min-height: 100vh;
-  background-color: var(--bg-base);
+  background-color: #F5F5F4;
 }
 
 @media (min-width: 768px) {
@@ -218,8 +219,8 @@ body {
 
 /* Desktop Sidebar - Static within grid */
 .sidebar-desktop {
-  background: linear-gradient(180deg, var(--bg-base) 0%, var(--bg-surface) 100%);
-  border-right: 1px solid var(--border-soft);
+  background: linear-gradient(180deg, #FDFDFD 0%, #F5F5F4 100%);
+  border-right: 1px solid #E5E5E5;
   padding: 24px 12px;
   flex-direction: column;
   min-height: 100vh;
@@ -241,7 +242,7 @@ body {
 .main-content {
   min-height: 100vh;
   padding-top: 56px; /* Account for mobile header */
-  background-color: var(--bg-base);
+  background-color: #F5F5F4;
 }
 
 @media (min-width: 768px) {

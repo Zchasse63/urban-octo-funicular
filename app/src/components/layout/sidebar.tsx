@@ -32,21 +32,21 @@ function NavItem({ href, icon: Icon, label, isActive, onClick }: NavItemProps) {
         "group relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium",
         "transition-all duration-200 ease-out",
         // Default state
-        !isActive && "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--hover-overlay)]",
+        !isActive && "text-[#6A6A69] hover:text-[#121212] hover:bg-[rgba(0,0,0,0.04)]",
         // Active state with accent indicator
         isActive && [
-          "text-[var(--text-primary)] bg-white",
-          "shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.03)]",
+          "text-[#121212] bg-white",
+          "shadow-[0_1px_3px_rgba(0,0,0,0.08),0_4px_12px_rgba(0,0,0,0.10)]",
         ]
       )}
       aria-current={isActive ? "page" : undefined}
     >
-      {/* Active indicator bar */}
+      {/* Active indicator bar - positioned to be visible */}
       {isActive && (
         <div
-          className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-[var(--accent-blue)]"
+          className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-[#007AFF]"
           style={{
-            boxShadow: "0 0 8px rgba(0, 122, 255, 0.4)",
+            boxShadow: "0 0 12px rgba(0, 122, 255, 0.6), 0 0 4px rgba(0, 122, 255, 0.8)",
           }}
         />
       )}
@@ -54,23 +54,14 @@ function NavItem({ href, icon: Icon, label, isActive, onClick }: NavItemProps) {
       {/* Icon with color transition */}
       <Icon
         className={cn(
-          "w-[18px] h-[18px] transition-colors duration-200",
-          isActive ? "text-[var(--accent-blue)]" : "text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]"
+          "w-[18px] h-[18px] transition-colors duration-200 relative z-10",
+          isActive ? "text-[#007AFF]" : "text-[#9A9A99] group-hover:text-[#6A6A69]"
         )}
         strokeWidth={1.75}
       />
 
       {/* Label */}
-      <span className="flex-1">{label}</span>
-
-      {/* Hover highlight (subtle) */}
-      <div
-        className={cn(
-          "absolute inset-0 rounded-lg opacity-0 transition-opacity duration-200",
-          !isActive && "group-hover:opacity-100"
-        )}
-        style={{ background: "var(--hover-overlay)" }}
-      />
+      <span className="flex-1 relative z-10">{label}</span>
     </Link>
   );
 }
@@ -85,10 +76,10 @@ function NavSection({
   return (
     <div className="mb-6">
       <div className="flex items-center gap-2 mb-2 ml-3">
-        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
+        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-[#9A9A99]">
           {title}
         </span>
-        <div className="flex-1 h-px bg-gradient-to-r from-[var(--border-soft)] to-transparent" />
+        <div className="flex-1 h-px bg-gradient-to-r from-[#E5E5E5] to-transparent" />
       </div>
       <nav className="flex flex-col gap-0.5">{children}</nav>
     </div>
