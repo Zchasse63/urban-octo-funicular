@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { AlertCard } from "@/components/podbrain";
 
 export default function CookiePolicyPage() {
   return (
-    <div className="animate-in max-w-4xl mx-auto px-6 py-12">
+    <div className="max-w-4xl mx-auto px-6 py-12">
       {/* Back Link */}
       <Link
         href="/"
@@ -281,17 +282,13 @@ export default function CookiePolicyPage() {
         </section>
 
         {/* Legal Disclaimer */}
-        <section
-          className="p-6 rounded-lg mt-8"
-          style={{ backgroundColor: "var(--bg-subtle)", border: "1px solid var(--border-soft)" }}
-        >
-          <p style={{ color: "var(--text-secondary)", lineHeight: "1.8", fontSize: "0.875rem" }}>
-            <strong>Disclaimer:</strong> This is placeholder legal content provided for reference
-            purposes. Before launching your service, you must have this policy reviewed and approved
-            by a qualified legal professional to ensure compliance with applicable laws and
-            regulations, including GDPR, CCPA, and other privacy regulations.
-          </p>
-        </section>
+        <div className="mt-8">
+          <AlertCard
+            variant="info"
+            title="Disclaimer"
+            description="This is placeholder legal content provided for reference purposes. Before launching your service, you must have this policy reviewed and approved by a qualified legal professional to ensure compliance with applicable laws and regulations, including GDPR, CCPA, and other privacy regulations."
+          />
+        </div>
       </div>
 
       {/* Footer Links */}

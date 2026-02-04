@@ -99,7 +99,7 @@ export default function VocabularyPage() {
   }
 
   return (
-    <div className="animate-in">
+    <div>
       {/* Back Link */}
         <Link
           href={`/shows/${showId}`}

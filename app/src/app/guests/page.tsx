@@ -3,6 +3,8 @@
 import * as React from 'react';
 import { Search, Plus, Users, ExternalLink, Mail, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ContentCard } from '@/components/podbrain';
+import { Input } from '@/components/ui/input';
 
 interface Guest {
   id: string;
@@ -72,7 +74,7 @@ const mockGuests: Guest[] = [
 
 function GuestCard({ guest }: { guest: Guest }) {
   return (
-    <div className="topo-card">
+    <ContentCard title="Guest Profile" className="flex flex-col">
       <div className="flex items-start gap-4">
         {/* Avatar with gradient background and online indicator */}
         <div className="relative flex-shrink-0">
@@ -145,7 +147,7 @@ function GuestCard({ guest }: { guest: Guest }) {
               href={guest.social.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-secondary text-xs px-3 py-1.5 transition-all duration-200 hover:border-[var(--text-secondary)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
+              className="h-10 px-4 font-medium text-md rounded-md inline-flex items-center justify-center whitespace-nowrap text-sm transition-all duration-200 border border-black/10 dark:border-white/10 bg-transparent hover:bg-black/5 dark:hover:bg-white/5"
             >
               <ExternalLink className="w-3 h-3 mr-1" />
               Website
@@ -156,7 +158,7 @@ function GuestCard({ guest }: { guest: Guest }) {
               href={`https://twitter.com/${guest.social.twitter}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-secondary text-xs px-3 py-1.5 transition-all duration-200 hover:border-[#1DA1F2] hover:shadow-[0_2px_8px_rgba(29,161,242,0.2)]"
+              className="h-10 px-4 font-medium text-md rounded-md inline-flex items-center justify-center whitespace-nowrap text-sm transition-all duration-200 border border-black/10 dark:border-white/10 bg-transparent hover:bg-black/5 dark:hover:bg-white/5"
             >
               Twitter
             </a>
@@ -166,14 +168,14 @@ function GuestCard({ guest }: { guest: Guest }) {
               href={guest.social.linkedin}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-secondary text-xs px-3 py-1.5 transition-all duration-200 hover:border-[#0A66C2] hover:shadow-[0_2px_8px_rgba(10,102,194,0.2)]"
+              className="h-10 px-4 font-medium text-md rounded-md inline-flex items-center justify-center whitespace-nowrap text-sm transition-all duration-200 border border-black/10 dark:border-white/10 bg-transparent hover:bg-black/5 dark:hover:bg-white/5"
             >
               LinkedIn
             </a>
           )}
         </div>
       )}
-    </div>
+    </ContentCard>
   );
 }
 
@@ -198,7 +200,7 @@ export default function GuestsPage() {
   }, [searchQuery]);
 
   return (
-    <div className="animate-in">
+    <div>
       {/* Header with section-label */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
         <div>
@@ -224,12 +226,12 @@ export default function GuestsPage() {
             style={{ color: 'var(--text-tertiary)' }}
           />
         </div>
-        <input
+        <Input
           type="text"
           placeholder="Search guests by name, bio, or topic..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="search-bar pl-10 focus:ring-2 focus:ring-[rgba(0,122,255,0.1)]"
+          className="pl-10 focus:ring-2 focus:ring-[rgba(0,122,255,0.1)]"
         />
       </div>
 
@@ -246,7 +248,7 @@ export default function GuestsPage() {
           ))}
         </div>
       ) : (
-        <div className="topo-card text-center py-12">
+        <ContentCard title="No Results" className="text-center py-12">
           <div
             className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
             style={{
@@ -270,7 +272,7 @@ export default function GuestsPage() {
               Add Guest
             </Button>
           )}
-        </div>
+        </ContentCard>
       )}
     </div>
   );

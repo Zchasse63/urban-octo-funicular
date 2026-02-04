@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { Home, ArrowLeft, Search, Mic2 } from 'lucide-react'
+import { PrimaryButton, SecondaryButton } from '@/components/podbrain/buttons'
 
 export default function NotFound() {
   return (
@@ -46,19 +47,17 @@ export default function NotFound() {
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link
-            href="/"
-            className="btn-primary inline-flex items-center justify-center gap-2 min-h-[44px]"
-          >
-            <Home className="w-4 h-4" />
-            Go Home
+          <Link href="/">
+            <PrimaryButton className="inline-flex items-center justify-center gap-2 min-h-[44px]">
+              <Home className="w-4 h-4" />
+              Go Home
+            </PrimaryButton>
           </Link>
-          <Link
-            href="/episodes"
-            className="btn-secondary inline-flex items-center justify-center gap-2 min-h-[44px]"
-          >
-            <Search className="w-4 h-4" />
-            Browse Episodes
+          <Link href="/episodes">
+            <SecondaryButton className="inline-flex items-center justify-center gap-2 min-h-[44px]">
+              <Search className="w-4 h-4" />
+              Browse Episodes
+            </SecondaryButton>
           </Link>
         </div>
 

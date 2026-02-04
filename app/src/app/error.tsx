@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { Home, RefreshCw, AlertTriangle, Bug } from 'lucide-react'
+import { PrimaryButton, SecondaryButton } from '@/components/podbrain/buttons'
 
 interface ErrorProps {
   error: Error & { digest?: string }
@@ -59,19 +60,18 @@ export default function Error({ error, reset }: ErrorProps) {
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <button
+          <PrimaryButton
             onClick={reset}
-            className="btn-primary inline-flex items-center justify-center gap-2 min-h-[44px]"
+            className="inline-flex items-center justify-center gap-2 min-h-[44px]"
           >
             <RefreshCw className="w-4 h-4" />
             Try Again
-          </button>
-          <Link
-            href="/"
-            className="btn-secondary inline-flex items-center justify-center gap-2 min-h-[44px]"
-          >
-            <Home className="w-4 h-4" />
-            Go Home
+          </PrimaryButton>
+          <Link href="/">
+            <SecondaryButton className="inline-flex items-center justify-center gap-2 min-h-[44px]">
+              <Home className="w-4 h-4" />
+              Go Home
+            </SecondaryButton>
           </Link>
         </div>
 

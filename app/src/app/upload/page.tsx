@@ -19,7 +19,7 @@ export default function UploadPage() {
   return (
     <UploadHero title="Transform Your Podcast">
       <main className="min-h-screen py-8 sm:py-12 px-4">
-        <div className="max-w-4xl mx-auto animate-in">
+        <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="text-center mb-8 sm:mb-12">
             <span className="mono text-[var(--accent-blue)] text-xs sm:text-sm">NEW TRANSFORMATION</span>

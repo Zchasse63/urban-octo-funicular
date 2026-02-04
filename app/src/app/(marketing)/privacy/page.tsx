@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { AlertCard } from "@/components/podbrain";
 
 export default function PrivacyPage() {
   return (
-    <div className="animate-in max-w-4xl mx-auto px-6 py-12">
+    <div className="max-w-4xl mx-auto px-6 py-12">
       {/* Back Link */}
       <Link
         href="/"
@@ -289,15 +290,12 @@ export default function PrivacyPage() {
         </section>
 
         {/* Notice */}
-        <div
-          className="alert-card info mt-12"
-          style={{ backgroundColor: "rgba(0, 122, 255, 0.05)" }}
-        >
-          <p className="text-sm" style={{ color: "var(--text-primary)", margin: 0 }}>
-            <strong>Note:</strong> This is placeholder legal content. Before launch, this Privacy
-            Policy must be reviewed by qualified legal counsel to ensure compliance with applicable
-            laws including GDPR, CCPA, and other data protection regulations.
-          </p>
+        <div className="mt-12">
+          <AlertCard
+            variant="info"
+            title="Note"
+            description="This is placeholder legal content. Before launch, this Privacy Policy must be reviewed by qualified legal counsel to ensure compliance with applicable laws including GDPR, CCPA, and other data protection regulations."
+          />
         </div>
       </div>
     </div>

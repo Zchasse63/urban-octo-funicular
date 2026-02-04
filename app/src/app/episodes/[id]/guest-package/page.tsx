@@ -222,7 +222,7 @@ export default function GuestPackagePage() {
   }
 
   return (
-    <div className="min-h-screen pb-16 animate-in">
+    <div className="min-h-screen pb-16">
       {/* Header */}
       <div className="border-b border-[var(--border-soft)] bg-[var(--bg-elevated)]">
         <div className="max-w-6xl mx-auto px-6 py-6">

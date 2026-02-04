@@ -2,6 +2,8 @@
 
 import * as React from 'react';
 import { TrendingUp, ArrowUpRight, Users, Mic2, Clock } from 'lucide-react';
+import { ContentCard } from '@/components/podbrain';
+import { Badge } from '@/components/ui/badge';
 
 interface TrendingTopic {
   id: string;
@@ -94,7 +96,7 @@ const mockTrending: TrendingTopic[] = [
 
 function TrendingCard({ topic }: { topic: TrendingTopic }) {
   return (
-    <div className="topo-card">
+    <ContentCard title="Trending Topic">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
@@ -119,7 +121,11 @@ function TrendingCard({ topic }: { topic: TrendingTopic }) {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-4">
-        <div className="metric-card">
+        <div style={{
+          backgroundColor: 'var(--bg-subtle)',
+          borderRadius: 'var(--radius-md)',
+          padding: '12px',
+        }}>
           <div className="text-xs font-mono uppercase tracking-wide mb-1" style={{ color: 'var(--text-tertiary)' }}>
             Mentions
           </div>
@@ -127,7 +133,11 @@ function TrendingCard({ topic }: { topic: TrendingTopic }) {
             {topic.mentions.toLocaleString()}
           </div>
         </div>
-        <div className="metric-card">
+        <div style={{
+          backgroundColor: 'var(--bg-subtle)',
+          borderRadius: 'var(--radius-md)',
+          padding: '12px',
+        }}>
           <div className="text-xs font-mono uppercase tracking-wide mb-1" style={{ color: 'var(--text-tertiary)' }}>
             Experts
           </div>
@@ -135,7 +145,11 @@ function TrendingCard({ topic }: { topic: TrendingTopic }) {
             {topic.expertCount}
           </div>
         </div>
-        <div className="metric-card">
+        <div style={{
+          backgroundColor: 'var(--bg-subtle)',
+          borderRadius: 'var(--radius-md)',
+          padding: '12px',
+        }}>
           <div className="text-xs font-mono uppercase tracking-wide mb-1" style={{ color: 'var(--text-tertiary)' }}>
             Episodes
           </div>
@@ -152,9 +166,9 @@ function TrendingCard({ topic }: { topic: TrendingTopic }) {
         </div>
         <div className="flex flex-wrap gap-2">
           {topic.relatedTopics.map((t) => (
-            <span key={t} className="badge text-xs">
+            <Badge key={t} variant="outline" className="text-xs">
               {t}
-            </span>
+            </Badge>
           ))}
         </div>
       </div>
@@ -167,7 +181,14 @@ function TrendingCard({ topic }: { topic: TrendingTopic }) {
         <div className="space-y-2">
           {topic.topExperts.map((expert) => (
             <div key={expert.name} className="flex items-center gap-2">
-              <div className="guest-avatar w-8 h-8 text-sm">
+              <div
+                className="w-8 h-8 text-sm flex items-center justify-center rounded-full font-semibold"
+                style={{
+                  background: 'linear-gradient(135deg, #F5F5F4 0%, #E5E5E4 100%)',
+                  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.06)',
+                  color: 'var(--text-primary)',
+                }}
+              >
                 {expert.name.charAt(0)}
               </div>
               <div>
@@ -184,13 +205,13 @@ function TrendingCard({ topic }: { topic: TrendingTopic }) {
           ))}
         </div>
       </div>
-    </div>
+    </ContentCard>
   );
 }
 
 export default function TrendingPage() {
   return (
-    <div className="animate-in">
+    <div>
       {/* Header */}
         <div className="mb-6 sm:mb-8">
           <h1 className="font-mono text-xs font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)] mb-2">
@@ -202,7 +223,7 @@ export default function TrendingPage() {
         </div>
 
         {/* Summary Card */}
-        <div className="topo-card mb-6">
+        <ContentCard title="This Week's Insights" className="mb-6">
           <div className="flex items-center gap-3 mb-4">
             <div
               className="w-10 h-10 rounded-lg flex items-center justify-center"
@@ -253,7 +274,7 @@ export default function TrendingPage() {
               </div>
             </div>
           </div>
-        </div>
+        </ContentCard>
 
         {/* Trending Topics List */}
         <div className="grid gap-6">

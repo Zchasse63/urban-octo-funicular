@@ -3,6 +3,9 @@
 import * as React from 'react';
 import { Search, Filter, Users, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ContentCard } from '@/components/podbrain';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import type { Expert, ExpertCategory } from '@/lib/experts/types';
 
 // Mock experts data
@@ -133,10 +136,17 @@ function ExpertResultCard({ expert }: { expert: Expert }) {
   const config = categoryConfig[expert.category];
 
   return (
-    <div className="topo-card">
+    <ContentCard title="Expert" className="flex flex-col">
       <div className="flex items-start gap-4">
         {/* Avatar */}
-        <div className="guest-avatar w-14 h-14 text-xl flex-shrink-0">
+        <div
+          className="w-14 h-14 text-xl flex-shrink-0 flex items-center justify-center rounded-full font-semibold"
+          style={{
+            background: 'linear-gradient(135deg, #F5F5F4 0%, #E5E5E4 100%)',
+            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.06)',
+            color: 'var(--text-primary)',
+          }}
+        >
           {expert.name.charAt(0)}
         </div>
 
@@ -146,7 +156,12 @@ function ExpertResultCard({ expert }: { expert: Expert }) {
             <h3 className="font-semibold text-base" style={{ color: 'var(--text-primary)' }}>
               {expert.name}
             </h3>
-            <span className={`badge ${config.badgeClass}`}>{config.label}</span>
+            <Badge variant={
+              config.badgeClass === 'badge-success' ? 'success' :
+              config.badgeClass === 'badge-new' ? 'new' :
+              config.badgeClass === 'badge-warning' ? 'warning' :
+              'default'
+            }>{config.label}</Badge>
           </div>
 
           {expert.metadata.affiliation && (
@@ -164,24 +179,38 @@ function ExpertResultCard({ expert }: { expert: Expert }) {
           {/* Expertise Tags */}
           <div className="flex flex-wrap gap-2 mb-3">
             {expert.expertise.map((exp) => (
-              <span key={exp} className="badge text-xs">
+              <Badge key={exp} variant="outline" className="text-xs">
                 {exp}
-              </span>
+              </Badge>
             ))}
           </div>
 
           {/* Freshness Meter */}
-          <div className="freshness-meter mb-3">
+          <div className="mb-3">
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs font-mono" style={{ color: 'var(--text-tertiary)' }}>
                 FRESHNESS
               </span>
-              <span className="freshness-value text-xs font-mono">{expert.freshnessScore}%</span>
+              <span className="text-xs font-mono">{expert.freshnessScore}%</span>
             </div>
-            <div className="freshness-bar">
+            <div
+              style={{
+                backgroundColor: 'var(--bg-subtle)',
+                borderRadius: 'var(--radius-sm)',
+                height: '6px',
+                overflow: 'hidden',
+              }}
+            >
               <div
-                className={`freshness-fill ${config.meterClass}`}
-                style={{ width: `${expert.freshnessScore}%` }}
+                style={{
+                  width: `${expert.freshnessScore}%`,
+                  height: '100%',
+                  backgroundColor: config.meterClass.includes('green') ? 'var(--accent-green)' :
+                                     config.meterClass.includes('blue') ? 'var(--accent-blue)' :
+                                     config.meterClass.includes('amber') ? 'var(--accent-amber)' :
+                                     'var(--text-primary)',
+                  transition: 'width 0.3s ease-out',
+                }}
               />
             </div>
           </div>
@@ -201,7 +230,7 @@ function ExpertResultCard({ expert }: { expert: Expert }) {
               href={expert.contactHints.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-secondary text-xs px-3 py-1.5"
+              className="h-10 px-4 font-medium text-md rounded-md inline-flex items-center justify-center whitespace-nowrap text-sm transition-all duration-200 border border-black/10 dark:border-white/10 bg-transparent hover:bg-black/5 dark:hover:bg-white/5"
             >
               <ExternalLink className="w-3 h-3 mr-1" />
               Website
@@ -212,7 +241,7 @@ function ExpertResultCard({ expert }: { expert: Expert }) {
               href={`https://twitter.com/${expert.contactHints.twitter}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-secondary text-xs px-3 py-1.5"
+              className="h-10 px-4 font-medium text-md rounded-md inline-flex items-center justify-center whitespace-nowrap text-sm transition-all duration-200 border border-black/10 dark:border-white/10 bg-transparent hover:bg-black/5 dark:hover:bg-white/5"
             >
               Twitter
             </a>
@@ -222,14 +251,14 @@ function ExpertResultCard({ expert }: { expert: Expert }) {
               href={expert.contactHints.linkedin}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-secondary text-xs px-3 py-1.5"
+              className="h-10 px-4 font-medium text-md rounded-md inline-flex items-center justify-center whitespace-nowrap text-sm transition-all duration-200 border border-black/10 dark:border-white/10 bg-transparent hover:bg-black/5 dark:hover:bg-white/5"
             >
               LinkedIn
             </a>
           )}
         </div>
       )}
-    </div>
+    </ContentCard>
   );
 }
 
@@ -271,7 +300,7 @@ export default function ExpertFinderPage() {
   };
 
   return (
-    <div className="animate-in">
+    <div>
       {/* Header */}
       <div className="mb-6 sm:mb-8">
         <h1 className="font-mono text-xs font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)] mb-2">
@@ -289,12 +318,12 @@ export default function ExpertFinderPage() {
             className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
             style={{ color: 'var(--text-tertiary)' }}
           />
-          <input
+          <Input
             type="text"
             placeholder="Search by name, topic, or expertise..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-bar pl-10"
+            className="pl-10"
           />
         </div>
         <div className="flex gap-2">
@@ -384,7 +413,7 @@ export default function ExpertFinderPage() {
           </div>
         )
       ) : (
-        <div className="topo-card text-center py-12">
+        <ContentCard title="No Results" className="text-center py-12">
           <div
             className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
             style={{ backgroundColor: 'var(--bg-subtle)' }}
@@ -397,7 +426,7 @@ export default function ExpertFinderPage() {
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
             Try adjusting your search terms or filters
           </p>
-        </div>
+        </ContentCard>
       )}
     </div>
   );

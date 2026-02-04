@@ -93,7 +93,7 @@ export default function ShowDetailPage() {
   }
 
   return (
-    <div className="animate-in">
+    <div>
       {/* Back Link */}
         <Link
           href="/shows"

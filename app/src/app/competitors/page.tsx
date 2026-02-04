@@ -2,6 +2,8 @@
 
 import * as React from 'react';
 import { Trophy, TrendingUp, TrendingDown, Minus, ExternalLink, Users, Mic2, BarChart3 } from 'lucide-react';
+import { ContentCard, AlertCard } from '@/components/podbrain';
+import { Badge } from '@/components/ui/badge';
 
 interface Competitor {
   id: string;
@@ -115,7 +117,10 @@ function GrowthIndicator({ growth, percent }: { growth: 'up' | 'down' | 'stable'
 
 function CompetitorCard({ competitor }: { competitor: Competitor }) {
   return (
-    <div className="topo-card">
+    <ContentCard
+      title={competitor.name}
+      className="shadow-[var(--shadow-elevation-2)]"
+    >
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
@@ -123,7 +128,7 @@ function CompetitorCard({ competitor }: { competitor: Competitor }) {
             <h3 className="font-semibold text-lg" style={{ color: 'var(--text-primary)' }}>
               {competitor.name}
             </h3>
-            <span className="badge text-xs">{competitor.platform}</span>
+            <Badge variant="default">{competitor.platform}</Badge>
           </div>
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
             {competitor.description}
@@ -134,7 +139,7 @@ function CompetitorCard({ competitor }: { competitor: Competitor }) {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-        <div className="metric-card">
+        <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--bg-subtle)' }}>
           <div className="text-xs font-mono uppercase tracking-wide mb-1" style={{ color: 'var(--text-tertiary)' }}>
             Episodes
           </div>
@@ -142,7 +147,7 @@ function CompetitorCard({ competitor }: { competitor: Competitor }) {
             {competitor.episodeCount}
           </div>
         </div>
-        <div className="metric-card">
+        <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--bg-subtle)' }}>
           <div className="text-xs font-mono uppercase tracking-wide mb-1" style={{ color: 'var(--text-tertiary)' }}>
             Avg Length
           </div>
@@ -150,7 +155,7 @@ function CompetitorCard({ competitor }: { competitor: Competitor }) {
             {competitor.avgEpisodeLength}m
           </div>
         </div>
-        <div className="metric-card">
+        <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--bg-subtle)' }}>
           <div className="text-xs font-mono uppercase tracking-wide mb-1" style={{ color: 'var(--text-tertiary)' }}>
             Rating
           </div>
@@ -158,7 +163,7 @@ function CompetitorCard({ competitor }: { competitor: Competitor }) {
             {competitor.rating} <span className="text-xs font-normal">({competitor.reviewCount})</span>
           </div>
         </div>
-        <div className="metric-card">
+        <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--bg-subtle)' }}>
           <div className="text-xs font-mono uppercase tracking-wide mb-1" style={{ color: 'var(--text-tertiary)' }}>
             Audience
           </div>
@@ -175,9 +180,7 @@ function CompetitorCard({ competitor }: { competitor: Competitor }) {
         </div>
         <div className="flex flex-wrap gap-2">
           {competitor.topTopics.map((topic) => (
-            <span key={topic} className="badge text-xs">
-              {topic}
-            </span>
+            <Badge key={topic} variant="default">{topic}</Badge>
           ))}
         </div>
       </div>
@@ -192,9 +195,9 @@ function CompetitorCard({ competitor }: { competitor: Competitor }) {
             {competitor.overlap}%
           </span>
         </div>
-        <div className="progress-track">
+        <div className="h-2 w-full rounded-full" style={{ backgroundColor: 'var(--bg-subtle)' }}>
           <div
-            className="progress-fill"
+            className="h-full rounded-full transition-all"
             style={{
               width: `${competitor.overlap}%`,
               backgroundColor:
@@ -222,13 +225,13 @@ function CompetitorCard({ competitor }: { competitor: Competitor }) {
           ))}
         </ul>
       </div>
-    </div>
+    </ContentCard>
   );
 }
 
 export default function CompetitorsPage() {
   return (
-    <div className="animate-in">
+    <div>
       {/* Header */}
       <div className="mb-6 sm:mb-8">
         <h1 className="font-mono text-xs font-medium uppercase tracking-[0.1em] text-[var(--text-secondary)] mb-2">
@@ -240,7 +243,7 @@ export default function CompetitorsPage() {
       </div>
 
       {/* Summary Card */}
-      <div className="topo-card mb-6">
+      <ContentCard title="Competitive Landscape" subtitle={`Analysis based on ${mockCompetitors.length} podcasts in your niche`} className="mb-6">
         <div className="flex items-center gap-3 mb-4">
           <div
             className="w-10 h-10 rounded-lg flex items-center justify-center"
@@ -291,22 +294,15 @@ export default function CompetitorsPage() {
             </div>
           </div>
         </div>
-      </div>
+      </ContentCard>
 
       {/* Opportunity Highlight */}
-      <div className="alert-card success mb-6">
-        <div className="flex items-start gap-3">
-          <Trophy className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--accent-green)' }} />
-          <div>
-            <h3 className="font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-              Top Opportunity
-            </h3>
-            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              Based on competitor analysis, there&apos;s a gap in <strong>bootstrapping stories</strong> and <strong>international founder perspectives</strong>.
-              Consider featuring more self-funded founders and entrepreneurs from outside the US.
-            </p>
-          </div>
-        </div>
+      <div className="mb-6">
+        <AlertCard
+          variant="success"
+          title="Top Opportunity"
+          description="Based on competitor analysis, there's a gap in bootstrapping stories and international founder perspectives. Consider featuring more self-funded founders and entrepreneurs from outside the US."
+        />
       </div>
 
       {/* Competitor Cards */}

@@ -102,7 +102,7 @@ export default function EpisodeDetailPage() {
   };
 
   return (
-    <div className="animate-in">
+    <div>
       {/* Episode Header */}
       <EpisodeHeader
         episodeNumber={mockEpisode.episodeNumber}

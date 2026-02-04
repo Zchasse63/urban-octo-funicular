@@ -14,6 +14,7 @@ import {
   Zap,
   BarChart3,
 } from 'lucide-react';
+import { ContentCard, InteractiveCard, PrimaryButton } from '@/components/podbrain';
 
 interface FAQItem {
   question: string;
@@ -109,7 +110,7 @@ function FAQAccordion({ item }: { item: FAQItem }) {
 
 export default function SupportPage() {
   return (
-    <div className="animate-in">
+    <div>
       {/* Header */}
         <div className="text-center mb-8 sm:mb-12">
           <div
@@ -128,65 +129,62 @@ export default function SupportPage() {
 
         {/* Quick Links */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 sm:mb-12">
-          <a
-            href="mailto:support@podbrain.ai"
-            className="topo-card flex items-center gap-3 hover:bg-[var(--bg-subtle)] transition-colors"
-          >
-            <div
-              className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ backgroundColor: 'var(--bg-subtle)' }}
-            >
-              <Mail className="w-5 h-5" style={{ color: 'var(--accent-blue)' }} />
-            </div>
-            <div>
-              <div className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                Email Support
+          <InteractiveCard href="mailto:support@podbrain.ai">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: 'var(--bg-subtle)' }}
+              >
+                <Mail className="w-5 h-5" style={{ color: 'var(--accent-blue)' }} />
               </div>
-              <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                support@podbrain.ai
+              <div>
+                <div className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                  Email Support
+                </div>
+                <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  support@podbrain.ai
+                </div>
               </div>
             </div>
-          </a>
+          </InteractiveCard>
 
-          <a
-            href="#"
-            className="topo-card flex items-center gap-3 hover:bg-[var(--bg-subtle)] transition-colors"
-          >
-            <div
-              className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ backgroundColor: 'var(--bg-subtle)' }}
-            >
-              <MessageCircle className="w-5 h-5" style={{ color: 'var(--accent-blue)' }} />
-            </div>
-            <div>
-              <div className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                Community
+          <InteractiveCard href="#">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: 'var(--bg-subtle)' }}
+              >
+                <MessageCircle className="w-5 h-5" style={{ color: 'var(--accent-blue)' }} />
               </div>
-              <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                Join our Discord
+              <div>
+                <div className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                  Community
+                </div>
+                <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  Join our Discord
+                </div>
               </div>
             </div>
-          </a>
+          </InteractiveCard>
 
-          <a
-            href="#"
-            className="topo-card flex items-center gap-3 hover:bg-[var(--bg-subtle)] transition-colors"
-          >
-            <div
-              className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ backgroundColor: 'var(--bg-subtle)' }}
-            >
-              <Book className="w-5 h-5" style={{ color: 'var(--accent-blue)' }} />
-            </div>
-            <div>
-              <div className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                Documentation
+          <InteractiveCard href="#">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: 'var(--bg-subtle)' }}
+              >
+                <Book className="w-5 h-5" style={{ color: 'var(--accent-blue)' }} />
               </div>
-              <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                Read the docs
+              <div>
+                <div className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                  Documentation
+                </div>
+                <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  Read the docs
+                </div>
               </div>
             </div>
-          </a>
+          </InteractiveCard>
         </div>
 
         {/* Guides Section */}
@@ -194,32 +192,30 @@ export default function SupportPage() {
           <h2 className="mono mb-4">Quick Start Guides</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {guides.map((guide) => (
-              <a
-                key={guide.title}
-                href={guide.href}
-                className="topo-card flex items-start gap-3 hover:bg-[var(--bg-subtle)] transition-colors group"
-              >
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: 'var(--bg-subtle)' }}
-                >
-                  <guide.icon className="w-5 h-5" style={{ color: 'var(--accent-blue)' }} />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                      {guide.title}
-                    </span>
-                    <ExternalLink
-                      className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity"
-                      style={{ color: 'var(--text-tertiary)' }}
-                    />
+              <InteractiveCard key={guide.title} href={guide.href}>
+                <div className="flex items-start gap-3 group">
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: 'var(--bg-subtle)' }}
+                  >
+                    <guide.icon className="w-5 h-5" style={{ color: 'var(--accent-blue)' }} />
                   </div>
-                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                    {guide.description}
-                  </p>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                        {guide.title}
+                      </span>
+                      <ExternalLink
+                        className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ color: 'var(--text-tertiary)' }}
+                      />
+                    </div>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                      {guide.description}
+                    </p>
+                  </div>
                 </div>
-              </a>
+              </InteractiveCard>
             ))}
           </div>
         </div>
@@ -227,26 +223,25 @@ export default function SupportPage() {
         {/* FAQ Section */}
         <div className="mb-8 sm:mb-12">
           <h2 className="mono mb-4">Frequently Asked Questions</h2>
-          <div className="topo-card">
+          <ContentCard title="FAQ">
             {faqs.map((faq, index) => (
               <FAQAccordion key={index} item={faq} />
             ))}
-          </div>
+          </ContentCard>
         </div>
 
         {/* Still Need Help */}
-        <div className="topo-card text-center">
-          <h3 className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-            Still need help?
-          </h3>
+        <ContentCard title="Still need help?" className="text-center">
           <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
             Our support team typically responds within 24 hours
           </p>
-        <a href="mailto:support@podbrain.ai" className="btn-primary inline-flex">
-          <Mail className="w-4 h-4" />
-          Contact Support
-        </a>
-      </div>
+          <a href="mailto:support@podbrain.ai">
+            <PrimaryButton>
+              <Mail className="w-4 h-4" />
+              Contact Support
+            </PrimaryButton>
+          </a>
+        </ContentCard>
     </div>
   );
 }

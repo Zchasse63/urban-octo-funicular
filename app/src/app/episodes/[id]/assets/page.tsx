@@ -472,7 +472,7 @@ export default function AssetsPage() {
   }
 
   return (
-    <div className="animate-in">
+    <div>
       {/* Header */}
       <div className="mb-8">
         <Link

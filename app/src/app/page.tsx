@@ -1,12 +1,15 @@
 import { Mic2, TrendingUp, Sparkles, Users, FileText, Share2, Check } from "lucide-react";
 import Link from "next/link";
 import { SUBSCRIPTION_TIERS } from "@/lib/constants";
+import { ContentCard } from "@/components/podbrain/content-card";
+import { PrimaryButton, SecondaryButton } from "@/components/podbrain/buttons";
+import { Badge } from "@/components/ui/badge";
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="animate-in max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16 md:py-20 text-center">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16 md:py-20 text-center">
         <h1
           className="text-4xl sm:text-5xl md:text-6xl font-bold mb-4 sm:mb-6"
           style={{ color: "var(--text-primary)", letterSpacing: "-0.02em" }}
@@ -22,12 +25,16 @@ export default function LandingPage() {
           unmatched accuracy.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
-          <Link href="/upload" className="btn-primary text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 min-h-[44px] justify-center">
-            <Sparkles className="w-5 h-5" aria-hidden="true" />
-            Get Started Free
+          <Link href="/upload">
+            <PrimaryButton className="text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 min-h-[44px] w-full sm:w-auto justify-center inline-flex gap-2">
+              <Sparkles className="w-5 h-5" aria-hidden="true" />
+              Get Started Free
+            </PrimaryButton>
           </Link>
-          <Link href="#pricing" className="btn-secondary text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 min-h-[44px] justify-center">
-            View Pricing
+          <Link href="#pricing">
+            <SecondaryButton className="text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 min-h-[44px] w-full sm:w-auto justify-center inline-flex gap-2">
+              View Pricing
+            </SecondaryButton>
           </Link>
         </div>
       </section>
@@ -42,72 +49,60 @@ export default function LandingPage() {
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {/* Feature 1: Transcription */}
-          <div className="topo-card text-center">
+          <ContentCard title="AI Transcription" className="text-center">
             <div
               className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
               style={{ backgroundColor: "var(--bg-subtle)" }}
             >
               <Mic2 className="w-8 h-8" style={{ color: "var(--accent-blue)" }} />
             </div>
-            <h3 className="text-lg font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
-              AI Transcription
-            </h3>
             <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
               Powered by AssemblyAI with speaker diarization and custom vocabulary learning for
               perfect accuracy on industry terms.
             </p>
-          </div>
+          </ContentCard>
 
           {/* Feature 2: SEO Optimization */}
-          <div className="topo-card text-center">
+          <ContentCard title="SEO Optimization" className="text-center">
             <div
               className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
               style={{ backgroundColor: "var(--bg-subtle)" }}
             >
               <TrendingUp className="w-8 h-8" style={{ color: "var(--accent-green)" }} />
             </div>
-            <h3 className="text-lg font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
-              SEO Optimization
-            </h3>
             <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
               Automatic keyword analysis, schema markup generation, and SEO scoring to maximize your
               podcast&apos;s discoverability.
             </p>
-          </div>
+          </ContentCard>
 
           {/* Feature 3: Content Multiplication */}
-          <div className="topo-card text-center">
+          <ContentCard title="30+ Content Assets" className="text-center">
             <div
               className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
               style={{ backgroundColor: "var(--bg-subtle)" }}
             >
               <FileText className="w-8 h-8" style={{ color: "var(--accent-amber)" }} />
             </div>
-            <h3 className="text-lg font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
-              30+ Content Assets
-            </h3>
             <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
               Generate LinkedIn posts, Twitter threads, blog posts, newsletters, quote cards, and
               more—all from a single episode.
             </p>
-          </div>
+          </ContentCard>
 
           {/* Feature 4: Guest Packages */}
-          <div className="topo-card text-center">
+          <ContentCard title="Guest Promotion Packages" className="text-center">
             <div
               className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
               style={{ backgroundColor: "var(--bg-subtle)" }}
             >
               <Share2 className="w-8 h-8" style={{ color: "var(--accent-blue)" }} />
             </div>
-            <h3 className="text-lg font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
-              Guest Promotion Packages
-            </h3>
             <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
               Automatically create shareable promo packages for guests with audiograms, quote cards,
               and pre-written social posts.
             </p>
-          </div>
+          </ContentCard>
         </div>
       </section>
 
@@ -124,8 +119,7 @@ export default function LandingPage() {
         </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
           {/* Free Tier */}
-          <div className="topo-card">
-            <h3 className="sr-only">Free Plan Details</h3>
+          <ContentCard title="Free">
             <div className="mb-4">
               <p className="text-2xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>
                 {SUBSCRIPTION_TIERS.free.name}
@@ -155,16 +149,17 @@ export default function LandingPage() {
                 <span style={{ color: "var(--text-secondary)" }}>All AI features</span>
               </li>
             </ul>
-            <Link href="/upload" className="btn-secondary w-full justify-center min-h-[44px]">
-              Start Free
+            <Link href="/upload" className="w-full">
+              <SecondaryButton className="w-full justify-center min-h-[44px]">
+                Start Free
+              </SecondaryButton>
             </Link>
-          </div>
+          </ContentCard>
 
           {/* Pro Tier */}
-          <div className="topo-card" style={{ borderColor: "var(--accent-blue)", borderWidth: "2px" }}>
-            <h3 className="sr-only">Pro Plan Details</h3>
+          <ContentCard title="Pro" style={{ borderColor: "var(--accent-blue)", borderWidth: "2px" }}>
             <div className="mb-4">
-              <div className="badge-new mb-3">Most Popular</div>
+              <Badge variant="new" className="mb-3">Most Popular</Badge>
               <p className="text-2xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>
                 {SUBSCRIPTION_TIERS.pro.name}
               </p>
@@ -195,14 +190,15 @@ export default function LandingPage() {
                 <span style={{ color: "var(--text-secondary)" }}>Advanced analytics</span>
               </li>
             </ul>
-            <Link href="/upload" className="btn-primary w-full justify-center min-h-[44px]">
-              Start Pro Trial
+            <Link href="/upload" className="w-full">
+              <PrimaryButton className="w-full justify-center min-h-[44px]">
+                Start Pro Trial
+              </PrimaryButton>
             </Link>
-          </div>
+          </ContentCard>
 
           {/* Agency Tier */}
-          <div className="topo-card">
-            <h3 className="sr-only">Agency Plan Details</h3>
+          <ContentCard title="Agency">
             <div className="mb-4">
               <p className="text-2xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>
                 {SUBSCRIPTION_TIERS.agency.name}
@@ -236,10 +232,12 @@ export default function LandingPage() {
                 <span style={{ color: "var(--text-secondary)" }}>Dedicated support</span>
               </li>
             </ul>
-            <Link href="/upload" className="btn-secondary w-full justify-center min-h-[44px]">
-              Start Agency Trial
+            <Link href="/upload" className="w-full">
+              <SecondaryButton className="w-full justify-center min-h-[44px]">
+                Start Agency Trial
+              </SecondaryButton>
             </Link>
-          </div>
+          </ContentCard>
         </div>
       </section>
 
@@ -253,82 +251,52 @@ export default function LandingPage() {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
           {/* Testimonial 1 */}
-          <div className="topo-card">
-            <div className="mb-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: "var(--bg-subtle)" }}
-                >
-                  <Users className="w-6 h-6" style={{ color: "var(--text-secondary)" }} />
-                </div>
-                <div>
-                  <div className="font-semibold" style={{ color: "var(--text-primary)" }}>
-                    Sarah Chen
-                  </div>
-                  <div className="text-sm" style={{ color: "var(--text-tertiary)" }}>
-                    Tech Talk Daily
-                  </div>
-                </div>
+          <ContentCard title="Sarah Chen" subtitle="Tech Talk Daily">
+            <div className="flex items-center gap-3 mb-3">
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: "var(--bg-subtle)" }}
+              >
+                <Users className="w-6 h-6" style={{ color: "var(--text-secondary)" }} />
               </div>
             </div>
             <p style={{ color: "var(--text-secondary)" }}>
               &quot;PodBrain cut my post-production time by 80%. The AI actually understands technical
               jargon and gets the transcriptions perfect. Game changer.&quot;
             </p>
-          </div>
+          </ContentCard>
 
           {/* Testimonial 2 */}
-          <div className="topo-card">
-            <div className="mb-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: "var(--bg-subtle)" }}
-                >
-                  <Users className="w-6 h-6" style={{ color: "var(--text-secondary)" }} />
-                </div>
-                <div>
-                  <div className="font-semibold" style={{ color: "var(--text-primary)" }}>
-                    Marcus Johnson
-                  </div>
-                  <div className="text-sm" style={{ color: "var(--text-tertiary)" }}>
-                    The Marketing Show
-                  </div>
-                </div>
+          <ContentCard title="Marcus Johnson" subtitle="The Marketing Show">
+            <div className="flex items-center gap-3 mb-3">
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: "var(--bg-subtle)" }}
+              >
+                <Users className="w-6 h-6" style={{ color: "var(--text-secondary)" }} />
               </div>
             </div>
             <p style={{ color: "var(--text-secondary)" }}>
               &quot;I used to spend hours creating social posts. Now I get 30+ assets instantly. My
               LinkedIn engagement has tripled since using PodBrain.&quot;
             </p>
-          </div>
+          </ContentCard>
 
           {/* Testimonial 3 */}
-          <div className="topo-card">
-            <div className="mb-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: "var(--bg-subtle)" }}
-                >
-                  <Users className="w-6 h-6" style={{ color: "var(--text-secondary)" }} />
-                </div>
-                <div>
-                  <div className="font-semibold" style={{ color: "var(--text-primary)" }}>
-                    Emily Rodriguez
-                  </div>
-                  <div className="text-sm" style={{ color: "var(--text-tertiary)" }}>
-                    Wellness Wisdom
-                  </div>
-                </div>
+          <ContentCard title="Emily Rodriguez" subtitle="Wellness Wisdom">
+            <div className="flex items-center gap-3 mb-3">
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: "var(--bg-subtle)" }}
+              >
+                <Users className="w-6 h-6" style={{ color: "var(--text-secondary)" }} />
               </div>
             </div>
             <p style={{ color: "var(--text-secondary)" }}>
               &quot;The guest promo packages are incredible. My guests love sharing their episodes
               because everything is ready to go. Worth every penny.&quot;
             </p>
-          </div>
+          </ContentCard>
         </div>
       </section>
 
