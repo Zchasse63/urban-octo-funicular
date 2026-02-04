@@ -1,6 +1,5 @@
 "use client";
 
-import { TopoCard, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles } from "lucide-react";
 
@@ -36,15 +35,17 @@ function TimestampLink({ timestamp }: { timestamp: string }) {
 
 export function ShowNotesCard({ showNotes }: ShowNotesCardProps) {
   return (
-    <TopoCard hover={false} className="h-full">
-      <CardHeader>
-        <CardTitle>Generated Show Notes</CardTitle>
+    <div className="flex flex-col gap-4">
+      {/* Header with AI badge */}
+      <div className="flex items-center gap-2">
         <Badge variant="new" className="gap-1">
           <Sparkles className="w-3 h-3" />
           AI Assisted
         </Badge>
-      </CardHeader>
-      <CardContent className="notes-area">
+      </div>
+
+      {/* Show notes content */}
+      <div className="notes-area">
         {/* Summary */}
         <p className="text-[var(--text-primary)] leading-relaxed">
           {showNotes.summary}
@@ -138,7 +139,7 @@ export function ShowNotesCard({ showNotes }: ShowNotesCardProps) {
             {showNotes.guestBio}
           </p>
         </div>
-      </CardContent>
-    </TopoCard>
+      </div>
+    </div>
   );
 }

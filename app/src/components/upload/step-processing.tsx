@@ -1,84 +1,46 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, Circle, Loader2, Mail } from 'lucide-react'
-import type { ProcessingState } from './upload-wizard'
+import { Mail } from 'lucide-react'
+import type { ProcessingState as UploadProcessingState } from './upload-wizard'
+import { ProcessingState, type ProcessingStep } from '@/components/podbrain/processing-states'
 
 interface StepProcessingProps {
-  processingState: ProcessingState
-}
-
-type StepStatus = 'pending' | 'active' | 'complete'
-
-interface ProcessingStep {
-  label: string
-  getStatus: (state: ProcessingState) => StepStatus
-}
-
-const processingSteps: ProcessingStep[] = [
-  {
-    label: 'Audio uploaded',
-    getStatus: (state) => state.audioUploaded ? 'complete' : 'pending',
-  },
-  {
-    label: 'Transcription complete',
-    getStatus: (state) => state.transcriptionComplete ? 'complete' :
-      state.audioUploaded ? 'active' : 'pending',
-  },
-  {
-    label: 'Running intelligence analysis',
-    getStatus: (state) => state.intelligenceAnalysis,
-  },
-  {
-    label: 'Generating show notes',
-    getStatus: (state) => state.showNotesGeneration,
-  },
-  {
-    label: 'Creating social posts',
-    getStatus: (state) => state.socialPostsCreation,
-  },
-]
-
-function StatusIcon({ status }: { status: StepStatus }) {
-  switch (status) {
-    case 'complete':
-      return (
-        <div
-          className="w-6 h-6 rounded-full flex items-center justify-center"
-          style={{
-            background: 'var(--accent-green)',
-            boxShadow: '0 2px 4px rgba(52,199,89,0.2)'
-          }}
-        >
-          <Check className="w-4 h-4 text-white" />
-        </div>
-      )
-    case 'active':
-      return (
-        <div
-          className="w-6 h-6 rounded-full flex items-center justify-center"
-          style={{
-            background: 'var(--accent-blue)',
-            boxShadow: '0 0 0 4px rgba(0,122,255,0.2)'
-          }}
-        >
-          <Loader2 className="w-4 h-4 text-white animate-spin" />
-        </div>
-      )
-    case 'pending':
-    default:
-      return (
-        <div className="w-6 h-6 rounded-full border-2 flex items-center justify-center" style={{ borderColor: 'var(--border-soft)', backgroundColor: 'white' }}>
-          <Circle className="w-3 h-3 text-[var(--text-tertiary)]" />
-        </div>
-      )
-  }
+  processingState: UploadProcessingState
 }
 
 export function StepProcessing({ processingState }: StepProcessingProps) {
   const [emailNotify, setEmailNotify] = useState(false)
   const [email, setEmail] = useState('')
   const isComplete = processingState.overallProgress === 100
+
+  // Map UploadProcessingState to ProcessingStep[] format
+  const steps: ProcessingStep[] = [
+    {
+      label: 'Audio uploaded',
+      status: processingState.audioUploaded ? 'complete' : 'pending',
+    },
+    {
+      label: 'Transcription complete',
+      status: processingState.transcriptionComplete
+        ? 'complete'
+        : processingState.audioUploaded
+          ? 'active'
+          : 'pending',
+    },
+    {
+      label: 'Running intelligence analysis',
+      status: processingState.intelligenceAnalysis,
+    },
+    {
+      label: 'Generating show notes',
+      status: processingState.showNotesGeneration,
+    },
+    {
+      label: 'Creating social posts',
+      status: processingState.socialPostsCreation,
+    },
+  ]
 
   return (
     <div className="space-y-6">
@@ -94,50 +56,12 @@ export function StepProcessing({ processingState }: StepProcessingProps) {
         </p>
       </div>
 
-      {/* Overall Progress Bar */}
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm">
-          <span className="text-[var(--text-secondary)]">Overall Progress</span>
-          <span className="text-[var(--text-primary)] font-semibold">
-            {processingState.overallProgress}%
-          </span>
-        </div>
-        <div className="progress-track h-3">
-          <div
-            className={`progress-fill h-full ${isComplete ? 'success' : ''}`}
-            style={{ width: `${processingState.overallProgress}%` }}
-          />
-        </div>
-      </div>
-
-      {/* Processing Checklist */}
-      <div className="space-y-3 py-4">
-        {processingSteps.map((step, index) => {
-          const status = step.getStatus(processingState)
-          return (
-            <div
-              key={index}
-              className={`
-                flex items-center gap-3 p-3 rounded-[var(--radius-lg)]
-                ${status === 'active' ? 'bg-[rgba(0,122,255,0.05)]' : ''}
-                ${status === 'complete' ? 'bg-[rgba(52,199,89,0.05)]' : ''}
-              `}
-            >
-              <StatusIcon status={status} />
-              <span
-                className={`
-                  text-sm
-                  ${status === 'complete' ? 'text-[var(--text-primary)]' : ''}
-                  ${status === 'active' ? 'text-[var(--accent-blue)] font-medium' : ''}
-                  ${status === 'pending' ? 'text-[var(--text-tertiary)]' : ''}
-                `}
-              >
-                {step.label}
-              </span>
-            </div>
-          )
-        })}
-      </div>
+      {/* Use ProcessingState component */}
+      <ProcessingState
+        title={isComplete ? undefined : "Transforming your content"}
+        progress={processingState.overallProgress}
+        steps={steps}
+      />
 
       {/* Estimated Time */}
       {!isComplete && (

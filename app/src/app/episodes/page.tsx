@@ -4,6 +4,7 @@ import * as React from 'react'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { EpisodeList } from '@/components/episodes/episode-list'
+import { EpisodeSearch } from '@/components/podbrain/search'
 import type { EpisodeRowData } from '@/components/episodes/episode-row'
 import { TableRowSkeleton } from '@/components/LoadingStates'
 
@@ -63,6 +64,7 @@ const mockEpisodes: EpisodeRowData[] = [
 
 export default function EpisodesPage() {
   const [isLoading, setIsLoading] = React.useState(false)
+  const [searchQuery, setSearchQuery] = React.useState('')
 
   const handleEpisodeClick = (id: string) => {
     // Navigate to episode detail page
@@ -73,6 +75,27 @@ export default function EpisodesPage() {
     // Open new transformation modal or navigate to upload page
     // In a real app: router.push('/episodes/new') or open modal
   }
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value)
+  }
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query)
+  }
+
+  // Filter episodes based on search query
+  const filteredEpisodes = React.useMemo(() => {
+    if (!searchQuery.trim()) {
+      return mockEpisodes
+    }
+    const lowerQuery = searchQuery.toLowerCase()
+    return mockEpisodes.filter(
+      (episode) =>
+        episode.title.toLowerCase().includes(lowerQuery) ||
+        episode.episodeNumber.toString().includes(lowerQuery)
+    )
+  }, [searchQuery])
 
   return (
     <div className="animate-in">
@@ -91,6 +114,16 @@ export default function EpisodesPage() {
           </Button>
         </div>
 
+        {/* Episode Search */}
+        <div className="mb-6">
+          <EpisodeSearch
+            placeholder="Search episodes by title or number..."
+            value={searchQuery}
+            onChange={handleSearchChange}
+            onSearch={handleSearch}
+          />
+        </div>
+
         {/* Episode List */}
         {isLoading ? (
           <div className="space-y-2">
@@ -100,8 +133,9 @@ export default function EpisodesPage() {
           </div>
         ) : (
         <EpisodeList
-          episodes={mockEpisodes}
+          episodes={filteredEpisodes}
           onEpisodeClick={handleEpisodeClick}
+          searchQuery={searchQuery}
         />
       )}
     </div>

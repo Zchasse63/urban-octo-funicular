@@ -30,6 +30,22 @@
   --bg-surface: #FAFAFA;
   --bg-overlay: rgba(255, 255, 255, 0.95);
 
+  /* === GLASSMORPHISM === */
+  --color-bg-glass: rgba(255, 255, 255, 0.72);
+  --color-bg-glass-border: rgba(255, 255, 255, 0.18);
+  --glass-blur: 20px;
+  --glass-saturation: 180%;
+
+  /* === SEMANTIC STATUS === */
+  --color-status-success-bg: rgba(52, 199, 89, 0.08);
+  --color-status-success-text: #34C759;
+  --color-status-warning-bg: rgba(245, 158, 11, 0.08);
+  --color-status-warning-text: #F59E0B;
+  --color-status-error-bg: rgba(239, 68, 68, 0.08);
+  --color-status-error-text: #EF4444;
+  --color-status-info-bg: rgba(0, 122, 255, 0.05);
+  --color-status-info-text: #007AFF;
+
   /* Gradient Tokens */
   --gradient-subtle: linear-gradient(180deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 100%);
   --gradient-card-shine: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 50%);
@@ -53,6 +69,9 @@
     0 1px 3px rgba(0,0,0,0.08);
   --shadow-focus:
     0 0 0 3px rgba(0, 122, 255, 0.25);
+  --shadow-glass:
+    0 8px 32px rgba(0,0,0,0.08),
+    inset 0 0 0 1px rgba(255,255,255,0.1);
 
   /* Enhanced Shadow System - 4 Elevation Levels (VISIBLE) */
   --shadow-elevation-1:
@@ -140,6 +159,8 @@
   --color-bg-elevated: var(--bg-elevated);
   --color-bg-surface: var(--bg-surface);
   --color-bg-overlay: var(--bg-overlay);
+  --color-bg-glass: var(--color-bg-glass);
+  --color-bg-glass-border: var(--color-bg-glass-border);
   --color-border-soft: var(--border-soft);
   --color-border-focus: var(--border-focus);
   --color-text-primary: var(--text-primary);
@@ -153,6 +174,14 @@
   --color-active-overlay: var(--active-overlay);
   --color-selected-bg: var(--selected-bg);
   --color-selected-border: var(--selected-border);
+  --color-status-success-bg: var(--color-status-success-bg);
+  --color-status-success-text: var(--color-status-success-text);
+  --color-status-warning-bg: var(--color-status-warning-bg);
+  --color-status-warning-text: var(--color-status-warning-text);
+  --color-status-error-bg: var(--color-status-error-bg);
+  --color-status-error-text: var(--color-status-error-text);
+  --color-status-info-bg: var(--color-status-info-bg);
+  --color-status-info-text: var(--color-status-info-text);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
 }
@@ -658,6 +687,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Page Enter Animation */
+/* DEPRECATED: Use motion/react animations instead. Kept for backwards compatibility. */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -810,6 +840,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Enhanced Animations */
 
+/* DEPRECATED: Use motion/react animations instead. Kept for backwards compatibility. */
 /* Fade in with slight lift */
 @keyframes fadeInUp {
   from {
@@ -822,6 +853,7 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/* DEPRECATED: Use motion/react animations instead. Kept for backwards compatibility. */
 /* Fade in from scale */
 @keyframes fadeInScale {
   from {
@@ -834,6 +866,7 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/* DEPRECATED: Use motion/react animations instead. Kept for backwards compatibility. */
 /* Subtle pulse for active elements */
 @keyframes subtlePulse {
   0%, 100% {
@@ -844,6 +877,7 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/* DEPRECATED: Use motion/react animations instead. Kept for backwards compatibility. */
 /* Shimmer for loading states */
 @keyframes shimmer {
   0% {
@@ -854,6 +888,7 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/* DEPRECATED: Use motion/react animations instead. Kept for backwards compatibility. */
 /* Spin with easing */
 @keyframes spinSmooth {
   from {

@@ -1,10 +1,12 @@
 'use client'
 
 import * as React from 'react'
+import { motion } from 'motion/react'
 import { Check, AlertTriangle, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { EpisodeStatus } from '@/types/database'
+import { InteractiveCard } from '@/components/podbrain/interactive-card'
 
 export interface EpisodeRowData {
   id: string
@@ -19,6 +21,7 @@ export interface EpisodeRowData {
 interface EpisodeRowProps {
   episode: EpisodeRowData
   onClick?: (id: string) => void
+  index?: number
 }
 
 function getHealthScoreColor(score: number | null): string {
@@ -95,7 +98,7 @@ function StatusBadge({ status, alertCount }: { status: EpisodeStatus; alertCount
   }
 }
 
-export function EpisodeRow({ episode, onClick }: EpisodeRowProps) {
+export function EpisodeRow({ episode, onClick, index = 0 }: EpisodeRowProps) {
   const handleClick = () => {
     onClick?.(episode.id)
   }
@@ -111,57 +114,69 @@ export function EpisodeRow({ episode, onClick }: EpisodeRowProps) {
 
   return (
     <>
-      {/* Desktop table row with enhanced hover states */}
-      <tr
-        className={cn(
-          'hidden sm:table-row group border-b border-[var(--border-soft)] transition-all duration-200 ease-out',
-          'hover:border-[rgba(0,0,0,0.08)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.04),0_4px_16px_rgba(0,0,0,0.04)] hover:-translate-y-px cursor-pointer',
-          'focus-visible:outline-none focus-visible:bg-[var(--bg-subtle)]'
-        )}
-        onClick={handleClick}
-        onKeyDown={handleKeyDown}
-        tabIndex={0}
-        role="button"
-        aria-label={`View episode ${episode.episodeNumber}: ${episode.title}`}
+      {/* Desktop table row with InteractiveCard wrapper */}
+      <motion.tr
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: index * 0.05 }}
+        className="hidden sm:table-row"
       >
-        <td className="py-4 px-4">
-          <div className="flex flex-col gap-1">
-            <span className="font-mono text-xs text-[var(--text-tertiary)]">
-              EP {episode.episodeNumber.toString().padStart(3, '0')}
-            </span>
-            <span className="font-medium text-[var(--text-primary)] group-hover:text-[var(--accent-blue)] transition-colors">
-              {episode.title}
-            </span>
-          </div>
-        </td>
-        <td className="py-4 px-4">
-          <span className="text-sm text-[var(--text-secondary)]">
-            {episode.date}
-          </span>
-        </td>
-        <td className="py-4 px-4">
-          <div
-            className="inline-flex items-center justify-center w-12 h-12 rounded-full border"
-            style={{
-              background: scoreGradient.background,
-              borderColor: scoreGradient.border
-            }}
+        <td colSpan={4} className="p-0">
+          <InteractiveCard
+            onClick={handleClick}
+            className="rounded-none border-x-0 border-t-0 shadow-none hover:shadow-[0_2px_8px_rgba(0,0,0,0.04),0_4px_16px_rgba(0,0,0,0.04)]"
           >
-            <span className={cn(
-              'font-mono text-sm font-semibold tabular-nums',
-              getHealthScoreColor(episode.healthScore)
-            )}>
-              {episode.healthScore !== null ? episode.healthScore : '--'}
-            </span>
-          </div>
+            <div
+              className="grid grid-cols-4 gap-4 py-4 px-4"
+              onKeyDown={handleKeyDown}
+              tabIndex={0}
+              role="button"
+              aria-label={`View episode ${episode.episodeNumber}: ${episode.title}`}
+            >
+              <div className="flex flex-col gap-1">
+                <span className="font-mono text-xs text-[var(--text-tertiary)]">
+                  EP {episode.episodeNumber.toString().padStart(3, '0')}
+                </span>
+                <span className="font-medium text-[var(--text-primary)]">
+                  {episode.title}
+                </span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-sm text-[var(--text-secondary)]">
+                  {episode.date}
+                </span>
+              </div>
+              <div className="flex items-center justify-center">
+                <div
+                  className="inline-flex items-center justify-center w-12 h-12 rounded-full border"
+                  style={{
+                    background: scoreGradient.background,
+                    borderColor: scoreGradient.border
+                  }}
+                >
+                  <span className={cn(
+                    'font-mono text-sm font-semibold tabular-nums',
+                    getHealthScoreColor(episode.healthScore)
+                  )}>
+                    {episode.healthScore !== null ? episode.healthScore : '--'}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center justify-end">
+                <StatusBadge status={episode.status} alertCount={episode.alertCount} />
+              </div>
+            </div>
+          </InteractiveCard>
         </td>
-        <td className="py-4 px-4">
-          <StatusBadge status={episode.status} alertCount={episode.alertCount} />
-        </td>
-      </tr>
+      </motion.tr>
 
       {/* Mobile card view */}
-      <tr className="sm:hidden">
+      <motion.tr
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: index * 0.05 }}
+        className="sm:hidden"
+      >
         <td colSpan={4} className="p-0">
           <div
             className={cn(
@@ -208,7 +223,7 @@ export function EpisodeRow({ episode, onClick }: EpisodeRowProps) {
             </div>
           </div>
         </td>
-      </tr>
+      </motion.tr>
     </>
   )
 }

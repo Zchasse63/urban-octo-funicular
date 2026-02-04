@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Search, Check, AlertTriangle, Loader2 } from 'lucide-react'
+import { Check, AlertTriangle, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { EpisodeRow, type EpisodeRowData } from './episode-row'
@@ -12,6 +12,7 @@ type FilterTab = 'all' | 'last30days' | 'hasAlerts' | 'processing'
 interface EpisodeListProps {
   episodes: EpisodeRowData[]
   onEpisodeClick?: (id: string) => void
+  searchQuery?: string
 }
 
 function StatusBadge({ status, alertCount }: { status: EpisodeStatus; alertCount?: number }) {
@@ -102,9 +103,8 @@ function filterEpisodes(episodes: EpisodeRowData[], filter: FilterTab, searchQue
   return filtered
 }
 
-export function EpisodeList({ episodes, onEpisodeClick }: EpisodeListProps) {
+export function EpisodeList({ episodes, onEpisodeClick, searchQuery = '' }: EpisodeListProps) {
   const [activeFilter, setActiveFilter] = React.useState<FilterTab>('all')
-  const [searchQuery, setSearchQuery] = React.useState('')
 
   const filteredEpisodes = React.useMemo(
     () => filterEpisodes(episodes, activeFilter, searchQuery),
@@ -113,24 +113,6 @@ export function EpisodeList({ episodes, onEpisodeClick }: EpisodeListProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Search Bar */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-tertiary)]" aria-hidden="true" />
-        <input
-          type="search"
-          placeholder="Search episodes..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          aria-label="Search episodes"
-          className={cn(
-            'w-full pl-10 pr-4 py-3 sm:py-2.5',
-            'bg-[var(--bg-subtle)] border border-[var(--border-soft)] rounded-lg',
-            'text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]',
-            'focus:outline-none focus:border-[var(--accent-blue)] focus:shadow-[var(--shadow-focus)]',
-            'transition-all duration-200'
-          )}
-        />
-      </div>
 
       {/* Filter Tabs */}
       <div className="flex gap-1 border-b border-[var(--border-soft)] overflow-x-auto">
@@ -184,11 +166,12 @@ export function EpisodeList({ episodes, onEpisodeClick }: EpisodeListProps) {
           </thead>
           <tbody>
             {filteredEpisodes.length > 0 ? (
-              filteredEpisodes.map((episode) => (
+              filteredEpisodes.map((episode, index) => (
                 <EpisodeRow
                   key={episode.id}
                   episode={episode}
                   onClick={onEpisodeClick}
+                  index={index}
                 />
               ))
             ) : (

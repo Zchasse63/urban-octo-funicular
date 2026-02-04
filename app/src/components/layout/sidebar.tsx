@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion, useReducedMotion } from "motion/react";
 import {
   Mic2,
   Upload,
@@ -13,6 +14,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { springs } from "@/lib/motion";
 
 interface NavItemProps {
   href: string;
@@ -20,17 +22,22 @@ interface NavItemProps {
   label: string;
   isActive?: boolean;
   onClick?: () => void;
+  isMobile?: boolean;
 }
 
-function NavItem({ href, icon: Icon, label, isActive, onClick }: NavItemProps) {
+const MotionLink = motion.create(Link);
+
+function NavItem({ href, icon: Icon, label, isActive, onClick, isMobile = false }: NavItemProps) {
+  const prefersReducedMotion = useReducedMotion();
+
   return (
-    <Link
+    <MotionLink
       href={href}
       onClick={onClick}
       className={cn(
         // Base styles
         "group relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium",
-        "transition-all duration-200 ease-out",
+        "transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)] focus-visible:ring-offset-2",
         // Default state
         !isActive && "text-[#6A6A69] hover:text-[#121212] hover:bg-[rgba(0,0,0,0.04)]",
         // Active state with accent indicator
@@ -40,14 +47,19 @@ function NavItem({ href, icon: Icon, label, isActive, onClick }: NavItemProps) {
         ]
       )}
       aria-current={isActive ? "page" : undefined}
+      whileHover={{ x: prefersReducedMotion ? 0 : 2 }}
+      whileTap={{ scale: prefersReducedMotion ? 1 : 0.98 }}
+      transition={prefersReducedMotion ? { duration: 0 } : springs.snappy}
     >
       {/* Active indicator bar - positioned to be visible */}
       {isActive && (
-        <div
+        <motion.div
+          layoutId={isMobile ? "activeNav-mobile" : "activeNav-desktop"}
           className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-[#007AFF]"
           style={{
             boxShadow: "0 0 12px rgba(0, 122, 255, 0.6), 0 0 4px rgba(0, 122, 255, 0.8)",
           }}
+          transition={springs.snappy}
         />
       )}
 
@@ -62,7 +74,7 @@ function NavItem({ href, icon: Icon, label, isActive, onClick }: NavItemProps) {
 
       {/* Label */}
       <span className="flex-1 relative z-10">{label}</span>
-    </Link>
+    </MotionLink>
   );
 }
 
@@ -81,7 +93,9 @@ function NavSection({
         </span>
         <div className="flex-1 h-px bg-gradient-to-r from-[#E5E5E5] to-transparent" />
       </div>
-      <nav className="flex flex-col gap-0.5">{children}</nav>
+      <nav className="flex flex-col gap-0.5">
+        {children}
+      </nav>
     </div>
   );
 }
@@ -170,6 +184,7 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
               label={item.label}
               isActive={pathname === item.href || pathname.startsWith(item.href + "/")}
               onClick={onMobileClose}
+              isMobile={isMobileOpen}
             />
           ))}
         </NavSection>
@@ -183,6 +198,7 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
               label={item.label}
               isActive={pathname === item.href || pathname.startsWith(item.href + "/")}
               onClick={onMobileClose}
+              isMobile={isMobileOpen}
             />
           ))}
         </NavSection>
@@ -198,6 +214,7 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
               label={item.label}
               isActive={pathname === item.href || pathname.startsWith(item.href + "/")}
               onClick={onMobileClose}
+              isMobile={isMobileOpen}
             />
           ))}
         </nav>
@@ -205,35 +222,29 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
     </>
   );
 
+  // Mobile sidebar renders inside SmoothDrawer with unique layoutId scope
+  if (isMobileOpen) {
+    return (
+      <motion.aside
+        className="flex flex-col h-full py-6"
+        aria-label="Main navigation"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.15 }}
+      >
+        {sidebarContent}
+      </motion.aside>
+    );
+  }
+
+  // Desktop sidebar - always rendered in CSS Grid with unique layoutId scope
   return (
-    <>
-      {/* Mobile Backdrop */}
-      {isMobileOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden"
-          onClick={onMobileClose}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Mobile Sidebar - Fixed overlay with slide animation */}
-      <aside
-        className={cn(
-          "sidebar-mobile md:hidden",
-          isMobileOpen ? "translate-x-0" : "-translate-x-full"
-        )}
-        aria-label="Main navigation"
-      >
-        {sidebarContent}
-      </aside>
-
-      {/* Desktop Sidebar - Static within CSS Grid */}
-      <aside
-        className="sidebar-desktop hidden md:flex"
-        aria-label="Main navigation"
-      >
-        {sidebarContent}
-      </aside>
-    </>
+    <aside
+      className="sidebar-desktop hidden md:flex"
+      aria-label="Main navigation"
+    >
+      {sidebarContent}
+    </aside>
   );
 }

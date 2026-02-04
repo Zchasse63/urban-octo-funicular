@@ -1,35 +1,22 @@
 "use client";
 
 import * as React from "react";
+import { usePathname } from "next/navigation";
+import { motion, useReducedMotion } from "motion/react";
 import { Sidebar } from "./sidebar";
 import { ToastProvider } from "@/components/ui/toast";
 import { Menu } from "lucide-react";
+import { SmoothDrawer } from "@/components/kokonutui/smooth-drawer";
+import { easings, durations } from "@/lib/motion";
 
 interface AppShellProps {
   children: React.ReactNode;
 }
 
 export function AppShell({ children }: AppShellProps) {
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = React.useState(false);
-
-  // Close sidebar on navigation (mobile)
-  React.useEffect(() => {
-    const handleRouteChange = () => setIsMobileSidebarOpen(false);
-    window.addEventListener("popstate", handleRouteChange);
-    return () => window.removeEventListener("popstate", handleRouteChange);
-  }, []);
-
-  // Prevent body scroll when mobile sidebar is open
-  React.useEffect(() => {
-    if (isMobileSidebarOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isMobileSidebarOpen]);
+  const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
+  const pathname = usePathname();
+  const prefersReducedMotion = useReducedMotion();
 
   return (
     <ToastProvider>
@@ -41,14 +28,24 @@ export function AppShell({ children }: AppShellProps) {
           borderColor: "var(--border-soft)",
         }}
       >
-        <button
-          onClick={() => setIsMobileSidebarOpen(true)}
-          className="p-2 rounded-lg hover:bg-[var(--bg-subtle)] transition-colors"
-          aria-label="Open menu"
-          aria-expanded={isMobileSidebarOpen}
+        <SmoothDrawer
+          open={mobileNavOpen}
+          onOpenChange={setMobileNavOpen}
+          side="left"
+          trigger={
+            <button
+              className="p-2 -ml-2 hover:bg-[rgba(0,0,0,0.04)] rounded-lg transition-colors"
+              aria-label="Open navigation menu"
+            >
+              <Menu className="w-5 h-5 text-[var(--text-primary)]" />
+            </button>
+          }
         >
-          <Menu className="w-5 h-5" style={{ color: "var(--text-primary)" }} />
-        </button>
+          <Sidebar
+            isMobileOpen={true}
+            onMobileClose={() => setMobileNavOpen(false)}
+          />
+        </SmoothDrawer>
         <span className="text-[var(--text-primary)] font-semibold text-lg tracking-tight">
           PodBrain
         </span>
@@ -56,22 +53,33 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* App Container - CSS Grid layout */}
       <div className="app-container">
-        <Sidebar
-          isMobileOpen={isMobileSidebarOpen}
-          onMobileClose={() => setIsMobileSidebarOpen(false)}
-        />
+        {/* Desktop sidebar - hidden on mobile */}
+        <Sidebar key="desktop-sidebar" />
 
-        <main className="main-content">
+        <motion.main
+          key={pathname}
+          className="main-content"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={
+            prefersReducedMotion
+              ? { duration: 0 }
+              : {
+                  duration: durations.enter,
+                  ease: easings.outExpo,
+                }
+          }
+        >
           <div className="mx-auto max-w-[1400px] w-full px-4 sm:px-6 md:px-16 py-6 md:py-10">
             <a
               href="#main-content"
-              className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-[var(--bg-elevated)] focus:rounded-lg focus:shadow-lg"
+              className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-[var(--bg-elevated)] focus:rounded-lg focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)] focus:ring-offset-2"
             >
               Skip to main content
             </a>
             <div id="main-content">{children}</div>
           </div>
-        </main>
+        </motion.main>
       </div>
     </ToastProvider>
   );

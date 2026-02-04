@@ -5,6 +5,7 @@ import { MetricsRow } from "@/components/episodes/metrics-row";
 import { ShowNotesCard } from "@/components/episodes/show-notes-card";
 import { GuestIntelligenceCard } from "@/components/episodes/guest-intelligence-card";
 import { ContentHealthCard } from "@/components/episodes/content-health-card";
+import { ContentCard } from "@/components/podbrain/content-card";
 
 // Mock data for sample episode
 const mockEpisode = {
@@ -118,7 +119,9 @@ export default function EpisodeDetailPage() {
       <div className="grid gap-8" style={{ gridTemplateColumns: "1.6fr 1fr" }}>
         {/* Left Column - Show Notes */}
         <div>
-          <ShowNotesCard showNotes={mockEpisode.showNotes} />
+          <ContentCard title="Generated Show Notes">
+            <ShowNotesCard showNotes={mockEpisode.showNotes} />
+          </ContentCard>
         </div>
 
         {/* Right Column - Sidebar Cards */}

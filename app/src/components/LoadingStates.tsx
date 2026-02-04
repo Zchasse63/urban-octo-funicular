@@ -5,6 +5,7 @@
 
 import * as React from 'react'
 import { cn } from '@/lib/utils'
+import { ProcessingState, AIContentReveal } from '@/components/podbrain/processing-states'
 
 /**
  * Base Skeleton component with shimmer animation
@@ -54,6 +55,7 @@ export function ListSkeleton({ count = 6 }: { count?: number }) {
 
 /**
  * Circular loading spinner using design system colors
+ * @deprecated Consider using ProcessingState for AI processing UIs
  */
 export function Spinner({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
   const sizeClasses = {
@@ -73,6 +75,7 @@ export function Spinner({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
 
 /**
  * Full-page loading state with centered spinner
+ * @deprecated Consider using ProcessingState for AI processing UIs
  */
 export function PageLoader({ message }: { message?: string }) {
   return (
@@ -125,3 +128,6 @@ export function MetricSkeleton() {
     </div>
   )
 }
+
+// Export new Kokonut UI-based components
+export { ProcessingState, AIContentReveal }

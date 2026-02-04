@@ -1,60 +1,42 @@
 import * as React from "react"
+
 import { cn } from "@/lib/utils"
 
-// Topo Card - Primary elevated card with layered shadow
-const TopoCard = React.forwardRef<
+const Card = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & {
-    hover?: boolean
-    glow?: boolean
-    accentColor?: 'blue' | 'green' | 'amber' | 'none'
-  }
->(({ className, hover = true, glow = false, accentColor = 'none', ...props }, ref) => {
-  const glowColors = {
-    blue: 'hover:shadow-[0_4px_8px_rgba(0,0,0,0.06),0_15px_45px_rgba(0,122,255,0.15)]',
-    green: 'hover:shadow-[0_4px_8px_rgba(0,0,0,0.06),0_15px_45px_rgba(52,199,89,0.15)]',
-    amber: 'hover:shadow-[0_4px_8px_rgba(0,0,0,0.06),0_15px_45px_rgba(245,158,11,0.15)]',
-    none: 'hover:shadow-[0_4px_8px_rgba(0,0,0,0.06),0_15px_45px_rgba(0,0,0,0.10)]'
-  }
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn(
+      "rounded-lg border bg-card text-card-foreground shadow-sm",
+      className
+    )}
+    {...props}
+  />
+))
+Card.displayName = "Card"
 
-  return (
-    <div
-      ref={ref}
-      className={cn(
-        "relative overflow-hidden rounded-xl border border-[#E5E5E5] bg-white p-6",
-        "shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.08)]",
-        hover && "transition-all duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] hover:-translate-y-1",
-        hover && (glow ? glowColors[accentColor] : glowColors.none),
-        className
-      )}
-      {...props}
-    />
-  )
-})
-TopoCard.displayName = "TopoCard"
-
-// Card Header with mono label
 const CardHeader = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex items-center justify-between mb-6", className)}
+    className={cn("flex flex-col space-y-1.5 p-6", className)}
     {...props}
   />
 ))
 CardHeader.displayName = "CardHeader"
 
-// Card Title (mono style)
 const CardTitle = React.forwardRef<
-  HTMLHeadingElement,
-  React.HTMLAttributes<HTMLHeadingElement>
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <h3
+  <div
     ref={ref}
     className={cn(
-      "font-mono text-xs font-medium uppercase tracking-[0.05em] text-[var(--text-secondary)]",
+      "text-2xl font-semibold leading-none tracking-tight",
       className
     )}
     {...props}
@@ -62,75 +44,66 @@ const CardTitle = React.forwardRef<
 ))
 CardTitle.displayName = "CardTitle"
 
-// Card Content
+const CardDescription = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("text-sm text-muted-foreground", className)}
+    {...props}
+  />
+))
+CardDescription.displayName = "CardDescription"
+
 const CardContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("", className)} {...props} />
+  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
 ))
 CardContent.displayName = "CardContent"
 
-// Card Footer with border separator
 const CardFooter = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn(
-      "mt-5 pt-4 border-t border-[var(--border-soft)] flex items-center justify-between",
-      className
-    )}
+    className={cn("flex items-center p-6 pt-0", className)}
     {...props}
   />
 ))
 CardFooter.displayName = "CardFooter"
 
-// Metric Card - For displaying scores and KPIs (with topo styling)
 const MetricCard = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & {
-    trend?: 'up' | 'down' | 'neutral'
-    interactive?: boolean
-  }
->(({ className, trend, interactive = false, ...props }, ref) => {
-  const trendColors = {
-    up: 'hover:border-[var(--accent-green)]/30',
-    down: 'hover:border-[var(--accent-red)]/30',
-    neutral: 'hover:border-[var(--accent-blue)]/30'
-  }
-
-  return (
-    <div
-      ref={ref}
-      className={cn(
-        "relative overflow-hidden rounded-xl border border-[#E5E5E5] bg-white p-4",
-        "shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.08)]",
-        interactive && "transition-all duration-300 hover:-translate-y-0.5",
-        interactive && trend && trendColors[trend],
-        className
-      )}
-      {...props}
-    />
-  )
-})
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn(
+      "rounded-xl border p-4 bg-white shadow-sm",
+      "border-[var(--border-subtle)]",
+      className
+    )}
+    {...props}
+  />
+))
 MetricCard.displayName = "MetricCard"
 
-// Metric Value
 const MetricValue = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("text-2xl font-bold my-1", className)}
+    className={cn("text-3xl font-bold tracking-tight my-2", className)}
     {...props}
   />
 ))
 MetricValue.displayName = "MetricValue"
 
-// Metric Label
 const MetricLabel = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -138,7 +111,7 @@ const MetricLabel = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "flex items-center gap-1 text-xs text-[var(--text-secondary)]",
+      "flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]",
       className
     )}
     {...props}
@@ -146,43 +119,25 @@ const MetricLabel = React.forwardRef<
 ))
 MetricLabel.displayName = "MetricLabel"
 
-// Alert Card
-interface AlertCardProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: 'info' | 'success' | 'warning' | 'error'
+interface TopoCardProps extends React.HTMLAttributes<HTMLDivElement> {
+  hover?: boolean;
 }
 
-const AlertCard = React.forwardRef<HTMLDivElement, AlertCardProps>(
-  ({ className, variant = 'info', ...props }, ref) => {
-    const borderColors = {
-      info: 'border-l-[var(--accent-blue)]',
-      success: 'border-l-[var(--accent-green)]',
-      warning: 'border-l-[var(--accent-amber)]',
-      error: 'border-l-[var(--accent-red)]',
-    }
+const TopoCard = React.forwardRef<
+  HTMLDivElement,
+  TopoCardProps
+>(({ className, hover = true, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn(
+      "rounded-xl border bg-white shadow-sm",
+      "border-[var(--border-subtle)]",
+      hover && "transition-shadow hover:shadow-md",
+      className
+    )}
+    {...props}
+  />
+))
+TopoCard.displayName = "TopoCard"
 
-    return (
-      <div
-        ref={ref}
-        className={cn(
-          "rounded-lg border-l-[3px] bg-[var(--bg-subtle)] p-4",
-          borderColors[variant],
-          className
-        )}
-        {...props}
-      />
-    )
-  }
-)
-AlertCard.displayName = "AlertCard"
-
-export {
-  TopoCard,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardFooter,
-  MetricCard,
-  MetricValue,
-  MetricLabel,
-  AlertCard,
-}
+export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent, MetricCard, MetricValue, MetricLabel, TopoCard }
