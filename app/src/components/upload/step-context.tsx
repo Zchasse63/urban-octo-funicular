@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { Lightbulb, ArrowLeft, ArrowRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import type { ContextData } from './upload-wizard'
 
 interface StepContextProps {
@@ -43,16 +45,18 @@ export function StepContext({
 
       {/* Episode Title */}
       <div className="space-y-2">
-        <label htmlFor="title" className="mono">
+        <label
+          htmlFor="title"
+          className="block font-mono text-xs font-medium uppercase tracking-[0.05em] text-[var(--text-secondary)]"
+        >
           Episode Title
         </label>
-        <input
+        <Input
           id="title"
           type="text"
           placeholder="e.g., The Future of AI in Podcasting"
           value={localData.title}
           onChange={(e) => handleChange('title', e.target.value)}
-          className="input"
           aria-label="Episode title"
         />
         <div className="flex items-start gap-2 mt-2">
@@ -65,16 +69,18 @@ export function StepContext({
 
       {/* Guest Name(s) */}
       <div className="space-y-2">
-        <label htmlFor="guests" className="mono">
+        <label
+          htmlFor="guests"
+          className="block font-mono text-xs font-medium uppercase tracking-[0.05em] text-[var(--text-secondary)]"
+        >
           Guest Name(s)
         </label>
-        <input
+        <Input
           id="guests"
           type="text"
           placeholder="e.g., Jane Smith, John Doe"
           value={localData.guestNames}
           onChange={(e) => handleChange('guestNames', e.target.value)}
-          className="input"
           aria-label="Guest names"
         />
         <div className="flex items-start gap-2 mt-2">
@@ -87,16 +93,18 @@ export function StepContext({
 
       {/* Target Keywords */}
       <div className="space-y-2">
-        <label htmlFor="keywords" className="mono">
+        <label
+          htmlFor="keywords"
+          className="block font-mono text-xs font-medium uppercase tracking-[0.05em] text-[var(--text-secondary)]"
+        >
           Target Keywords
         </label>
-        <input
+        <Input
           id="keywords"
           type="text"
           placeholder="e.g., podcast marketing, content strategy, audience growth"
           value={localData.targetKeywords}
           onChange={(e) => handleChange('targetKeywords', e.target.value)}
-          className="input"
           aria-label="Target keywords for SEO"
         />
         <div className="flex items-start gap-2 mt-2">
@@ -109,26 +117,30 @@ export function StepContext({
 
       {/* Action Buttons */}
       <div className="flex gap-3 pt-4">
-        <button
+        <Button
+          type="button"
+          variant="secondary"
           onClick={onBack}
-          className="btn-secondary"
         >
           <ArrowLeft className="w-4 h-4" />
           Back
-        </button>
-        <button
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
           onClick={onSkip}
-          className="btn-secondary flex-1 justify-center"
+          className="flex-1 justify-center"
         >
           Skip
-        </button>
-        <button
+        </Button>
+        <Button
+          type="button"
           onClick={handleContinue}
-          className="btn-primary flex-1 justify-center"
+          className="flex-1 justify-center"
         >
           Continue
           <ArrowRight className="w-4 h-4" />
-        </button>
+        </Button>
       </div>
     </div>
   )

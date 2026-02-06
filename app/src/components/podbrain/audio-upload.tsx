@@ -52,7 +52,6 @@ export function AudioUpload({
   maxSize = 500 * 1024 * 1024, // 500MB default
   className,
 }: AudioUploadProps) {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileInfo, setFileInfo] = useState<{
     name: string;
     size: string;
@@ -109,7 +108,6 @@ export function AudioUpload({
   const handleUploadSuccess = useCallback(
     (file: File) => {
       // Store file info
-      setSelectedFile(file);
       setFileInfo({
         name: file.name,
         size: formatBytes(file.size),
@@ -143,11 +141,11 @@ export function AudioUpload({
 
       {/* Display file info after selection */}
       {fileInfo && (
-        <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-black">
-          <h3 className="mb-2 text-sm font-medium text-gray-900 dark:text-white">
+        <div className="mt-4 rounded-lg border border-[var(--border-soft)] bg-[var(--bg-elevated)] p-4">
+          <h3 className="mb-2 text-sm font-medium text-[var(--text-primary)]">
             Selected Audio File
           </h3>
-          <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+          <div className="space-y-1 text-sm text-[var(--text-secondary)]">
             <div className="flex items-center justify-between">
               <span className="font-medium">File:</span>
               <span className="truncate max-w-xs" title={fileInfo.name}>
@@ -160,7 +158,7 @@ export function AudioUpload({
             </div>
             <div className="flex items-center justify-between">
               <span className="font-medium">Duration:</span>
-              <span className="text-gray-500">{fileInfo.duration}</span>
+              <span className="text-[var(--text-tertiary)]">{fileInfo.duration}</span>
             </div>
           </div>
         </div>

@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'
 import { Download, Mail, ArrowLeft, User, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { TopoCard, CardContent } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { SocialPostCard, QuoteCardsGrid, EmailTemplate } from '@/components/guest-package'
 import { useToast } from '@/components/ui/toast'
 import type { SocialPostVariant, QuoteCard } from '@/lib/guest-package/generator'
@@ -32,7 +32,6 @@ export default function GuestPackagePage() {
   const [isLoading, setIsLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [isDownloading, setIsDownloading] = React.useState(false)
-  const [isSendingEmail, setIsSendingEmail] = React.useState(false)
 
   const [socialPosts, setSocialPosts] = React.useState<SocialPostVariant[]>([])
   const [emailSubject, setEmailSubject] = React.useState('')
@@ -144,7 +143,6 @@ export default function GuestPackagePage() {
       return
     }
 
-    setIsSendingEmail(true)
     try {
       const response = await fetch(`/api/episodes/${episodeId}/guest-package`, {
         method: 'POST',
@@ -173,8 +171,6 @@ export default function GuestPackagePage() {
         variant: 'error',
         description: err instanceof Error ? err.message : 'Failed to send email',
       })
-    } finally {
-      setIsSendingEmail(false)
     }
   }
 
@@ -270,7 +266,7 @@ export default function GuestPackagePage() {
       {/* Content */}
       <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
         {/* Guest Info Card */}
-        <TopoCard hover={false}>
+        <Card>
           <CardContent>
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--bg-subtle)] to-[var(--border-soft)] flex items-center justify-center">
@@ -304,7 +300,7 @@ export default function GuestPackagePage() {
               </div>
             </div>
           </CardContent>
-        </TopoCard>
+        </Card>
 
         {/* Social Posts Section */}
         <section>
@@ -352,7 +348,7 @@ export default function GuestPackagePage() {
         </section>
 
         {/* Quick Actions Footer */}
-        <TopoCard hover={false} className="bg-[var(--bg-subtle)]">
+        <Card className="bg-[var(--bg-subtle)]">
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
@@ -371,7 +367,7 @@ export default function GuestPackagePage() {
               </Link>
             </div>
           </CardContent>
-        </TopoCard>
+        </Card>
       </div>
     </div>
   )

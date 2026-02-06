@@ -6,7 +6,6 @@ import Link from 'next/link'
 import {
   ArrowLeft,
   Download,
-  Filter,
   LayoutGrid,
   List,
   Sparkles,
@@ -17,18 +16,13 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { TopoCard, CardHeader, CardTitle } from '@/components/ui/card'
-import { createAssetList, getCategoryCounts, getReadyCounts, type AssetWithContent } from '@/components/assets/asset-grid'
+import { Card } from '@/components/ui/card'
+import { createAssetList, getCategoryCounts, getReadyCounts } from '@/components/assets/asset-grid'
 import { AssetEditor } from '@/components/assets/asset-editor'
 import { ListSkeleton } from '@/components/LoadingStates'
 import {
-  ASSET_TYPE_DEFINITIONS,
-  ASSET_CATEGORIES,
   TOTAL_ASSET_TYPES,
   type AssetCategory,
-  type AssetGenerationStatus,
-  getAssetDefinition,
 } from '@/lib/assets/asset-types'
 import type { GeneratedAsset } from '@/types/database'
 
@@ -446,7 +440,7 @@ export default function AssetsPage() {
     }
   }
 
-  const handleSaveEdit = async (content: string) => {
+  const handleSaveEdit = async () => {
     if (!editingAssetId) return
 
     setIsSaving(true)
@@ -533,7 +527,7 @@ export default function AssetsPage() {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-4 gap-4 mb-8">
-        <TopoCard hover={false} className="p-4">
+        <Card className="p-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--bg-subtle)]">
               <LayoutGrid className="h-5 w-5 text-[var(--text-secondary)]" />
@@ -543,9 +537,9 @@ export default function AssetsPage() {
               <p className="text-xs text-[var(--text-tertiary)] font-mono uppercase">Total Assets</p>
             </div>
           </div>
-        </TopoCard>
+        </Card>
 
-        <TopoCard hover={false} className="p-4">
+        <Card className="p-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[rgba(52,199,89,0.1)]">
               <CheckCircle2 className="h-5 w-5 text-[var(--accent-green)]" />
@@ -555,9 +549,9 @@ export default function AssetsPage() {
               <p className="text-xs text-[var(--text-tertiary)] font-mono uppercase">Ready</p>
             </div>
           </div>
-        </TopoCard>
+        </Card>
 
-        <TopoCard hover={false} className="p-4">
+        <Card className="p-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[rgba(0,122,255,0.1)]">
               <Clock className="h-5 w-5 text-[var(--accent-blue)]" />
@@ -567,9 +561,9 @@ export default function AssetsPage() {
               <p className="text-xs text-[var(--text-tertiary)] font-mono uppercase">Generating</p>
             </div>
           </div>
-        </TopoCard>
+        </Card>
 
-        <TopoCard hover={false} className="p-4">
+        <Card className="p-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--bg-subtle)]">
               <AlertCircle className="h-5 w-5 text-[var(--text-tertiary)]" />
@@ -581,7 +575,7 @@ export default function AssetsPage() {
               <p className="text-xs text-[var(--text-tertiary)] font-mono uppercase">Pending</p>
             </div>
           </div>
-        </TopoCard>
+        </Card>
       </div>
 
       {/* Filter Bar */}

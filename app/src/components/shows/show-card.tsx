@@ -4,7 +4,7 @@ import * as React from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Podcast, Mic } from 'lucide-react'
-import { TopoCard } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 
 export interface ShowCardData {
   id: string
@@ -39,7 +39,7 @@ export function ShowCard({ show, onClick }: ShowCardProps) {
 
   return (
     <Link href={`/shows/${show.id}/episodes`} onClick={handleClick}>
-      <TopoCard className="cursor-pointer h-full">
+      <Card className="cursor-pointer h-full">
         <div className="flex flex-col h-full">
           {/* Artwork */}
           <div className="flex items-start gap-4 mb-4">
@@ -83,7 +83,7 @@ export function ShowCard({ show, onClick }: ShowCardProps) {
             </span>
           </div>
         </div>
-      </TopoCard>
+      </Card>
     </Link>
   )
 }

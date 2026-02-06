@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { Search, Headphones, Clock, Calendar, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { TopoCard, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatDurationDisplay } from '@/lib/seo/schema-generator'
 
@@ -92,7 +92,7 @@ export function SearchPreview({
     : null
 
   return (
-    <TopoCard className={className} hover={false}>
+    <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Search className="w-4 h-4" />
@@ -208,7 +208,7 @@ export function SearchPreview({
           </div>
         </div>
       </CardContent>
-    </TopoCard>
+    </Card>
   )
 }
 

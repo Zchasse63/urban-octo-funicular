@@ -9,8 +9,7 @@ import {
   AlertTriangle,
   CheckCircle,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { TopoCard, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import type { PodcastEpisodeSchema } from '@/lib/seo/schema-generator'
@@ -118,7 +117,7 @@ export function SchemaPreview({
   }
 
   return (
-    <TopoCard className={className} hover={false}>
+    <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Code className="w-4 h-4" />
@@ -228,7 +227,7 @@ export function SchemaPreview({
           </p>
         </div>
       </CardContent>
-    </TopoCard>
+    </Card>
   )
 }
 

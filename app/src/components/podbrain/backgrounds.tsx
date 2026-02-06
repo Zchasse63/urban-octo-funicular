@@ -71,9 +71,9 @@ export function EmptyStateBackground({ children }: EmptyStateBackgroundProps) {
     <div className="relative min-h-screen w-full overflow-hidden">
       {/* Background layer at z-0 with reduced opacity */}
       <div className="absolute inset-0 z-0 opacity-40">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden bg-white dark:bg-neutral-950">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden bg-[var(--bg-elevated)]">
           <svg
-            className="h-full w-full text-slate-950/20 dark:text-white/20"
+            className="h-full w-full text-slate-950/20"
             fill="none"
             preserveAspectRatio="xMidYMid slice"
             viewBox="-2400 -800 4800 1600"

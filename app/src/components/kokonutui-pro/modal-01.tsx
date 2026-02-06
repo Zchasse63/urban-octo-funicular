@@ -10,7 +10,7 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileText, ChevronDown, Sparkles } from "lucide-react";
+import { FileText } from "lucide-react";
 
 export default function Modal01() {
     const [isOpen, setIsOpen] = useState(false);
@@ -44,7 +44,7 @@ export default function Modal01() {
                     <div className="p-4 space-y-4">
                         <div className="space-y-2">
                             <h4 className="text-md font-medium text-zinc-900 dark:text-zinc-100">
-                                What's included:
+                                What&apos;s included:
                             </h4>
                             <ul className="text-sm text-zinc-500 dark:text-zinc-400 space-y-2">
                                 {[

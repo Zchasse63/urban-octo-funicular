@@ -118,10 +118,10 @@ export function GlobalSearch({
               className="w-full max-w-2xl px-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-800 dark:bg-black">
+              <div className="rounded-lg border border-[var(--border-soft)] bg-[var(--bg-elevated)] shadow-lg">
                 <div className="p-4">
                   <label
-                    className="mb-2 block text-xs font-medium text-gray-500 dark:text-gray-400"
+                    className="mb-2 block text-xs font-medium text-[var(--text-tertiary)]"
                     htmlFor="global-search"
                   >
                     Search Commands
@@ -141,8 +141,8 @@ export function GlobalSearch({
                 </div>
 
                 {recentSearches.length > 0 && (
-                  <div className="border-t border-gray-200 p-4 dark:border-gray-800">
-                    <h3 className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                  <div className="border-t border-[var(--border-soft)] p-4">
+                    <h3 className="mb-2 text-xs font-medium text-[var(--text-tertiary)]">
                       Recent Searches
                     </h3>
                     <ul className="space-y-1">
@@ -150,9 +150,9 @@ export function GlobalSearch({
                         <li key={index}>
                           <button
                             onClick={() => handleRecentSearchClick(search)}
-                            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-900 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-800"
+                            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]"
                           >
-                            <Search className="h-4 w-4 text-gray-400" />
+                            <Search className="h-4 w-4 text-[var(--text-tertiary)]" />
                             <span>{search}</span>
                           </button>
                         </li>
@@ -161,8 +161,8 @@ export function GlobalSearch({
                   </div>
                 )}
 
-                <div className="border-t border-gray-200 px-4 py-2 dark:border-gray-800">
-                  <div className="flex items-center justify-between text-xs text-gray-500">
+                <div className="border-t border-[var(--border-soft)] px-4 py-2">
+                  <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)]">
                     <span>Press ⌘K to open commands</span>
                     <span>ESC to cancel</span>
                   </div>
@@ -176,14 +176,14 @@ export function GlobalSearch({
       {/* Keyboard shortcut hint trigger button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-500 transition-colors hover:bg-gray-50 dark:border-gray-800 dark:bg-black dark:text-gray-400 dark:hover:bg-gray-900"
+        className="flex items-center gap-2 rounded-lg border border-[var(--border-soft)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-subtle)]"
         aria-expanded={isOpen}
         aria-controls="global-search"
         aria-label="Open global search"
       >
         <Search className="h-4 w-4" />
         <span>Search</span>
-        <kbd className="ml-auto rounded border border-gray-200 bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
+        <kbd className="ml-auto rounded border border-[var(--border-soft)] bg-[var(--bg-subtle)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)]">
           ⌘K
         </kbd>
       </button>

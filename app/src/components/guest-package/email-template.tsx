@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { Mail, Send, Edit2, Check } from 'lucide-react'
-import { TopoCard, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -63,7 +63,7 @@ export function EmailTemplate({
   }, [isEditingSubject])
 
   return (
-    <TopoCard hover={false}>
+    <Card>
       <CardHeader>
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-[var(--accent-blue)]/10">
@@ -178,6 +178,6 @@ export function EmailTemplate({
           </p>
         </div>
       </CardContent>
-    </TopoCard>
+    </Card>
   )
 }

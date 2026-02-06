@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { Mail } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import type { ProcessingState as UploadProcessingState } from './upload-wizard'
 import { ProcessingState, type ProcessingStep } from '@/components/podbrain/processing-states'
 
@@ -93,12 +95,12 @@ export function StepProcessing({ processingState }: StepProcessingProps) {
               {emailNotify && (
                 <div className="mt-3 relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
-                  <input
+                  <Input
                     type="email"
                     placeholder="your@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="input pl-10"
+                    className="pl-10"
                   />
                 </div>
               )}
@@ -110,12 +112,12 @@ export function StepProcessing({ processingState }: StepProcessingProps) {
       {/* Completion Actions */}
       {isComplete && (
         <div className="flex gap-3 pt-4">
-          <button className="btn-secondary flex-1 justify-center">
+          <Button type="button" variant="secondary" className="flex-1 justify-center">
             View Show Notes
-          </button>
-          <button className="btn-primary flex-1 justify-center">
+          </Button>
+          <Button type="button" className="flex-1 justify-center">
             View All Assets
-          </button>
+          </Button>
         </div>
       )}
     </div>

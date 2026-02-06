@@ -1,6 +1,6 @@
 "use client";
 
-import { TopoCard, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
 
 interface ContentHealthData {
@@ -20,10 +20,10 @@ function ProgressBar({
   value: number;
   label: string;
 }) {
-  const getColorClass = (score: number) => {
-    if (score >= 70) return "success";
-    if (score >= 40) return "warning";
-    return "error";
+  const getColor = (score: number) => {
+    if (score >= 70) return "var(--accent-green)";
+    if (score >= 40) return "var(--accent-amber)";
+    return "var(--accent-red)";
   };
 
   return (
@@ -36,10 +36,10 @@ function ProgressBar({
           {value}%
         </span>
       </div>
-      <div className="progress-track">
+      <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--bg-subtle)]">
         <div
-          className={`progress-fill ${getColorClass(value)}`}
-          style={{ width: `${value}%` }}
+          className="h-full rounded-full transition-[width] duration-300"
+          style={{ width: `${value}%`, backgroundColor: getColor(value) }}
         />
       </div>
     </div>
@@ -48,7 +48,7 @@ function ProgressBar({
 
 export function ContentHealthCard({ health }: ContentHealthCardProps) {
   return (
-    <TopoCard hover={false}>
+    <Card>
       <CardHeader>
         <CardTitle>Content Health</CardTitle>
       </CardHeader>
@@ -71,6 +71,6 @@ export function ContentHealthCard({ health }: ContentHealthCardProps) {
           </div>
         </div>
       </CardContent>
-    </TopoCard>
+    </Card>
   );
 }

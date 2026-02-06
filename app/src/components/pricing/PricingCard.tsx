@@ -1,6 +1,8 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface PricingCardProps {
   tier: string;
@@ -24,16 +26,13 @@ export function PricingCard({
   loading = false,
 }: PricingCardProps) {
   return (
-    <div
+    <Card
       className={cn(
-        'topo-card relative transition-all',
-        highlighted && 'ring-2'
+        'relative transition-all',
+        highlighted && 'ring-2 ring-[var(--accent-blue)]'
       )}
-      style={highlighted ? {
-        borderColor: 'var(--accent-blue)',
-        '--tw-ring-color': 'var(--accent-blue)'
-      } as React.CSSProperties : undefined}
     >
+      <CardContent className="pt-6">
       {highlighted && (
         <div
           className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full px-4 py-1 text-sm font-medium text-white"
@@ -44,6 +43,7 @@ export function PricingCard({
       )}
 
       <div className="mb-4">
+        <p className="mb-1 text-xs font-mono uppercase tracking-[0.05em] text-[var(--text-tertiary)]">{tier}</p>
         <h3 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{name}</h3>
       </div>
 
@@ -76,23 +76,20 @@ export function PricingCard({
         ))}
       </ul>
 
-      <button
+      <Button
         onClick={onSubscribe}
         disabled={loading}
+        type="button"
+        variant={highlighted ? 'default' : 'secondary'}
         className={cn(
-          'w-full rounded-[var(--radius-lg)] px-6 py-3 font-medium transition-colors',
+          'w-full transition-colors',
           loading && 'cursor-not-allowed opacity-50'
         )}
-        style={highlighted ? {
-          backgroundColor: 'var(--accent-blue)',
-          color: 'white'
-        } : {
-          backgroundColor: 'var(--text-primary)',
-          color: 'white'
-        }}
+        style={highlighted ? { backgroundColor: 'var(--accent-blue)', color: 'white' } : undefined}
       >
         {loading ? 'Loading...' : buttonText}
-      </button>
-    </div>
+      </Button>
+      </CardContent>
+    </Card>
   );
 }

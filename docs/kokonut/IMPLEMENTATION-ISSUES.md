@@ -2,6 +2,13 @@
 
 This document tracks issues discovered during the UI migration that need review after all phases are complete.
 
+## Revalidation Update (2026-02-06)
+
+- Legacy class usage (`topo-card`, `btn-*`, `input`, `progress-*`, `alert-card`) has been removed from active app flows.
+- Duplicate provider mounting was fixed (`ToastProvider` now mounts once at root).
+- Build warnings around `themeColor` metadata/root detection were resolved.
+- Lint is no longer failing (warnings remain, but no blocking errors).
+
 ## Known Component Limitations
 
 ### 1. HoldButton (kokonutui/hold-button.tsx)

@@ -62,16 +62,12 @@ export function SecondaryButton({
   disabled,
   onClick,
   type = "button",
-  onDrag,
-  onDragEnd,
-  onDragStart,
-  ...props
 }: SecondaryButtonProps) {
   const prefersReducedMotion = useReducedMotion();
   const variantStyles =
     variant === "ghost"
-      ? "border-transparent bg-transparent hover:bg-black/5 dark:hover:bg-white/5"
-      : "border border-black/10 dark:border-white/10 bg-transparent hover:bg-black/5 dark:hover:bg-white/5";
+      ? "border-transparent bg-transparent hover:bg-[var(--hover-overlay)]"
+      : "border border-[var(--border-soft)] bg-transparent hover:bg-[var(--hover-overlay)]";
 
   return (
     <motion.button
@@ -81,7 +77,10 @@ export function SecondaryButton({
       disabled={disabled}
       type={type}
       className={cn(
-        "h-10 px-4 font-medium text-md rounded-md inline-flex items-center justify-center whitespace-nowrap text-sm ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 dark:ring-offset-slate-950 dark:focus-visible:ring-slate-300",
+        "h-10 px-4 font-medium text-md rounded-md inline-flex items-center justify-center whitespace-nowrap text-sm",
+        "text-[var(--text-primary)] transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-elevated)]",
+        "disabled:pointer-events-none disabled:opacity-50",
         "transition-all duration-200",
         variantStyles,
         className
@@ -104,9 +103,7 @@ export function PublishButton({
   destination,
   disabled,
   onClick,
-  ...props
 }: PublishButtonProps) {
-  const prefersReducedMotion = useReducedMotion();
   // Use SlideTextButton with button wrapper to handle onClick
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -122,7 +119,7 @@ export function PublishButton({
       href="#"
       onClick={handleClick}
       className={cn(
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-300",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-elevated)]",
         disabled && "pointer-events-none opacity-50",
         className
       )}
@@ -152,7 +149,7 @@ export function ExportButton({
       className={cn(disabled && "pointer-events-none opacity-50", className)}
       {...props}
     >
-      {shortcut}
+      {children || shortcut}
     </CommandButton>
   );
 }

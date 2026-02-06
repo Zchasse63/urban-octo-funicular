@@ -84,7 +84,7 @@ const MetricCard = React.forwardRef<
     ref={ref}
     className={cn(
       "rounded-xl border p-4 bg-white shadow-sm",
-      "border-[var(--border-subtle)]",
+      "border-[var(--border-soft)]",
       className
     )}
     {...props}
@@ -119,25 +119,4 @@ const MetricLabel = React.forwardRef<
 ))
 MetricLabel.displayName = "MetricLabel"
 
-interface TopoCardProps extends React.HTMLAttributes<HTMLDivElement> {
-  hover?: boolean;
-}
-
-const TopoCard = React.forwardRef<
-  HTMLDivElement,
-  TopoCardProps
->(({ className, hover = true, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "rounded-xl border bg-white shadow-sm",
-      "border-[var(--border-subtle)]",
-      hover && "transition-shadow hover:shadow-md",
-      className
-    )}
-    {...props}
-  />
-))
-TopoCard.displayName = "TopoCard"
-
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent, MetricCard, MetricValue, MetricLabel, TopoCard }
+export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent, MetricCard, MetricValue, MetricLabel }

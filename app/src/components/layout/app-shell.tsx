@@ -4,7 +4,6 @@ import * as React from "react";
 import { usePathname } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 import { Sidebar } from "./sidebar";
-import { ToastProvider } from "@/components/ui/toast";
 import { Menu } from "lucide-react";
 import { SmoothDrawer } from "@/components/kokonutui/smooth-drawer";
 import { easings, durations } from "@/lib/motion";
@@ -19,7 +18,7 @@ export function AppShell({ children }: AppShellProps) {
   const prefersReducedMotion = useReducedMotion();
 
   return (
-    <ToastProvider>
+    <>
       {/* Mobile Header with Hamburger - only shown on mobile */}
       <header
         className="md:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 border-b flex items-center gap-3"
@@ -81,6 +80,6 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         </motion.main>
       </div>
-    </ToastProvider>
+    </>
   );
 }

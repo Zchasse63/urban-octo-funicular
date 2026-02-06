@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Check } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
 import { StepUpload } from './step-upload'
 import { StepContext } from './step-context'
 import { StepProcessing } from './step-processing'
@@ -192,7 +193,8 @@ export function UploadWizard() {
       </div>
 
       {/* Step Content */}
-      <div className="topo-card">
+      <Card>
+        <CardContent className="pt-6">
         {currentStep === 1 && (
           <StepUpload
             uploadData={uploadData}
@@ -212,7 +214,8 @@ export function UploadWizard() {
         {currentStep === 3 && (
           <StepProcessing processingState={processingState} />
         )}
-      </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

@@ -84,7 +84,10 @@ export default function BillingPage() {
         <div className="mb-6">
           <div className="mb-2 text-3xl font-bold text-[var(--text-primary)]">{tierName}</div>
           {subscription?.status && (
-            <div className="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium" style={{ backgroundColor: 'var(--accent-green-bg)', color: 'var(--accent-green)' }}>
+            <div
+              className="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium"
+              style={{ backgroundColor: 'var(--color-status-success-bg)', color: 'var(--accent-green)' }}
+            >
               {subscription.status === 'active' ? 'Active' : subscription.status}
             </div>
           )}

@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { Download, Quote } from 'lucide-react'
-import { TopoCard, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { QuoteCard } from '@/lib/guest-package/generator'
@@ -69,7 +69,7 @@ export function QuoteCardsGrid({
   onDownloadSingle,
 }: QuoteCardsGridProps) {
   return (
-    <TopoCard hover={false}>
+    <Card>
       <CardHeader>
         <div>
           <CardTitle className="text-sm normal-case tracking-normal font-sans font-semibold text-[var(--text-primary)]">
@@ -108,7 +108,7 @@ export function QuoteCardsGrid({
           </div>
         )}
       </CardContent>
-    </TopoCard>
+    </Card>
   )
 }
 

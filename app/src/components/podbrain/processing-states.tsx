@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import AILoadingState from '@/components/kokonutui/ai-loading';
 import ShimmerText from '@/components/kokonutui/shimmer-text';
 import { springs } from '@/lib/motion';
@@ -180,32 +180,30 @@ export function AIContentReveal({
   className,
 }: AIContentRevealProps) {
   const [revealedCount, setRevealedCount] = useState(0);
-  const [isComplete, setIsComplete] = useState(false);
   const prefersReducedMotion = useReducedMotion();
+  const shouldShowFullContent = prefersReducedMotion || !content;
+  const clampedRevealedCount = Math.min(revealedCount, content.length);
+  const revealedContent = shouldShowFullContent
+    ? content
+    : content.slice(0, clampedRevealedCount);
+  const isComplete = shouldShowFullContent || clampedRevealedCount >= content.length;
 
   useEffect(() => {
-    // Handle empty content
     if (!content || content.length === 0) {
-      setIsComplete(true);
       onComplete?.();
       return;
     }
 
-    // Skip animation for reduced motion preference
     if (prefersReducedMotion) {
-      setRevealedCount(content.length);
-      setIsComplete(true);
       onComplete?.();
       return;
     }
 
-    // Typewriter interval
     const timer = setInterval(() => {
       setRevealedCount((prev) => {
         const next = prev + speed;
         if (next >= content.length) {
           clearInterval(timer);
-          setIsComplete(true);
           onComplete?.();
           return content.length;
         }
@@ -215,8 +213,6 @@ export function AIContentReveal({
 
     return () => clearInterval(timer);
   }, [content, speed, interval, onComplete, prefersReducedMotion]);
-
-  const revealedContent = content.slice(0, revealedCount);
 
   return (
     <motion.div

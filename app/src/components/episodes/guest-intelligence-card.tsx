@@ -1,6 +1,6 @@
 "use client";
 
-import { TopoCard, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { User, Twitter, Linkedin, Globe, Instagram } from "lucide-react";
 
@@ -40,7 +40,7 @@ function SocialIcon({ platform }: { platform: SocialLink["platform"] }) {
 
 export function GuestIntelligenceCard({ guest }: GuestIntelligenceCardProps) {
   return (
-    <TopoCard hover={false}>
+    <Card>
       <CardHeader>
         <CardTitle>Guest Intelligence</CardTitle>
       </CardHeader>
@@ -100,6 +100,6 @@ export function GuestIntelligenceCard({ guest }: GuestIntelligenceCardProps) {
           </div>
         </div>
       </CardContent>
-    </TopoCard>
+    </Card>
   );
 }

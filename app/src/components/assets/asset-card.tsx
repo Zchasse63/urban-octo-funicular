@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { Copy, Download, Edit3, RotateCcw, Check, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { TopoCard } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { AssetTypeDefinition, AssetGenerationStatus, AssetCategory } from '@/lib/assets/asset-types'
@@ -67,8 +67,7 @@ export function AssetCard({
   const isGenerating = status === 'generating'
 
   return (
-    <TopoCard
-      hover={isReady ? true : false}
+    <Card
       className={cn(
         'flex flex-col h-full',
         !isReady && 'opacity-75',
@@ -183,7 +182,7 @@ export function AssetCard({
           </Button>
         )}
       </div>
-    </TopoCard>
+    </Card>
   )
 }
 

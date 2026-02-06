@@ -10,7 +10,7 @@
  * @github: https://github.com/kokonut-labs/kokonutui
  */
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -146,22 +146,13 @@ function ActionSearchBar({
     className,
 }: ActionSearchBarProps) {
     const [internalQuery, setInternalQuery] = useState(value || "");
-    const [result, setResult] = useState<SearchResult | null>(null);
     const [isFocused, setIsFocused] = useState(defaultOpen);
-    const [isTyping, setIsTyping] = useState(false);
     const [selectedAction, setSelectedAction] = useState<Action | null>(null);
     const [activeIndex, setActiveIndex] = useState(-1);
 
-    // Sync internal state with controlled value
-    const query = value !== undefined ? value : internalQuery;
+    const isControlled = value !== undefined;
+    const query = isControlled ? value : internalQuery;
     const debouncedQuery = useDebounce(query, 200);
-
-    // Sync external value prop with internal state when it changes
-    useEffect(() => {
-        if (value !== undefined && value !== internalQuery) {
-            setInternalQuery(value);
-        }
-    }, [value]);
 
     const filteredActions = useMemo(() => {
         if (!debouncedQuery) return actions;
@@ -174,26 +165,21 @@ function ActionSearchBar({
         });
     }, [debouncedQuery, actions]);
 
-    useEffect(() => {
-        if (!isFocused) {
-            setResult(null);
-            setActiveIndex(-1);
-            return;
-        }
-
-        setResult({ actions: filteredActions });
-        setActiveIndex(-1);
-    }, [filteredActions, isFocused]);
+    const result = useMemo<SearchResult | null>(
+        () => (isFocused ? { actions: filteredActions } : null),
+        [filteredActions, isFocused]
+    );
 
     const handleInputChange = useCallback(
         (e: React.ChangeEvent<HTMLInputElement>) => {
             const newValue = e.target.value;
-            setInternalQuery(newValue);
+            if (!isControlled) {
+                setInternalQuery(newValue);
+            }
             onChange?.(newValue);
-            setIsTyping(true);
             setActiveIndex(-1);
         },
-        [onChange]
+        [isControlled, onChange]
     );
 
     const handleKeyDown = useCallback(
@@ -230,7 +216,7 @@ function ActionSearchBar({
                     break;
             }
         },
-        [result?.actions, activeIndex]
+        [activeIndex, onActionSelect, onSearch, query, result]
     );
 
     const handleActionClick = useCallback((action: Action) => {

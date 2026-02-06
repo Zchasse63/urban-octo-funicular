@@ -18,11 +18,11 @@ export default function SettingsLayout({
   const pathname = usePathname();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[var(--bg-base)]">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-8 md:flex-row">
           <aside className="w-full md:w-64">
-            <nav className="space-y-1">
+            <nav className="space-y-1 rounded-xl border border-[var(--border-soft)] bg-[var(--bg-elevated)] p-2 shadow-[var(--shadow-elevation-1)]">
               {navItems.map((item) => {
                 const isActive = pathname === item.href;
                 return (
@@ -30,10 +30,10 @@ export default function SettingsLayout({
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      'block rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                      'block rounded-lg border px-4 py-2 text-sm font-medium transition-colors',
                       isActive
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                        ? 'border-[var(--selected-border)] bg-[var(--selected-bg)] text-[var(--accent-blue)]'
+                        : 'border-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]'
                     )}
                   >
                     {item.label}

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Podcast, Settings, Trash2, Upload, Book, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { TopoCard, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import type { Show } from '@/types/database'
 
@@ -59,7 +59,6 @@ export default function ShowDetailPage() {
   const [description, setDescription] = React.useState(mockShow.description || '')
   const [defaultLanguage, setDefaultLanguage] = React.useState(mockShow.default_language)
   const [tone, setTone] = React.useState(mockShow.style_preferences.tone || 'professional')
-  const [artworkFile, setArtworkFile] = React.useState<File | null>(null)
   const [artworkPreview, setArtworkPreview] = React.useState<string | null>(mockShow.artwork_url)
   const [isSaving, setIsSaving] = React.useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false)
@@ -69,7 +68,6 @@ export default function ShowDetailPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      setArtworkFile(file)
       const reader = new FileReader()
       reader.onloadend = () => {
         setArtworkPreview(reader.result as string)
@@ -130,7 +128,7 @@ export default function ShowDetailPage() {
         </div>
 
         {/* Show Info Section */}
-        <TopoCard className="mb-6" hover={false}>
+        <Card className="mb-6">
           <CardHeader>
             <CardTitle>Show Information</CardTitle>
           </CardHeader>
@@ -220,10 +218,10 @@ export default function ShowDetailPage() {
               />
             </div>
           </CardContent>
-        </TopoCard>
+        </Card>
 
         {/* Settings Section */}
-        <TopoCard className="mb-6" hover={false}>
+        <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
@@ -293,7 +291,7 @@ export default function ShowDetailPage() {
               </p>
             </div>
           </CardContent>
-        </TopoCard>
+        </Card>
 
         {/* Save Button */}
         <div className="flex justify-end mb-8">
@@ -304,7 +302,7 @@ export default function ShowDetailPage() {
         </div>
 
         {/* Danger Zone */}
-        <TopoCard className="border-[var(--accent-red)]/30" hover={false}>
+        <Card className="border-[var(--accent-red)]/30">
           <CardHeader>
             <CardTitle className="text-[var(--accent-red)]">Danger Zone</CardTitle>
           </CardHeader>
@@ -344,7 +342,7 @@ export default function ShowDetailPage() {
             )}
           </div>
         </CardContent>
-      </TopoCard>
+      </Card>
     </div>
   )
 }

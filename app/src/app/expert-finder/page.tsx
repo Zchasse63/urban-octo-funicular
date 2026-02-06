@@ -1,8 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Search, Filter, Users, ExternalLink } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Search, Users, ExternalLink } from 'lucide-react';
 import { ContentCard } from '@/components/podbrain';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -114,21 +113,21 @@ const mockExperts: Expert[] = [
   },
 ];
 
-const categoryConfig: Record<ExpertCategory, { label: string; badgeClass: string; meterClass: string }> = {
+const categoryConfig: Record<ExpertCategory, { label: string; badgeVariant: 'success' | 'new' | 'warning'; meterColor: string }> = {
   fresh: {
     label: 'Fresh Voice',
-    badgeClass: 'badge-success',
-    meterClass: 'bg-[var(--accent-green)]',
+    badgeVariant: 'success',
+    meterColor: 'var(--accent-green)',
   },
   established: {
     label: 'Established',
-    badgeClass: 'badge-new',
-    meterClass: 'bg-[var(--accent-blue)]',
+    badgeVariant: 'new',
+    meterColor: 'var(--accent-blue)',
   },
   oversaturated: {
     label: 'Over-interviewed',
-    badgeClass: 'badge-warning',
-    meterClass: 'bg-[var(--accent-amber)]',
+    badgeVariant: 'warning',
+    meterColor: 'var(--accent-amber)',
   },
 };
 
@@ -156,12 +155,7 @@ function ExpertResultCard({ expert }: { expert: Expert }) {
             <h3 className="font-semibold text-base" style={{ color: 'var(--text-primary)' }}>
               {expert.name}
             </h3>
-            <Badge variant={
-              config.badgeClass === 'badge-success' ? 'success' :
-              config.badgeClass === 'badge-new' ? 'new' :
-              config.badgeClass === 'badge-warning' ? 'warning' :
-              'default'
-            }>{config.label}</Badge>
+            <Badge variant={config.badgeVariant}>{config.label}</Badge>
           </div>
 
           {expert.metadata.affiliation && (
@@ -205,10 +199,7 @@ function ExpertResultCard({ expert }: { expert: Expert }) {
                 style={{
                   width: `${expert.freshnessScore}%`,
                   height: '100%',
-                  backgroundColor: config.meterClass.includes('green') ? 'var(--accent-green)' :
-                                     config.meterClass.includes('blue') ? 'var(--accent-blue)' :
-                                     config.meterClass.includes('amber') ? 'var(--accent-amber)' :
-                                     'var(--text-primary)',
+                  backgroundColor: config.meterColor,
                   transition: 'width 0.3s ease-out',
                 }}
               />
@@ -230,7 +221,7 @@ function ExpertResultCard({ expert }: { expert: Expert }) {
               href={expert.contactHints.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="h-10 px-4 font-medium text-md rounded-md inline-flex items-center justify-center whitespace-nowrap text-sm transition-all duration-200 border border-black/10 dark:border-white/10 bg-transparent hover:bg-black/5 dark:hover:bg-white/5"
+              className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border border-[var(--border-soft)] bg-[var(--bg-elevated)] px-4 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
             >
               <ExternalLink className="w-3 h-3 mr-1" />
               Website
@@ -241,7 +232,7 @@ function ExpertResultCard({ expert }: { expert: Expert }) {
               href={`https://twitter.com/${expert.contactHints.twitter}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="h-10 px-4 font-medium text-md rounded-md inline-flex items-center justify-center whitespace-nowrap text-sm transition-all duration-200 border border-black/10 dark:border-white/10 bg-transparent hover:bg-black/5 dark:hover:bg-white/5"
+              className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border border-[var(--border-soft)] bg-[var(--bg-elevated)] px-4 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
             >
               Twitter
             </a>
@@ -251,7 +242,7 @@ function ExpertResultCard({ expert }: { expert: Expert }) {
               href={expert.contactHints.linkedin}
               target="_blank"
               rel="noopener noreferrer"
-              className="h-10 px-4 font-medium text-md rounded-md inline-flex items-center justify-center whitespace-nowrap text-sm transition-all duration-200 border border-black/10 dark:border-white/10 bg-transparent hover:bg-black/5 dark:hover:bg-white/5"
+              className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border border-[var(--border-soft)] bg-[var(--bg-elevated)] px-4 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
             >
               LinkedIn
             </a>

@@ -100,7 +100,7 @@ Here's a complete `components.json` with both free and Pro registries:
 ### Your Kokonut UI Pro Token
 
 ```
-b9ba6b98-cf81-434c-b656-a460ed04eee7
+<YOUR_KOKONUT_UI_PRO_TOKEN>
 ```
 
 ### Add to Environment Variables
@@ -108,7 +108,7 @@ b9ba6b98-cf81-434c-b656-a460ed04eee7
 **Option A: Export in Terminal (Temporary)**
 
 ```bash
-export KOKO_PRO_TOKEN="b9ba6b98-cf81-434c-b656-a460ed04eee7"
+export KOKO_PRO_TOKEN="<YOUR_KOKONUT_UI_PRO_TOKEN>"
 ```
 
 **Option B: Add to `.env.local` (Recommended for Development)**
@@ -117,7 +117,7 @@ Create or edit `.env.local` in your project root:
 
 ```bash
 # .env.local
-KOKO_PRO_TOKEN="b9ba6b98-cf81-434c-b656-a460ed04eee7"
+KOKO_PRO_TOKEN="<YOUR_KOKONUT_UI_PRO_TOKEN>"
 ```
 
 **Option C: Add to Shell Profile (Persistent)**
@@ -126,7 +126,7 @@ Add to your `~/.zshrc` or `~/.bashrc`:
 
 ```bash
 # Kokonut UI Pro
-export KOKO_PRO_TOKEN="b9ba6b98-cf81-434c-b656-a460ed04eee7"
+export KOKO_PRO_TOKEN="<YOUR_KOKONUT_UI_PRO_TOKEN>"
 ```
 
 Then reload:
@@ -256,12 +256,12 @@ Your token isn't being read. Check:
 1. Token is exported in your current terminal session:
    ```bash
    echo $KOKO_PRO_TOKEN
-   # Should output: b9ba6b98-cf81-434c-b656-a460ed04eee7
+   # Should output: <YOUR_KOKONUT_UI_PRO_TOKEN>
    ```
 
 2. If empty, export it:
    ```bash
-   export KOKO_PRO_TOKEN="b9ba6b98-cf81-434c-b656-a460ed04eee7"
+   export KOKO_PRO_TOKEN="<YOUR_KOKONUT_UI_PRO_TOKEN>"
    ```
 
 3. Try the install command again
@@ -347,7 +347,7 @@ Refer to the **PodBrain Kokonut UI Design System** document for which components
 
 ```bash
 # Set token (run once per terminal session)
-export KOKO_PRO_TOKEN="b9ba6b98-cf81-434c-b656-a460ed04eee7"
+export KOKO_PRO_TOKEN="<YOUR_KOKONUT_UI_PRO_TOKEN>"
 
 # Install free component
 bunx --bun shadcn@latest add @kokonutui/[name]

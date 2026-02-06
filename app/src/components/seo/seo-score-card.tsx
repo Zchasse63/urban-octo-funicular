@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { TrendingUp, TrendingDown, Minus, Target } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { TopoCard, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import type { SEOFactor } from '@/lib/seo/analyzer'
 import { getScoreColor, getScoreLabel } from '@/lib/seo/analyzer'
 
@@ -162,7 +162,7 @@ export function SEOScoreCard({
   className,
 }: SEOScoreCardProps) {
   return (
-    <TopoCard className={cn('', className)} hover={false}>
+    <Card className={cn('', className)}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Target className="w-4 h-4" />
@@ -186,7 +186,7 @@ export function SEOScoreCard({
           </div>
         </div>
       </CardContent>
-    </TopoCard>
+    </Card>
   )
 }
 

@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { Copy, Check, Linkedin, Twitter, Instagram } from 'lucide-react'
-import { TopoCard, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { SocialPostVariant } from '@/lib/guest-package/generator'
@@ -68,7 +68,7 @@ export function SocialPostCard({ post, onContentChange }: SocialPostCardProps) {
   }, [content])
 
   return (
-    <TopoCard hover={false}>
+    <Card>
       <CardHeader>
         <div className="flex items-center gap-3">
           <div className={cn('p-2 rounded-lg', config.bgColor)}>
@@ -134,6 +134,6 @@ export function SocialPostCard({ post, onContentChange }: SocialPostCardProps) {
           )}
         </div>
       </CardContent>
-    </TopoCard>
+    </Card>
   )
 }

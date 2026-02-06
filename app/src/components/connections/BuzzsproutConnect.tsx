@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 
 interface Connection {
   id: string;
@@ -37,7 +41,7 @@ export function BuzzsproutConnect() {
         // Still set to null to allow connection attempt
         setConnection(null);
       }
-    } catch (error) {
+    } catch {
       // Network error - distinguish from missing connection
       // Set to null to allow user to attempt connection
       setConnection(null);
@@ -116,96 +120,96 @@ export function BuzzsproutConnect() {
 
   if (checking) {
     return (
-      <div className="animate-pulse topo-card">
-        <div className="h-6 w-48 rounded" style={{ backgroundColor: 'var(--bg-subtle)' }}></div>
-      </div>
+      <Card className="animate-pulse">
+        <CardContent className="pt-6">
+          <div className="h-6 w-48 rounded bg-[var(--bg-subtle)]" />
+        </CardContent>
+      </Card>
     );
   }
 
   if (connection) {
     return (
-      <div className="topo-card">
-        <div className="mb-4 flex items-center justify-between">
+      <Card>
+        <CardHeader className="flex-row items-start justify-between space-y-0">
           <div>
-            <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Buzzsprout</h3>
-            <div className="mt-1 badge badge-success">
-              Connected
-            </div>
+            <CardTitle className="text-lg normal-case tracking-normal">Buzzsprout</CardTitle>
+            <Badge variant="success" className="mt-2">Connected</Badge>
           </div>
-          <button
+          <Button
             onClick={handleDisconnect}
             disabled={loading}
-            className="rounded-[var(--radius-lg)] border px-4 py-2 transition-colors hover:bg-[var(--bg-subtle)] disabled:cursor-not-allowed disabled:opacity-50"
-            style={{
-              borderColor: 'var(--accent-red)',
-              color: 'var(--accent-red)'
-            }}
+            type="button"
+            variant="outline"
+            className="border-[var(--accent-red)] text-[var(--accent-red)] hover:bg-[rgba(239,68,68,0.08)]"
           >
             {loading ? 'Disconnecting...' : 'Disconnect'}
-          </button>
-        </div>
-        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          Connected on {new Date(connection.created_at).toLocaleDateString()}
-        </p>
-      </div>
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-[var(--text-secondary)]">
+            Connected on {new Date(connection.created_at).toLocaleDateString()}
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="topo-card">
-      <h3 className="mb-4 text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-        Connect Buzzsprout
-      </h3>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg normal-case tracking-normal">Connect Buzzsprout</CardTitle>
+      </CardHeader>
+      <CardContent>
 
-      <form onSubmit={handleConnect} className="space-y-4">
-        <div>
-          <label
-            htmlFor="apiToken"
-            className="block text-sm font-medium"
-            style={{ color: 'var(--text-secondary)' }}
+        <form onSubmit={handleConnect} className="space-y-4">
+          <div>
+            <label
+              htmlFor="apiToken"
+              className="block text-sm font-medium text-[var(--text-secondary)]"
+            >
+              API Token <span className="text-[var(--accent-red)]">*</span>
+            </label>
+            <Input
+              type="password"
+              id="apiToken"
+              value={apiToken}
+              onChange={(e) => setApiToken(e.target.value)}
+              placeholder="Enter your Buzzsprout API token"
+              className="mt-1"
+              required
+            />
+            <p className="mt-1 text-sm text-[var(--text-tertiary)]">
+              Find your API token in your Buzzsprout account settings
+            </p>
+          </div>
+
+          <div>
+            <label
+              htmlFor="showId"
+              className="block text-sm font-medium text-[var(--text-secondary)]"
+            >
+              Show ID (Optional)
+            </label>
+            <Input
+              type="text"
+              id="showId"
+              value={showId}
+              onChange={(e) => setShowId(e.target.value)}
+              placeholder="Enter show ID (optional)"
+              className="mt-1"
+            />
+          </div>
+
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full justify-center"
           >
-            API Token <span style={{ color: 'var(--accent-red)' }}>*</span>
-          </label>
-          <input
-            type="password"
-            id="apiToken"
-            value={apiToken}
-            onChange={(e) => setApiToken(e.target.value)}
-            placeholder="Enter your Buzzsprout API token"
-            className="input mt-1"
-            required
-          />
-          <p className="mt-1 text-sm" style={{ color: 'var(--text-tertiary)' }}>
-            Find your API token in your Buzzsprout account settings
-          </p>
-        </div>
-
-        <div>
-          <label
-            htmlFor="showId"
-            className="block text-sm font-medium"
-            style={{ color: 'var(--text-secondary)' }}
-          >
-            Show ID (Optional)
-          </label>
-          <input
-            type="text"
-            id="showId"
-            value={showId}
-            onChange={(e) => setShowId(e.target.value)}
-            placeholder="Enter show ID (optional)"
-            className="input mt-1"
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="btn-primary w-full justify-center disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {loading ? 'Connecting...' : 'Connect'}
-        </button>
-      </form>
-    </div>
+            {loading ? 'Connecting...' : 'Connect'}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

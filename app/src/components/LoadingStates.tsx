@@ -6,6 +6,7 @@
 import * as React from 'react'
 import { cn } from '@/lib/utils'
 import { ProcessingState, AIContentReveal } from '@/components/podbrain/processing-states'
+import { Card, CardContent } from '@/components/ui/card'
 
 /**
  * Base Skeleton component with shimmer animation
@@ -24,15 +25,16 @@ export function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivEl
  */
 export function CardSkeleton() {
   return (
-    <div
-      className="topo-card"
+    <Card
       role="status"
       aria-label="Loading content"
     >
-      <Skeleton className="h-4 w-3/4 mb-3" />
-      <Skeleton className="h-3 w-full mb-2" />
-      <Skeleton className="h-3 w-5/6" />
-    </div>
+      <CardContent className="pt-6">
+        <Skeleton className="h-4 w-3/4 mb-3" />
+        <Skeleton className="h-3 w-full mb-2" />
+        <Skeleton className="h-3 w-5/6" />
+      </CardContent>
+    </Card>
   )
 }
 

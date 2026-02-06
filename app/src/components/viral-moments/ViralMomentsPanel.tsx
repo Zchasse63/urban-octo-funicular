@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ViralMoment } from '@/lib/viral-moments/types';
 
 interface ViralMomentsPanelProps {
@@ -8,12 +10,12 @@ interface ViralMomentsPanelProps {
   onPlayMoment: (time: number) => void;
 }
 
-const categoryColors: Record<string, string> = {
-  controversial: 'badge-error',
-  emotional: 'badge-warning',
-  quotable: 'badge-new',
-  surprising: 'badge-success',
-  counterintuitive: 'badge-warning', // Use warning instead of unsupported purple
+const categoryVariants: Record<string, 'error' | 'warning' | 'new' | 'success'> = {
+  controversial: 'error',
+  emotional: 'warning',
+  quotable: 'new',
+  surprising: 'success',
+  counterintuitive: 'warning',
 };
 
 const getScoreColor = (score: number): { text: string; bg: string } => {
@@ -33,10 +35,14 @@ const platformIcons: Record<string, string> = {
 export default function ViralMomentsPanel({ moments, onPlayMoment }: ViralMomentsPanelProps) {
   if (!moments || moments.length === 0) {
     return (
-      <div className="topo-card">
-        <h3 className="mono mb-4">Viral Moments</h3>
-        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No viral moments detected yet.</p>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm normal-case tracking-normal font-sans">Viral Moments</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-[var(--text-secondary)]">No viral moments detected yet.</p>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -47,30 +53,34 @@ export default function ViralMomentsPanel({ moments, onPlayMoment }: ViralMoment
   };
 
   return (
-    <div className="topo-card">
-      <div className="card-header mb-6">
-        <h3 className="mono">Viral Moments</h3>
-        <span className="badge badge-new">{moments.length} detected</span>
-      </div>
-
-      <div className="space-y-4">
+    <Card>
+      <CardHeader className="flex-row items-center justify-between space-y-0">
+        <CardTitle className="text-sm normal-case tracking-normal font-sans">Viral Moments</CardTitle>
+        <Badge variant="new">{moments.length} detected</Badge>
+      </CardHeader>
+      <CardContent className="space-y-4">
         {moments.map((moment, index) => {
           const scoreStyle = getScoreColor(moment.score);
           return (
             <div
               key={moment.id}
-              className="moment-card p-4 rounded-[var(--radius-lg)] border transition-colors cursor-pointer"
-              style={{ borderColor: 'var(--border-soft)' }}
+              className="cursor-pointer rounded-[var(--radius-lg)] border border-[var(--border-soft)] p-4 transition-colors hover:border-[var(--accent-blue)]"
               onClick={() => onPlayMoment(moment.startTime)}
-              onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent-blue)'}
-              onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-soft)'}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onPlayMoment(moment.startTime);
+                }
+              }}
+              role="button"
+              tabIndex={0}
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>#{index + 1}</span>
-                  <span className={`badge ${categoryColors[moment.category]}`}>
+                  <Badge variant={categoryVariants[moment.category] || 'default'}>
                     {moment.category}
-                  </span>
+                  </Badge>
                 </div>
                 <span
                   className="px-3 py-1 rounded-md text-sm font-semibold"
@@ -90,7 +100,8 @@ export default function ViralMomentsPanel({ moments, onPlayMoment }: ViralMoment
                     e.stopPropagation();
                     onPlayMoment(moment.startTime);
                   }}
-                  className="timestamp-link"
+                  className="rounded px-2 py-1 text-[var(--accent-blue)] hover:bg-[var(--bg-subtle)]"
+                  type="button"
                 >
                   {formatTime(moment.startTime)} - {formatTime(moment.endTime)}
                 </button>
@@ -110,7 +121,7 @@ export default function ViralMomentsPanel({ moments, onPlayMoment }: ViralMoment
             </div>
           );
         })}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

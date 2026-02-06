@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Search, Plus, Users, ExternalLink, Mail, Calendar } from 'lucide-react';
+import { Search, Plus, Users, ExternalLink, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ContentCard } from '@/components/podbrain';
 import { Input } from '@/components/ui/input';
@@ -147,7 +147,7 @@ function GuestCard({ guest }: { guest: Guest }) {
               href={guest.social.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="h-10 px-4 font-medium text-md rounded-md inline-flex items-center justify-center whitespace-nowrap text-sm transition-all duration-200 border border-black/10 dark:border-white/10 bg-transparent hover:bg-black/5 dark:hover:bg-white/5"
+              className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border border-[var(--border-soft)] bg-[var(--bg-elevated)] px-4 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
             >
               <ExternalLink className="w-3 h-3 mr-1" />
               Website
@@ -158,7 +158,7 @@ function GuestCard({ guest }: { guest: Guest }) {
               href={`https://twitter.com/${guest.social.twitter}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="h-10 px-4 font-medium text-md rounded-md inline-flex items-center justify-center whitespace-nowrap text-sm transition-all duration-200 border border-black/10 dark:border-white/10 bg-transparent hover:bg-black/5 dark:hover:bg-white/5"
+              className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border border-[var(--border-soft)] bg-[var(--bg-elevated)] px-4 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
             >
               Twitter
             </a>
@@ -168,7 +168,7 @@ function GuestCard({ guest }: { guest: Guest }) {
               href={guest.social.linkedin}
               target="_blank"
               rel="noopener noreferrer"
-              className="h-10 px-4 font-medium text-md rounded-md inline-flex items-center justify-center whitespace-nowrap text-sm transition-all duration-200 border border-black/10 dark:border-white/10 bg-transparent hover:bg-black/5 dark:hover:bg-white/5"
+              className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border border-[var(--border-soft)] bg-[var(--bg-elevated)] px-4 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
             >
               LinkedIn
             </a>

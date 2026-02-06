@@ -1,7 +1,10 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
-import { Upload, FileAudio, Link, AlertCircle } from 'lucide-react'
+import { Upload, FileAudio, Link } from 'lucide-react'
+import { AlertCard } from '@/components/podbrain/alert-card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import type { UploadData } from './upload-wizard'
 
 interface StepUploadProps {
@@ -43,7 +46,7 @@ export function StepUpload({ uploadData, setUploadData, onContinue }: StepUpload
     return true
   }
 
-  const uploadFile = async (file: File) => {
+  const uploadFile = useCallback(async (file: File) => {
     setIsUploading(true)
     setError(null)
     setUploadData(prev => ({ ...prev, uploadProgress: 0 }))
@@ -91,7 +94,7 @@ export function StepUpload({ uploadData, setUploadData, onContinue }: StepUpload
       xhr.open('POST', '/api/upload')
       xhr.send(formData)
     })
-  }
+  }, [setUploadData])
 
   const handleFile = useCallback(async (file: File) => {
     if (validateFile(file)) {
@@ -250,9 +253,9 @@ export function StepUpload({ uploadData, setUploadData, onContinue }: StepUpload
               {uploadData.uploadProgress}%
             </span>
           </div>
-          <div className="progress-track">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--bg-subtle)]">
             <div
-              className="progress-fill"
+              className="h-full rounded-full bg-[var(--accent-blue)] transition-[width] duration-200"
               style={{ width: `${uploadData.uploadProgress}%` }}
             />
           </div>
@@ -277,41 +280,45 @@ export function StepUpload({ uploadData, setUploadData, onContinue }: StepUpload
         <div className="flex gap-3">
           <div className="relative flex-1">
             <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
-            <input
+            <Input
               type="url"
               placeholder="https://feeds.example.com/podcast.rss"
               value={uploadData.rssUrl}
               onChange={(e) => setUploadData(prev => ({ ...prev, rssUrl: e.target.value, file: null }))}
-              className="input pl-10"
+              className="pl-10"
               disabled={isUploading || !!uploadData.file}
             />
           </div>
-          <button
+          <Button
+            type="button"
             onClick={handleRssSubmit}
-            className="btn-secondary"
+            variant="secondary"
             disabled={!uploadData.rssUrl.trim() || isUploading || !!uploadData.file}
           >
             Import
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Error Message */}
       {error && (
-        <div className="alert-card error">
-          <p className="text-sm">{error}</p>
-        </div>
+        <AlertCard
+          variant="error"
+          title="Upload failed"
+          description={error}
+        />
       )}
 
       {/* Continue Button */}
       <div className="pt-4">
-        <button
+        <Button
+          type="button"
           onClick={onContinue}
           disabled={!canContinue}
-          className={`btn-primary w-full justify-center ${!canContinue ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className="w-full justify-center"
         >
           Continue
-        </button>
+        </Button>
       </div>
     </div>
   )

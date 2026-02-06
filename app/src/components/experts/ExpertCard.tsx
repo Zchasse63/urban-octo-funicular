@@ -1,24 +1,30 @@
 'use client';
 
 import React from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import type { Expert, ExpertCategory } from '@/lib/experts/types';
 
 interface ExpertCardProps {
   expert: Expert;
 }
 
-const categoryStyles: Record<ExpertCategory, { badge: string; meter: string }> = {
+const categoryStyles: Record<ExpertCategory, { badge: 'success' | 'new' | 'warning'; meter: string; label: string }> = {
   fresh: {
-    badge: 'badge-success',
+    badge: 'success',
     meter: 'bg-[var(--accent-green)]',
+    label: 'Fresh Voice',
   },
   established: {
-    badge: 'badge-new',
+    badge: 'new',
     meter: 'bg-[var(--accent-blue)]',
+    label: 'Established',
   },
   oversaturated: {
-    badge: 'badge-warning',
+    badge: 'warning',
     meter: 'bg-[var(--accent-amber)]',
+    label: 'Over-interviewed',
   },
 };
 
@@ -50,81 +56,74 @@ export default function ExpertCard({ expert }: ExpertCardProps) {
     : null;
 
   return (
-    <div className="guest-item">
-      <div className="guest-avatar flex items-center justify-center text-2xl">
-        {expert.name.charAt(0)}
-      </div>
-
-      <div className="guest-info flex-1">
-        <h4 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>{expert.name}</h4>
-        {expert.metadata.affiliation && (
-          <p className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>{expert.metadata.affiliation}</p>
-        )}
-
-        <div className="flex items-center gap-2 mb-2">
-          <span className={`badge ${styles.badge}`}>{expert.category}</span>
-          {expert.expertise.slice(0, 2).map((exp) => (
-            <span key={exp} className="badge text-xs">
-              {exp}
-            </span>
-          ))}
-        </div>
-
-        <div className="freshness-meter">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-mono" style={{ color: 'var(--text-tertiary)' }}>FRESHNESS</span>
-            <span className="freshness-value text-xs font-mono">{expert.freshnessScore}%</span>
+    <Card>
+      <CardContent className="pt-6">
+        <div className="flex items-start gap-4">
+          <div
+            className="h-12 w-12 shrink-0 rounded-full text-center text-2xl leading-[48px] font-semibold"
+            style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-primary)' }}
+          >
+            {expert.name.charAt(0)}
           </div>
-          <div className="freshness-bar">
-            <div
-              className={`freshness-fill ${styles.meter}`}
-              style={{ width: `${expert.freshnessScore}%` }}
-            />
-          </div>
-        </div>
 
-        <div className="mt-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
-          <p>
-            {expert.recentAppearances} appearances (last 12 months) • {expert.appearanceCount}{' '}
-            total
-          </p>
-        </div>
+          <div className="flex-1">
+            <h4 className="mb-1 text-base font-semibold text-[var(--text-primary)]">{expert.name}</h4>
+            {expert.metadata.affiliation && (
+              <p className="mb-2 text-xs text-[var(--text-secondary)]">{expert.metadata.affiliation}</p>
+            )}
 
-        {(websiteUrl || twitterHandle || linkedinUrl) && (
-          <div className="mt-3 flex gap-2">
-            {websiteUrl && (
-              <a
-                href={websiteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-secondary text-xs px-3 py-1"
-              >
-                Website
-              </a>
-            )}
-            {twitterHandle && (
-              <a
-                href={`https://twitter.com/${twitterHandle}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-secondary text-xs px-3 py-1"
-              >
-                Twitter
-              </a>
-            )}
-            {linkedinUrl && (
-              <a
-                href={linkedinUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-secondary text-xs px-3 py-1"
-              >
-                LinkedIn
-              </a>
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <Badge variant={styles.badge}>{styles.label}</Badge>
+              {expert.expertise.slice(0, 2).map((exp) => (
+                <Badge key={exp} variant="outline">{exp}</Badge>
+              ))}
+            </div>
+
+            <div className="mb-2">
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-xs font-mono text-[var(--text-tertiary)]">FRESHNESS</span>
+                <span className="text-xs font-mono text-[var(--text-secondary)]">{expert.freshnessScore}%</span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--bg-subtle)]">
+                <div
+                  className={`h-full ${styles.meter}`}
+                  style={{ width: `${expert.freshnessScore}%` }}
+                />
+              </div>
+            </div>
+
+            <p className="mt-2 text-xs text-[var(--text-tertiary)]">
+              {expert.recentAppearances} appearances (last 12 months) • {expert.appearanceCount} total
+            </p>
+
+            {(websiteUrl || twitterHandle || linkedinUrl) && (
+              <div className="mt-3 flex gap-2">
+                {websiteUrl && (
+                  <Button asChild size="sm" variant="secondary">
+                    <a href={websiteUrl} target="_blank" rel="noopener noreferrer">
+                      Website
+                    </a>
+                  </Button>
+                )}
+                {twitterHandle && (
+                  <Button asChild size="sm" variant="secondary">
+                    <a href={`https://twitter.com/${twitterHandle}`} target="_blank" rel="noopener noreferrer">
+                      Twitter
+                    </a>
+                  </Button>
+                )}
+                {linkedinUrl && (
+                  <Button asChild size="sm" variant="secondary">
+                    <a href={linkedinUrl} target="_blank" rel="noopener noreferrer">
+                      LinkedIn
+                    </a>
+                  </Button>
+                )}
+              </div>
             )}
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

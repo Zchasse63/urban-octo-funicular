@@ -7,6 +7,8 @@
 
 import * as React from 'react'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 
 interface ErrorBoundaryProps {
   children: React.ReactNode
@@ -51,11 +53,12 @@ export class ErrorBoundary extends React.Component<
     if (this.state.hasError) {
       return (
         <div className="min-h-[400px] flex items-center justify-center p-6">
-          <div
-            className="topo-card max-w-lg w-full text-center"
+          <Card
+            className="max-w-lg w-full text-center"
             role="alert"
             aria-live="assertive"
           >
+            <CardContent className="pt-6">
             <div
               className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
               style={{ backgroundColor: 'var(--bg-subtle)' }}
@@ -105,23 +108,25 @@ export class ErrorBoundary extends React.Component<
             )}
 
             <div className="flex gap-3 justify-center">
-              <button
+              <Button
                 onClick={this.handleReset}
-                className="btn-secondary"
                 aria-label="Try again"
+                type="button"
+                variant="secondary"
               >
                 <RefreshCw className="w-4 h-4" aria-hidden="true" />
                 Try Again
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={this.handleRefresh}
-                className="btn-primary"
                 aria-label="Refresh page"
+                type="button"
               >
                 Refresh Page
-              </button>
+              </Button>
             </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       )
     }

@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ============================================
-   PodBrain Design System: "Alabaster Topography"
+   PodBrain Design System: "Kokonut Surface Language"
    ============================================ */
 
 :root {
@@ -11,6 +11,12 @@
   --bg-elevated: #FFFFFF;
   --bg-surface: #F8F8F7;
 
+  /* Kokonut semantic surface aliases */
+  --surface-canvas: var(--bg-base);
+  --surface-subtle: var(--bg-subtle);
+  --surface-elevated: var(--bg-elevated);
+  --surface-contrast: var(--bg-surface);
+
   /* Borders - more visible */
   --border-soft: #E0E0DE;
   --border-focus: #007AFF;
@@ -19,6 +25,11 @@
   --text-primary: #121212;
   --text-secondary: #6A6A69;
   --text-tertiary: #9A9A99;
+
+  /* Kokonut semantic text aliases */
+  --text-strong: var(--text-primary);
+  --text-muted: var(--text-secondary);
+  --text-subtle: var(--text-tertiary);
 
   /* Accents */
   --accent-blue: #007AFF;
@@ -45,6 +56,10 @@
   --color-status-error-text: #EF4444;
   --color-status-info-bg: rgba(0, 122, 255, 0.05);
   --color-status-info-text: #007AFF;
+
+  /* Migration-safe aliases */
+  --border-subtle: var(--border-soft);
+  --accent-green-bg: var(--color-status-success-bg);
 
   /* Gradient Tokens */
   --gradient-subtle: linear-gradient(180deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 100%);
