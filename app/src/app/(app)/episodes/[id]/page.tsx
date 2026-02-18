@@ -20,6 +20,7 @@ import {
 import { cn, formatDate, formatDuration, truncate } from "@/lib/utils";
 import { springs } from "@/lib/motion";
 import PageHeader from "@/components/podbrain/page-header";
+import SectionHeading from "@/components/podbrain/section-heading";
 import HealthGauge from "@/components/podbrain/health-gauge";
 import { Badge, StatusBadge } from "@/components/podbrain/badge";
 import {
@@ -422,9 +423,9 @@ export default function EpisodeDetailPage({
 
                       {seoData.seo_analysis.suggestions.length > 0 && (
                         <div>
-                          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-tertiary font-mono">
+                          <SectionHeading className="mb-2 text-xs">
                             Suggestions
-                          </h4>
+                          </SectionHeading>
                           <ul className="space-y-2">
                             {seoData.seo_analysis.suggestions.map(
                               (suggestion, i) => (
@@ -457,9 +458,9 @@ export default function EpisodeDetailPage({
           {/* Guest Info */}
           {episode.guest_name && (
             <ElevatedCard className="p-4">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-tertiary font-mono">
+              <SectionHeading className="mb-3 text-xs">
                 Guest
-              </h3>
+              </SectionHeading>
               <GuestCard
                 name={episode.guest_name}
                 title={episode.guest_bio || undefined}
@@ -470,9 +471,9 @@ export default function EpisodeDetailPage({
 
           {/* Episode Info */}
           <ElevatedCard className="p-4">
-            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-tertiary font-mono">
+            <SectionHeading className="mb-3 text-xs">
               Details
-            </h3>
+            </SectionHeading>
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <dt className="text-text-secondary">Status</dt>
@@ -506,9 +507,9 @@ export default function EpisodeDetailPage({
           {/* Viral Moments */}
           {episode.viral_moments && episode.viral_moments.length > 0 && (
             <ElevatedCard className="p-4">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-tertiary font-mono">
+              <SectionHeading className="mb-3 text-xs">
                 Viral Moments
-              </h3>
+              </SectionHeading>
               <div className="space-y-2">
                 {episode.viral_moments.slice(0, 3).map((moment, i) => (
                   <div

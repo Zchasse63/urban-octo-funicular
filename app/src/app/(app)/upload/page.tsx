@@ -10,6 +10,7 @@ import {
   Mic2,
   FileAudio,
   CheckCircle2,
+  ChevronDown,
 } from "lucide-react";
 import { springs } from "@/lib/motion";
 import PageHeader from "@/components/podbrain/page-header";
@@ -297,7 +298,7 @@ export default function UploadPage() {
                       setState((prev) => ({ ...prev, title: e.target.value }))
                     }
                     placeholder="Episode title"
-                    className="h-10 w-full rounded-lg border border-border-soft bg-bg-base px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/15"
+                    className="h-10 w-full rounded-lg border border-border-soft bg-bg-base px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
                   />
                 </div>
 
@@ -316,7 +317,7 @@ export default function UploadPage() {
                         }))
                       }
                       placeholder="Optional"
-                      className="h-10 w-full rounded-lg border border-border-soft bg-bg-base px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/15"
+                      className="h-10 w-full rounded-lg border border-border-soft bg-bg-base px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
                     />
                   </div>
                   <div>
@@ -333,7 +334,7 @@ export default function UploadPage() {
                         }))
                       }
                       placeholder="Optional"
-                      className="h-10 w-full rounded-lg border border-border-soft bg-bg-base px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/15"
+                      className="h-10 w-full rounded-lg border border-border-soft bg-bg-base px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
                     />
                   </div>
                 </div>
@@ -352,7 +353,7 @@ export default function UploadPage() {
                       }))
                     }
                     placeholder="Comma-separated keywords"
-                    className="h-10 w-full rounded-lg border border-border-soft bg-bg-base px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/15"
+                    className="h-10 w-full rounded-lg border border-border-soft bg-bg-base px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
                   />
                 </div>
 
@@ -361,43 +362,49 @@ export default function UploadPage() {
                     <label className="mb-1 block text-sm font-medium text-text-primary">
                       Show
                     </label>
-                    <select
-                      value={state.showId}
-                      onChange={(e) =>
-                        setState((prev) => ({
-                          ...prev,
-                          showId: e.target.value,
-                        }))
-                      }
-                      className="h-10 w-full rounded-lg border border-border-soft bg-bg-base px-3 text-sm text-text-primary"
-                    >
-                      <option value="">Select a show</option>
-                      {shows.map((show) => (
-                        <option key={show.id} value={show.id}>
-                          {show.name}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <select
+                        value={state.showId}
+                        onChange={(e) =>
+                          setState((prev) => ({
+                            ...prev,
+                            showId: e.target.value,
+                          }))
+                        }
+                        className="h-9 w-full appearance-none rounded-lg border border-border-soft bg-bg-base pl-3 pr-8 text-sm text-text-primary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
+                      >
+                        <option value="">Select a show</option>
+                        {shows.map((show) => (
+                          <option key={show.id} value={show.id}>
+                            {show.name}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-tertiary" />
+                    </div>
                   </div>
                   <div>
                     <label className="mb-1 block text-sm font-medium text-text-primary">
                       Language
                     </label>
-                    <select
-                      value={state.language}
-                      onChange={(e) =>
-                        setState((prev) => ({
-                          ...prev,
-                          language: e.target.value,
-                        }))
-                      }
-                      className="h-10 w-full rounded-lg border border-border-soft bg-bg-base px-3 text-sm text-text-primary"
-                    >
-                      <option value="en">English</option>
-                      <option value="es">Spanish</option>
-                      <option value="fr">French</option>
-                      <option value="de">German</option>
-                    </select>
+                    <div className="relative">
+                      <select
+                        value={state.language}
+                        onChange={(e) =>
+                          setState((prev) => ({
+                            ...prev,
+                            language: e.target.value,
+                          }))
+                        }
+                        className="h-9 w-full appearance-none rounded-lg border border-border-soft bg-bg-base pl-3 pr-8 text-sm text-text-primary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
+                      >
+                        <option value="en">English</option>
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-tertiary" />
+                    </div>
                   </div>
                 </div>
               </div>

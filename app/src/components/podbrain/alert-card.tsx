@@ -22,25 +22,25 @@ const variantConfig: Record<
   attention: {
     icon: AlertTriangle,
     bg: "bg-status-warning-bg",
-    border: "border-amber-200",
+    border: "border-status-warning-text/20",
     iconColor: "text-status-warning-text",
   },
   opportunity: {
     icon: Lightbulb,
     bg: "bg-status-success-bg",
-    border: "border-green-200",
+    border: "border-status-success-text/20",
     iconColor: "text-status-success-text",
   },
   info: {
     icon: Info,
     bg: "bg-status-info-bg",
-    border: "border-blue-200",
+    border: "border-status-info-text/20",
     iconColor: "text-status-info-text",
   },
   error: {
     icon: XCircle,
     bg: "bg-status-error-bg",
-    border: "border-red-200",
+    border: "border-status-error-text/20",
     iconColor: "text-status-error-text",
   },
 };

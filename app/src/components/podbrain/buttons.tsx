@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef } from "react";
-import { Loader2, Download, Send, Trash2, Plus } from "lucide-react";
+import { Loader2, Download, Send, Plus } from "lucide-react";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -76,10 +76,7 @@ export const DangerButton = forwardRef<HTMLButtonElement, ExtendedButtonProps>(
           {loadingText || "Deleting..."}
         </>
       ) : (
-        <>
-          <Trash2 className="mr-2 h-4 w-4" />
-          {children}
-        </>
+        children
       )}
     </Button>
   )

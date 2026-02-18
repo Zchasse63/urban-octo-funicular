@@ -1,20 +1,24 @@
 "use client";
 
-import { motion } from "motion/react";
+import { usePathname } from "next/navigation";
+import { motion, AnimatePresence } from "motion/react";
+import { durations, easings } from "@/lib/motion";
 import Sidebar from "./sidebar";
 import MobileNav from "./mobile-nav";
 import useKeyboardShortcuts from "@/hooks/use-keyboard-shortcuts";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   useKeyboardShortcuts();
+  const pathname = usePathname();
+
   return (
     <div className="relative flex h-dvh overflow-hidden bg-bg-base">
       {/* Dot grid background */}
       <div
-        className="pointer-events-none fixed inset-0 z-0 opacity-[0.03]"
+        className="pointer-events-none fixed inset-0 z-0 opacity-[0.045]"
         style={{
           backgroundImage:
-            "radial-gradient(circle, #121212 0.75px, transparent 0.75px)",
+            "radial-gradient(circle, var(--color-text-primary) 0.75px, transparent 0.75px)",
           backgroundSize: "24px 24px",
         }}
       />
@@ -25,21 +29,25 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Main Content Area */}
-      <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
+      <div className="relative z-10 flex flex-1 flex-col overflow-hidden shadow-[inset_4px_0_12px_-4px_rgba(0,0,0,0.04)]">
         {/* Mobile Nav */}
         <MobileNav />
 
         {/* Page Content */}
-        <motion.main
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, ease: [0.25, 1, 0.5, 1] }}
-          className="flex-1 overflow-y-auto"
-        >
-          <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-            {children}
-          </div>
-        </motion.main>
+        <AnimatePresence mode="wait">
+          <motion.main
+            key={pathname}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: durations.slow, ease: easings.outQuart }}
+            className="flex-1 overflow-y-auto"
+          >
+            <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+              {children}
+            </div>
+          </motion.main>
+        </AnimatePresence>
       </div>
     </div>
   );

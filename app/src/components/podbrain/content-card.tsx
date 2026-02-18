@@ -56,10 +56,12 @@ export function StatCard({
   return (
     <div
       className={cn(
-        "rounded-xl border border-border-soft bg-bg-elevated p-4",
+        "group relative overflow-hidden rounded-xl border border-border-soft bg-bg-elevated p-4 shadow-[var(--shadow-topo)] transition-all duration-200 hover:shadow-[var(--shadow-topo-hover)] hover:-translate-y-0.5",
         className
       )}
     >
+      {/* Gradient accent line — visible on hover */}
+      <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-accent-blue to-accent-purple opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
       <p className="font-mono text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
         {label}
       </p>

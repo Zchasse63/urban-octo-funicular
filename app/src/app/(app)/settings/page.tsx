@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, LayoutGroup } from "motion/react";
 import {
   User,
   CreditCard,
@@ -17,6 +17,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { PageHeader, Badge, PrimaryButton, SecondaryButton, DangerButton } from "@/components/podbrain";
+import InfoBanner from "@/components/podbrain/info-banner";
 import { PRICING_TIERS, type PricingTier, type TierFeatures } from "@/lib/stripe/products";
 import useSubscription from "@/hooks/use-subscription";
 import useShows from "@/hooks/use-shows";
@@ -126,10 +127,10 @@ function BillingTab() {
           return (
             <div
               key={tier.tier}
-              className={`relative rounded-xl border p-6 transition-shadow ${
+              className={`relative rounded-xl border p-6 transition-all ${
                 isCurrent
-                  ? "border-accent-blue bg-accent-blue/5 shadow-md"
-                  : "border-border-soft bg-bg-elevated hover:shadow-sm"
+                  ? "border-accent-blue bg-gradient-to-b from-accent-blue/5 to-transparent shadow-[var(--shadow-topo-hover)]"
+                  : "border-border-soft bg-bg-elevated shadow-[var(--shadow-topo)] hover:shadow-[var(--shadow-topo-hover)] hover:-translate-y-0.5"
               }`}
             >
               {isCurrent && (
@@ -318,7 +319,7 @@ function IntegrationsTab() {
                 value={apiToken}
                 onChange={(e) => setApiToken(e.target.value)}
                 placeholder="Enter your Buzzsprout API token"
-                className="w-full rounded-lg border border-border-soft bg-bg-base px-4 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
+                className="w-full rounded-lg border border-border-soft bg-bg-base px-4 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
               />
             </div>
             <div>
@@ -331,7 +332,7 @@ function IntegrationsTab() {
                 value={buzzsproutShowId}
                 onChange={(e) => setBuzzsproutShowId(e.target.value)}
                 placeholder="Specific Buzzsprout show ID"
-                className="w-full rounded-lg border border-border-soft bg-bg-base px-4 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
+                className="w-full rounded-lg border border-border-soft bg-bg-base px-4 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
               />
             </div>
             <PrimaryButton
@@ -468,7 +469,7 @@ function VocabularyTab() {
             value={selectedShowId}
             onChange={(e) => setSelectedShowId(e.target.value)}
             disabled={showsLoading}
-            className="w-full appearance-none rounded-lg border border-border-soft bg-bg-base px-4 py-2.5 pr-10 text-sm text-text-primary focus:border-accent-blue focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
+            className="w-full appearance-none rounded-lg border border-border-soft bg-bg-base px-4 py-2.5 pr-10 text-sm text-text-primary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
           >
             <option value="">Select a show...</option>
             {shows.map((show) => (
@@ -489,7 +490,7 @@ function VocabularyTab() {
                 value={newTerm}
                 onChange={(e) => setNewTerm(e.target.value)}
                 placeholder="Term (e.g., Kubernetes)"
-                className="flex-1 rounded-lg border border-border-soft bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
+                className="flex-1 rounded-lg border border-border-soft bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
                 onKeyDown={(e) => e.key === "Enter" && handleAdd()}
               />
               <input
@@ -497,7 +498,7 @@ function VocabularyTab() {
                 value={newDefinition}
                 onChange={(e) => setNewDefinition(e.target.value)}
                 placeholder="Alternative spelling (optional)"
-                className="flex-1 rounded-lg border border-border-soft bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
+                className="flex-1 rounded-lg border border-border-soft bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
                 onKeyDown={(e) => e.key === "Enter" && handleAdd()}
               />
               <PrimaryButton
@@ -567,20 +568,15 @@ function VocabularyTab() {
         )}
       </div>
 
-      <div className="rounded-xl border border-accent-blue/20 bg-accent-blue/5 p-4">
-        <div className="flex gap-3">
-          <AlertCircle className="h-5 w-5 shrink-0 text-accent-blue" />
-          <div className="text-sm text-text-secondary">
-            <p className="font-medium text-text-primary">How Vocabulary Works</p>
-            <p className="mt-1">
-              Custom vocabulary terms are used during transcription to improve
-              accuracy for industry jargon, proper nouns, and technical terms.
-              Terms with embeddings enable fuzzy matching for similar
-              pronunciations.
-            </p>
-          </div>
-        </div>
-      </div>
+      <InfoBanner icon={AlertCircle}>
+        <p className="font-medium text-text-primary">How Vocabulary Works</p>
+        <p className="mt-1">
+          Custom vocabulary terms are used during transcription to improve
+          accuracy for industry jargon, proper nouns, and technical terms.
+          Terms with embeddings enable fuzzy matching for similar
+          pronunciations.
+        </p>
+      </InfoBanner>
     </div>
   );
 }
@@ -614,33 +610,42 @@ export default function SettingsPage() {
 
       <div className="flex flex-col gap-6 lg:flex-row">
         {/* Tab Navigation */}
-        <nav className="flex gap-1 lg:w-56 lg:shrink-0 lg:flex-col">
-          {TABS.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => handleTabChange(tab.id)}
-                className={`relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-accent-blue/10 text-accent-blue"
-                    : "text-text-secondary hover:bg-bg-subtle hover:text-text-primary"
-                }`}
-              >
-                {isActive && (
-                  <motion.div
-                    layoutId="settings-tab-indicator"
-                    className="absolute inset-0 rounded-lg bg-accent-blue/10"
-                    transition={springs.snappy}
-                  />
-                )}
-                <Icon className="relative h-4 w-4" />
-                <span className="relative">{tab.label}</span>
-              </button>
-            );
-          })}
-        </nav>
+        <LayoutGroup id="settings-tabs">
+          <nav className="flex gap-1 lg:w-56 lg:shrink-0 lg:flex-col">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                    isActive
+                      ? "text-accent-blue"
+                      : "text-text-secondary hover:bg-bg-subtle hover:text-text-primary"
+                  }`}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="settings-tab-indicator"
+                      className="absolute inset-0 rounded-lg bg-accent-blue/10"
+                      transition={springs.snappy}
+                    />
+                  )}
+                  {isActive && (
+                    <motion.div
+                      layoutId="settings-tab-accent"
+                      className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-accent-blue"
+                      transition={springs.snappy}
+                    />
+                  )}
+                  <Icon className="relative h-4 w-4" />
+                  <span className="relative">{tab.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </LayoutGroup>
 
         {/* Tab Content */}
         <div className="min-w-0 flex-1">

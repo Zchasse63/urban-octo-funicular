@@ -2,14 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { motion } from "motion/react";
-import { Mic2, Search } from "lucide-react";
+import { motion, LayoutGroup } from "motion/react";
+import { Mic2, Search, ChevronDown } from "lucide-react";
 import { staggerContainer, staggerItem } from "@/lib/motion";
-import { formatRelativeTime, formatDuration } from "@/lib/utils";
 import PageHeader from "@/components/podbrain/page-header";
 import EmptyState from "@/components/podbrain/empty-state";
-import { StatusBadge } from "@/components/podbrain/badge";
-import HealthGauge from "@/components/podbrain/health-gauge";
+import EpisodeRow from "@/components/podbrain/episode-row";
 import { PrimaryButton } from "@/components/podbrain/buttons";
 import useEpisodes from "@/hooks/use-episodes";
 import useShows from "@/hooks/use-shows";
@@ -64,49 +62,66 @@ export default function EpisodesPage() {
             placeholder="Search episodes..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-9 w-full rounded-lg border border-border-soft bg-bg-elevated pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/15"
+            className="h-9 w-full rounded-lg border border-border-soft bg-bg-elevated pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
           />
         </div>
 
         {/* Show Filter */}
         {shows.length > 1 && (
-          <select
-            value={showFilter}
-            onChange={(e) => {
-              setShowFilter(e.target.value);
-              setPage(1);
-            }}
-            className="h-9 rounded-lg border border-border-soft bg-bg-elevated px-3 text-sm text-text-primary"
-          >
-            <option value="">All Shows</option>
-            {shows.map((show) => (
-              <option key={show.id} value={show.id}>
-                {show.name}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={showFilter}
+              onChange={(e) => {
+                setShowFilter(e.target.value);
+                setPage(1);
+              }}
+              className="h-9 appearance-none rounded-lg border border-border-soft bg-bg-elevated pl-3 pr-8 text-sm text-text-primary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
+            >
+              <option value="">All Shows</option>
+              {shows.map((show) => (
+                <option key={show.id} value={show.id}>
+                  {show.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-tertiary" />
+          </div>
         )}
 
         {/* Status Tabs */}
-        <div className="flex gap-1 rounded-lg border border-border-soft bg-bg-subtle p-0.5">
-          {statusFilters.map((filter) => (
-            <button
-              key={filter.id}
-              type="button"
-              onClick={() => {
-                setStatusFilter(filter.id);
-                setPage(1);
-              }}
-              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-                statusFilter === filter.id
-                  ? "bg-bg-elevated text-text-primary shadow-sm"
-                  : "text-text-secondary hover:text-text-primary"
-              }`}
-            >
-              {filter.label}
-            </button>
-          ))}
-        </div>
+        <LayoutGroup id="episode-filters">
+          <div className="flex gap-1 rounded-lg border border-border-soft bg-bg-subtle p-0.5">
+            {statusFilters.map((filter) => (
+              <button
+                key={filter.id}
+                type="button"
+                onClick={() => {
+                  setStatusFilter(filter.id);
+                  setPage(1);
+                }}
+                className={`relative rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                  statusFilter === filter.id
+                    ? "text-text-primary"
+                    : "text-text-secondary hover:text-text-primary"
+                }`}
+              >
+                {statusFilter === filter.id && (
+                  <motion.div
+                    layoutId="episode-status-active"
+                    className="absolute inset-0 rounded-md bg-bg-elevated shadow-sm"
+                    style={{ zIndex: -1 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 400,
+                      damping: 30,
+                    }}
+                  />
+                )}
+                <span className="relative">{filter.label}</span>
+              </button>
+            ))}
+          </div>
+        </LayoutGroup>
       </div>
 
       {/* Episode List */}
@@ -138,46 +153,7 @@ export default function EpisodesPage() {
           >
             {episodes.map((episode) => (
               <motion.div key={episode.id} variants={staggerItem}>
-                <Link href={`/episodes/${episode.id}`}>
-                  <div className="flex items-center gap-4 rounded-xl border border-border-soft bg-bg-elevated p-4 transition-all hover:shadow-[var(--shadow-topo)] hover:border-border-focus/20">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent-blue/10">
-                      <Mic2 className="h-5 w-5 text-accent-blue" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-text-primary">
-                        {episode.title || "Untitled Episode"}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-text-secondary">
-                        <span>{episode.shows?.name || "Unknown Show"}</span>
-                        <span>·</span>
-                        <span>{formatRelativeTime(episode.created_at)}</span>
-                        {episode.audio_duration_seconds && (
-                          <>
-                            <span>·</span>
-                            <span>{formatDuration(episode.audio_duration_seconds)}</span>
-                          </>
-                        )}
-                        {episode.guest_name && (
-                          <>
-                            <span>·</span>
-                            <span className="truncate">Guest: {episode.guest_name}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {episode.seo_score !== null && (
-                        <HealthGauge
-                          value={episode.seo_score}
-                          label="SEO"
-                          size="sm"
-                          showLabel={false}
-                        />
-                      )}
-                      <StatusBadge status={episode.status} />
-                    </div>
-                  </div>
-                </Link>
+                <EpisodeRow episode={episode} detailed />
               </motion.div>
             ))}
           </motion.div>

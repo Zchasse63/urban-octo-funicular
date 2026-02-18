@@ -34,5 +34,8 @@ Thumbs.db
 # Testing
 coverage/
 
+# Netlify
+.netlify/
+
 # Misc
 *.log

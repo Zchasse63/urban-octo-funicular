@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
-import { Radio, Plus, X, Mic2 } from "lucide-react";
+import { Radio, Plus, X, Mic2, ChevronDown } from "lucide-react";
 import { staggerContainer, staggerItem, springs } from "@/lib/motion";
 import { formatRelativeTime } from "@/lib/utils";
 import PageHeader from "@/components/podbrain/page-header";
@@ -80,9 +80,9 @@ export default function ShowsPage() {
           {shows.map((show) => (
             <motion.div key={show.id} variants={staggerItem}>
               <Link href={`/episodes?show_id=${show.id}`}>
-                <div className="group rounded-xl border border-border-soft bg-bg-elevated p-6 transition-all hover:shadow-[var(--shadow-topo)] hover:border-border-focus/20">
+                <div className="group rounded-xl border border-border-soft bg-bg-elevated p-6 shadow-[var(--shadow-topo)] transition-all hover:shadow-[var(--shadow-topo-hover)] hover:border-border-focus/20 hover:-translate-y-0.5">
                   {/* Artwork / Placeholder */}
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-accent-blue/20 to-purple-500/20">
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-accent-blue/20 to-accent-purple/20">
                     {show.artwork_url ? (
                       <img
                         src={show.artwork_url}
@@ -157,7 +157,7 @@ export default function ShowsPage() {
                       setFormData((prev) => ({ ...prev, name: e.target.value }))
                     }
                     placeholder="My Awesome Podcast"
-                    className="h-10 w-full rounded-lg border border-border-soft bg-bg-base px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/15"
+                    className="h-9 w-full rounded-lg border border-border-soft bg-bg-base px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
                   />
                 </div>
 
@@ -175,7 +175,7 @@ export default function ShowsPage() {
                     }
                     placeholder="What's your show about?"
                     rows={3}
-                    className="w-full rounded-lg border border-border-soft bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/15 resize-none"
+                    className="w-full rounded-lg border border-border-soft bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/20 resize-none"
                   />
                 </div>
 
@@ -184,21 +184,24 @@ export default function ShowsPage() {
                     <label className="mb-1 block text-sm font-medium text-text-primary">
                       Language
                     </label>
-                    <select
-                      value={formData.default_language}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          default_language: e.target.value,
-                        }))
-                      }
-                      className="h-10 w-full rounded-lg border border-border-soft bg-bg-base px-3 text-sm text-text-primary"
-                    >
-                      <option value="en">English</option>
-                      <option value="es">Spanish</option>
-                      <option value="fr">French</option>
-                      <option value="de">German</option>
-                    </select>
+                    <div className="relative">
+                      <select
+                        value={formData.default_language}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            default_language: e.target.value,
+                          }))
+                        }
+                        className="h-9 w-full appearance-none rounded-lg border border-border-soft bg-bg-base pl-3 pr-8 text-sm text-text-primary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
+                      >
+                        <option value="en">English</option>
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-tertiary" />
+                    </div>
                   </div>
                   <div>
                     <label className="mb-1 block text-sm font-medium text-text-primary">
@@ -214,7 +217,7 @@ export default function ShowsPage() {
                         }))
                       }
                       placeholder="https://..."
-                      className="h-10 w-full rounded-lg border border-border-soft bg-bg-base px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/15"
+                      className="h-9 w-full rounded-lg border border-border-soft bg-bg-base px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
                     />
                   </div>
                 </div>

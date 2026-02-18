@@ -13,6 +13,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { PageHeader, FreshnessMeter, Badge, EmptyState } from "@/components/podbrain";
+import { PrimaryButton } from "@/components/podbrain/buttons";
 import useShows from "@/hooks/use-shows";
 import useExperts from "@/hooks/use-experts";
 import { springs, staggerContainer, staggerItem } from "@/lib/motion";
@@ -197,7 +198,7 @@ export default function ExpertsPage() {
               value={selectedShowId}
               onChange={(e) => setSelectedShowId(e.target.value)}
               disabled={showsLoading}
-              className="w-full appearance-none rounded-lg border border-border-soft bg-bg-elevated px-4 py-2.5 pr-10 text-sm text-text-primary focus:border-accent-blue focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
+              className="w-full appearance-none rounded-lg border border-border-soft bg-bg-elevated px-4 py-2.5 pr-10 text-sm text-text-primary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
             >
               <option value="">Choose a show...</option>
               {shows.map((show) => (
@@ -220,17 +221,18 @@ export default function ExpertsPage() {
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Search for a topic (e.g., AI ethics, climate change, growth marketing)..."
               disabled={!selectedShowId}
-              className="w-full rounded-lg border border-border-soft bg-bg-elevated py-2.5 pl-10 pr-4 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none focus:ring-2 focus:ring-accent-blue/20 disabled:opacity-50"
+              className="w-full rounded-lg border border-border-soft bg-bg-elevated py-2.5 pl-10 pr-4 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/20 disabled:opacity-50"
             />
           </div>
-          <button
+          <PrimaryButton
             type="submit"
             disabled={!selectedShowId || !searchInput.trim() || isLoading}
-            className="inline-flex items-center gap-2 rounded-lg bg-accent-blue px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent-blue/90 disabled:opacity-50"
+            isLoading={isLoading}
+            loadingText="Searching..."
           >
-            <Sparkles className="h-4 w-4" />
-            {isLoading ? "Searching..." : "Discover"}
-          </button>
+            <Sparkles className="mr-2 h-4 w-4" />
+            Discover
+          </PrimaryButton>
         </form>
       </div>
 

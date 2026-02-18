@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { PageHeader, PrimaryButton, SecondaryButton } from "@/components/podbrain";
+import SectionHeading from "@/components/podbrain/section-heading";
 import useEpisode from "@/hooks/use-episode";
 import { useToast } from "@/hooks/use-toast";
 import { staggerContainer, staggerItem } from "@/lib/motion";
@@ -30,9 +31,9 @@ const PLATFORM_ICONS: Record<string, React.ElementType> = {
 };
 
 const PLATFORM_COLORS: Record<string, string> = {
-  linkedin: "bg-blue-600/10 text-blue-600",
-  twitter: "bg-sky-500/10 text-sky-500",
-  instagram: "bg-pink-500/10 text-pink-500",
+  linkedin: "bg-accent-blue/10 text-accent-blue",
+  twitter: "bg-accent-blue/10 text-accent-blue",
+  instagram: "bg-accent-purple/10 text-accent-purple",
 };
 
 function CopyButton({ text }: { text: string }) {
@@ -306,9 +307,9 @@ export default function GuestPackagePage({
 
           {/* Social Posts */}
           <div>
-            <h2 className="mb-4 text-lg font-semibold text-text-primary">
+            <SectionHeading className="mb-4 text-sm">
               Social Posts
-            </h2>
+            </SectionHeading>
             <motion.div
               variants={staggerContainer}
               initial="hidden"
@@ -324,9 +325,9 @@ export default function GuestPackagePage({
           {/* Quote Cards */}
           {guestPackage.quoteCards.length > 0 && (
             <div>
-              <h2 className="mb-4 text-lg font-semibold text-text-primary">
+              <SectionHeading className="mb-4 text-sm">
                 Quote Cards
-              </h2>
+              </SectionHeading>
               <motion.div
                 variants={staggerContainer}
                 initial="hidden"
@@ -342,9 +343,9 @@ export default function GuestPackagePage({
 
           {/* Email Template */}
           <div>
-            <h2 className="mb-4 text-lg font-semibold text-text-primary">
+            <SectionHeading className="mb-4 text-sm">
               Email Template
-            </h2>
+            </SectionHeading>
             <div className="rounded-xl border border-border-soft bg-bg-elevated p-5">
               <div className="flex items-center justify-between border-b border-border-soft pb-3">
                 <div>
@@ -379,7 +380,7 @@ export default function GuestPackagePage({
                   value={guestEmail}
                   onChange={(e) => setGuestEmail(e.target.value)}
                   placeholder="guest@example.com"
-                  className="w-full rounded-lg border border-border-soft bg-bg-elevated px-4 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
+                  className="w-full rounded-lg border border-border-soft bg-bg-elevated px-4 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
                 />
               </div>
               <div>
@@ -392,7 +393,7 @@ export default function GuestPackagePage({
                   onChange={(e) => setCustomMessage(e.target.value)}
                   placeholder="Add a personal note..."
                   rows={3}
-                  className="w-full rounded-lg border border-border-soft bg-bg-elevated px-4 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none focus:ring-2 focus:ring-accent-blue/20 resize-none"
+                  className="w-full rounded-lg border border-border-soft bg-bg-elevated px-4 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-blue/20 resize-none"
                 />
               </div>
               <PrimaryButton

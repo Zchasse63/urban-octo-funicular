@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
-import { Mic2, Upload, ArrowRight, Sparkles } from "lucide-react";
+import { Upload, ArrowRight, Sparkles } from "lucide-react";
 import { staggerContainer, staggerItem } from "@/lib/motion";
-import { formatRelativeTime } from "@/lib/utils";
 import PageHeader from "@/components/podbrain/page-header";
 import { StatCard } from "@/components/podbrain/content-card";
 import HealthGauge from "@/components/podbrain/health-gauge";
 import EmptyState from "@/components/podbrain/empty-state";
-import { StatusBadge } from "@/components/podbrain/badge";
+import EpisodeRow from "@/components/podbrain/episode-row";
+import SectionHeading from "@/components/podbrain/section-heading";
 import { PrimaryButton } from "@/components/podbrain/buttons";
 import useEpisodes from "@/hooks/use-episodes";
 import useShows from "@/hooks/use-shows";
@@ -28,6 +28,32 @@ export default function DashboardPage() {
           completedEpisodes.reduce((sum, ep) => sum + (ep.seo_score || 0), 0) /
             completedEpisodes.length
         )
+      : 0;
+
+  // Compute readability from seo_analysis (now included in API response)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getAnalysis = (ep: unknown): any => (ep as any)?.seo_analysis;
+  const episodesWithReadability = completedEpisodes.filter(
+    (ep) => getAnalysis(ep)?.readability_score
+  );
+  const avgReadability =
+    episodesWithReadability.length > 0
+      ? Math.round(
+          episodesWithReadability.reduce(
+            (sum, ep) => sum + (getAnalysis(ep)?.readability_score || 0),
+            0
+          ) / episodesWithReadability.length
+        )
+      : 0;
+
+  // Quality: % of completed episodes with show notes content
+  const episodesWithNotes = completedEpisodes.filter(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (ep) => (ep as any)?.show_notes
+  );
+  const qualityScore =
+    completedEpisodes.length > 0
+      ? Math.round((episodesWithNotes.length / completedEpisodes.length) * 100)
       : 0;
 
   const processingCount = episodes.filter(
@@ -113,13 +139,11 @@ export default function DashboardPage() {
       {/* Health Gauges */}
       {completedEpisodes.length > 0 && (
         <div className="mb-8">
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-text-tertiary font-mono">
-            Content Health
-          </h2>
+          <SectionHeading className="mb-4">Content Health</SectionHeading>
           <div className="flex flex-wrap gap-6">
             <HealthGauge value={avgSeoScore} label="SEO" size="lg" />
-            <HealthGauge value={85} label="Quality" size="lg" />
-            <HealthGauge value={72} label="Readability" size="lg" />
+            <HealthGauge value={qualityScore} label="Quality" size="lg" />
+            <HealthGauge value={avgReadability} label="Readability" size="lg" />
           </div>
         </div>
       )}
@@ -127,9 +151,7 @@ export default function DashboardPage() {
       {/* Recent Episodes */}
       <div>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-text-tertiary font-mono">
-            Recent Episodes
-          </h2>
+          <SectionHeading>Recent Episodes</SectionHeading>
           <Link
             href="/episodes"
             className="flex items-center gap-1 text-xs font-medium text-accent-blue hover:underline"
@@ -146,33 +168,7 @@ export default function DashboardPage() {
         >
           {episodes.map((episode) => (
             <motion.div key={episode.id} variants={staggerItem}>
-              <Link href={`/episodes/${episode.id}`}>
-                <div className="flex items-center gap-4 rounded-xl border border-border-soft bg-bg-elevated p-4 transition-all hover:shadow-[var(--shadow-topo)] hover:border-border-focus/20">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent-blue/10">
-                    <Mic2 className="h-5 w-5 text-accent-blue" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-text-primary">
-                      {episode.title || "Untitled Episode"}
-                    </p>
-                    <p className="text-xs text-text-secondary">
-                      {episode.shows?.name || "Unknown Show"} ·{" "}
-                      {formatRelativeTime(episode.created_at)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {episode.seo_score !== null && (
-                      <HealthGauge
-                        value={episode.seo_score}
-                        label="SEO"
-                        size="sm"
-                        showLabel={false}
-                      />
-                    )}
-                    <StatusBadge status={episode.status} />
-                  </div>
-                </div>
-              </Link>
+              <EpisodeRow episode={episode} />
             </motion.div>
           ))}
         </motion.div>

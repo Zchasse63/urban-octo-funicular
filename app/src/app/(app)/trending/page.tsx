@@ -10,6 +10,7 @@ import {
   Lightbulb,
 } from "lucide-react";
 import { PageHeader, Badge } from "@/components/podbrain";
+import InfoBanner from "@/components/podbrain/info-banner";
 import { staggerContainer, staggerItem } from "@/lib/motion";
 
 const TRENDING_TOPICS = [
@@ -75,7 +76,7 @@ function HeatBar({ value }: { value: number }) {
             value >= 90
               ? "bg-accent-red"
               : value >= 75
-                ? "bg-amber-500"
+                ? "bg-accent-amber"
                 : "bg-accent-blue"
           }`}
         />
@@ -96,20 +97,15 @@ export default function TrendingPage() {
       />
 
       {/* Coming Soon Banner */}
-      <div className="mb-6 rounded-xl border border-accent-blue/20 bg-accent-blue/5 p-4">
-        <div className="flex items-center gap-3">
-          <Sparkles className="h-5 w-5 text-accent-blue" />
-          <div>
-            <p className="text-sm font-medium text-text-primary">
-              Trending Topics &mdash; Preview
-            </p>
-            <p className="text-xs text-text-secondary">
-              Live trending data and personalized recommendations are coming soon.
-              Here&apos;s a preview of the format.
-            </p>
-          </div>
-        </div>
-      </div>
+      <InfoBanner icon={Sparkles} className="mb-6">
+        <p className="font-medium text-text-primary">
+          Trending Topics &mdash; Preview
+        </p>
+        <p className="mt-0.5 text-xs text-text-secondary">
+          Live trending data and personalized recommendations are coming soon.
+          Here&apos;s a preview of the format.
+        </p>
+      </InfoBanner>
 
       {/* Topic Cards */}
       <motion.div
@@ -124,7 +120,7 @@ export default function TrendingPage() {
             <motion.div
               key={topic.title}
               variants={staggerItem}
-              className="group rounded-xl border border-border-soft bg-bg-elevated p-5 transition-shadow hover:shadow-md"
+              className="group rounded-xl border border-border-soft bg-bg-elevated p-5 shadow-[var(--shadow-topo)] transition-all hover:shadow-[var(--shadow-topo-hover)] hover:-translate-y-0.5"
             >
               <div className="flex items-start justify-between">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-blue/10">

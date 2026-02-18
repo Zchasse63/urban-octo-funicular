@@ -11,12 +11,12 @@ export function AILoadingOrb({ className }: { className?: string }) {
     <div className={cn("flex items-center justify-center", className)}>
       <div className="relative h-16 w-16">
         <motion.div
-          className="absolute inset-0 rounded-full bg-gradient-to-br from-accent-blue to-purple-500 opacity-20"
+          className="absolute inset-0 rounded-full bg-gradient-to-br from-accent-blue to-accent-purple opacity-20"
           animate={{ scale: [1, 1.2, 1], opacity: [0.2, 0.1, 0.2] }}
           transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div
-          className="absolute inset-2 rounded-full bg-gradient-to-br from-accent-blue to-purple-500 opacity-40"
+          className="absolute inset-2 rounded-full bg-gradient-to-br from-accent-blue to-accent-purple opacity-40"
           animate={{ scale: [1, 1.1, 1], opacity: [0.4, 0.2, 0.4] }}
           transition={{
             duration: 2,
@@ -26,7 +26,7 @@ export function AILoadingOrb({ className }: { className?: string }) {
           }}
         />
         <motion.div
-          className="absolute inset-4 rounded-full bg-gradient-to-br from-accent-blue to-purple-500"
+          className="absolute inset-4 rounded-full bg-gradient-to-br from-accent-blue to-accent-purple"
           animate={{ rotate: 360 }}
           transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
         />
@@ -119,7 +119,7 @@ export function ProcessingProgressBar({
       )}
       <div className="h-2 overflow-hidden rounded-full bg-border-soft">
         <motion.div
-          className="h-full rounded-full bg-gradient-to-r from-accent-blue to-purple-500"
+          className="h-full rounded-full bg-gradient-to-r from-accent-blue to-accent-purple"
           initial={{ width: 0 }}
           animate={{ width: `${progress}%` }}
           transition={{ duration: 0.5, ease: "easeOut" }}

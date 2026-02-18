@@ -57,6 +57,8 @@ export async function GET(request: NextRequest) {
         language,
         status,
         seo_score,
+        seo_analysis,
+        show_notes,
         guest_name,
         published_at,
         created_at,

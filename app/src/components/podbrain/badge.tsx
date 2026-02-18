@@ -15,9 +15,9 @@ const badgeVariants = cva(
           "bg-status-warning-bg text-status-warning-text",
         error:
           "bg-status-error-bg text-status-error-text",
-        ai: "bg-gradient-to-r from-accent-blue/10 to-purple-500/10 text-accent-blue",
+        ai: "bg-gradient-to-r from-accent-blue/10 to-accent-purple/10 text-accent-blue",
         processing:
-          "bg-amber-500/10 text-amber-600 animate-pulse",
+          "bg-accent-amber/10 text-accent-amber animate-pulse",
       },
     },
     defaultVariants: {
