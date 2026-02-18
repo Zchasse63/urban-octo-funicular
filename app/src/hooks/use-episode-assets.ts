@@ -29,7 +29,7 @@ export default function useEpisodeAssets(
       if (!response.ok) throw new Error("Failed to fetch assets");
 
       const result = await response.json();
-      setAssets(result.data || []);
+      setAssets(result.data?.assets || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load assets");
     } finally {
@@ -43,7 +43,7 @@ export default function useEpisodeAssets(
         const response = await fetch(`/api/episodes/${episodeId}/assets`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ asset_types: [assetType] }),
+          body: JSON.stringify({ assetType, regenerate: true }),
         });
 
         if (!response.ok) throw new Error("Failed to regenerate asset");

@@ -70,6 +70,7 @@ export interface User {
   google_id: string | null
   avatar_url: string | null
   preferences: Record<string, unknown>
+  subscription_tier: 'free' | 'pro' | 'agency'
   created_at: string
   updated_at: string
 }
@@ -186,10 +187,15 @@ export interface Correction {
 export interface HostingConnection {
   id: string
   user_id: string
-  platform: HostingPlatform
-  access_token: string
-  refresh_token: string | null
-  metadata: Record<string, unknown>
+  provider: string
+  credentials: Record<string, unknown>
+  show_id: string | null
+  status: string
+  // Legacy fields (Phase 1 schema)
+  platform?: HostingPlatform
+  access_token?: string
+  refresh_token?: string | null
+  metadata?: Record<string, unknown>
   created_at: string
   updated_at: string
 }
@@ -209,10 +215,9 @@ export interface EpisodeListItem {
   published_at: string | null
   created_at: string
   updated_at: string
-  shows: {
-    user_id: string
-    name: string
-  }[]
+  // Supabase !inner join returns array shape, but for many-to-one it's effectively a single object
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  shows: any
 }
 
 // API Response Types
@@ -228,16 +233,26 @@ export interface PaginatedResponse<T> {
   per_page: number
 }
 
-// Processing Status Types
+// Processing Status Types (matches Trigger.dev run status API response)
 export interface ProcessingStatus {
-  episode_id: string
-  current_step: ProcessingStep
-  progress: number
-  started_at: string
-  estimated_completion: string | null
-  error: string | null
+  runId: string
+  status: TriggerRunStatus
+  createdAt: string
+  updatedAt: string
+  error?: string
 }
 
+export type TriggerRunStatus =
+  | 'PENDING'
+  | 'QUEUED'
+  | 'EXECUTING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'CANCELED'
+  | 'REATTEMPTING'
+  | 'FROZEN'
+
+// Legacy processing steps (for UI display mapping)
 export type ProcessingStep =
   | 'uploading'
   | 'transcribing'

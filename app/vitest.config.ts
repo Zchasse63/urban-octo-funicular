@@ -8,8 +8,8 @@ export default defineConfig({
     // Global setup/teardown for test database
     globalSetup: ['./test/setup/global-setup.ts'],
 
-    // Setup file for each test file
-    setupFiles: ['./test/setup/test-env.ts'],
+    // Setup files for each test file
+    setupFiles: ['./test/setup/test-env.ts', './test/setup/component-setup.ts'],
 
     // Environment for component tests
     environment: 'happy-dom',
@@ -24,6 +24,7 @@ export default defineConfig({
     exclude: [
       'node_modules',
       'test/e2e/**', // E2E tests run with Playwright
+      'test/integration/api/**', // API tests need a running dev server (use npm run test:api)
     ],
 
     // Increased timeouts for live tests (real network calls)

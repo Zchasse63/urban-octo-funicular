@@ -146,9 +146,9 @@ export default function GuestPackagePage({
       }
 
       const data = await response.json();
-      setGuestPackage(data.package);
-      if (data.episode?.guest_email) {
-        setGuestEmail(data.episode.guest_email);
+      setGuestPackage(data.data?.package || null);
+      if (data.data?.episode?.guest_email) {
+        setGuestEmail(data.data.episode.guest_email);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load package");

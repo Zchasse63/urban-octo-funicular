@@ -10,6 +10,7 @@ export interface TierFeatures {
   shows: number;
 }
 
+// Client-safe pricing data — priceIds are resolved server-side only
 export const PRICING_TIERS: Record<PricingTier, TierFeatures> = {
   free: {
     tier: 'free',
@@ -29,7 +30,7 @@ export const PRICING_TIERS: Record<PricingTier, TierFeatures> = {
     tier: 'pro',
     name: 'Pro',
     price: 19,
-    priceId: process.env.STRIPE_PRO_PRICE_ID || null,
+    priceId: null, // Resolved server-side via getServerPriceId()
     episodesPerMonth: 50,
     shows: 5,
     features: [
@@ -45,7 +46,7 @@ export const PRICING_TIERS: Record<PricingTier, TierFeatures> = {
     tier: 'agency',
     name: 'Agency',
     price: 49,
-    priceId: process.env.STRIPE_AGENCY_PRICE_ID || null,
+    priceId: null, // Resolved server-side via getServerPriceId()
     episodesPerMonth: 200,
     shows: 999,
     features: [
@@ -61,11 +62,18 @@ export const PRICING_TIERS: Record<PricingTier, TierFeatures> = {
   },
 };
 
+/**
+ * Get the Stripe price ID for a tier. Must be called server-side only.
+ */
+export function getServerPriceId(tier: PricingTier): string | null {
+  if (tier === 'pro') return process.env.STRIPE_PRO_PRICE_ID || null;
+  if (tier === 'agency') return process.env.STRIPE_AGENCY_PRICE_ID || null;
+  return null;
+}
+
 export function getTierByPriceId(priceId: string): PricingTier | null {
-  for (const [tier, config] of Object.entries(PRICING_TIERS)) {
-    if (config.priceId === priceId) {
-      return tier as PricingTier;
-    }
-  }
+  // Must check against server env vars
+  if (priceId === process.env.STRIPE_PRO_PRICE_ID) return 'pro';
+  if (priceId === process.env.STRIPE_AGENCY_PRICE_ID) return 'agency';
   return null;
 }

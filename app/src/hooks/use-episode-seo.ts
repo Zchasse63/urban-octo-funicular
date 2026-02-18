@@ -34,7 +34,15 @@ export default function useEpisodeSeo(
       if (!response.ok) throw new Error("Failed to fetch SEO data");
 
       const result = await response.json();
-      setSeoData(result.data || null);
+      if (result.data) {
+        setSeoData({
+          seo_score: result.data.episode?.seo_score ?? null,
+          seo_analysis: result.data.analysis ?? null,
+          schema_markup: result.data.schema ?? null,
+        });
+      } else {
+        setSeoData(null);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load SEO data");
     } finally {

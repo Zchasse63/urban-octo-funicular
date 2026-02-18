@@ -16,7 +16,7 @@ interface UseSubscriptionResult {
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
-  checkout: (priceId: string) => Promise<void>;
+  checkout: (tier: string) => Promise<void>;
   openPortal: () => Promise<void>;
 }
 
@@ -44,12 +44,12 @@ export default function useSubscription(): UseSubscriptionResult {
     }
   }, []);
 
-  const checkout = useCallback(async (priceId: string) => {
+  const checkout = useCallback(async (tier: string) => {
     try {
       const response = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ price_id: priceId }),
+        body: JSON.stringify({ tier }),
       });
 
       if (!response.ok) {

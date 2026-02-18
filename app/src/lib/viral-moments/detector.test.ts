@@ -1,5 +1,4 @@
-import { describe, it } from 'node:test';
-import assert from 'node:assert';
+import { describe, it, expect } from 'vitest';
 import { DetectionResponseSchema } from './detector';
 
 describe('Viral Moments Detector', () => {
@@ -30,7 +29,7 @@ describe('Viral Moments Detector', () => {
     };
 
     const result = DetectionResponseSchema.safeParse(validResponse);
-    assert.strictEqual(result.success, true, 'Valid response should pass validation');
+    expect(result.success).toBe(true);
   });
 
   it('rejects invalid time ordering', () => {
@@ -60,7 +59,7 @@ describe('Viral Moments Detector', () => {
     };
 
     const result = DetectionResponseSchema.safeParse(invalidResponse);
-    assert.strictEqual(result.success, false, 'Invalid time ordering should fail');
+    expect(result.success).toBe(false);
   });
 
   it('rejects empty arrays', () => {
@@ -90,6 +89,6 @@ describe('Viral Moments Detector', () => {
     };
 
     const result = DetectionResponseSchema.safeParse(invalidResponse);
-    assert.strictEqual(result.success, false, 'Empty platform array should fail');
+    expect(result.success).toBe(false);
   });
 });

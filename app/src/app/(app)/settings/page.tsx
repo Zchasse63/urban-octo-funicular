@@ -162,10 +162,10 @@ function BillingTab() {
                   <SecondaryButton className="w-full" disabled>
                     Current Plan
                   </SecondaryButton>
-                ) : tier.priceId ? (
+                ) : tier.tier !== "free" ? (
                   <PrimaryButton
                     className="w-full"
-                    onClick={() => checkout(tier.priceId!)}
+                    onClick={() => checkout(tier.tier)}
                   >
                     {tier.price > (PRICING_TIERS[currentTier]?.price || 0)
                       ? "Upgrade"
@@ -195,6 +195,28 @@ function IntegrationsTab() {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionId, setConnectionId] = useState<string | null>(null);
   const toast = useToast();
+
+  // Check existing connection on mount
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("hosting_connections")
+          .select("id, platform")
+          .eq("platform", "buzzsprout")
+          .maybeSingle();
+
+        if (data) {
+          setIsConnected(true);
+          setConnectionId(data.id);
+        }
+      } catch {
+        // Silently fail — not critical
+      }
+    };
+    checkConnection();
+  }, []);
 
   const handleConnect = useCallback(async () => {
     if (!apiToken.trim()) return;
@@ -340,7 +362,7 @@ function IntegrationsTab() {
 interface VocabTerm {
   id: string;
   term: string;
-  definition: string | null;
+  alternatives: string[] | null;
   show_id: string;
 }
 
@@ -367,7 +389,7 @@ function VocabularyTab() {
         const supabase = createClient();
         const { data, error } = await supabase
           .from("vocabulary_terms")
-          .select("id, term, definition, show_id")
+          .select("id, term, alternatives, show_id")
           .eq("show_id", selectedShowId)
           .order("term");
 
@@ -393,11 +415,10 @@ function VocabularyTab() {
         .from("vocabulary_terms")
         .insert({
           term: newTerm.trim(),
-          definition: newDefinition.trim() || null,
+          alternatives: newDefinition.trim() ? [newDefinition.trim()] : [],
           show_id: selectedShowId,
-          user_id: DEFAULT_USER_ID,
         })
-        .select("id, term, definition, show_id")
+        .select("id, term, alternatives, show_id")
         .single();
 
       if (error) throw error;
@@ -475,7 +496,7 @@ function VocabularyTab() {
                 type="text"
                 value={newDefinition}
                 onChange={(e) => setNewDefinition(e.target.value)}
-                placeholder="Definition (optional)"
+                placeholder="Alternative spelling (optional)"
                 className="flex-1 rounded-lg border border-border-soft bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent-blue focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
                 onKeyDown={(e) => e.key === "Enter" && handleAdd()}
               />
@@ -519,9 +540,9 @@ function VocabularyTab() {
                           <span className="font-medium text-text-primary">
                             {term.term}
                           </span>
-                          {term.definition && (
+                          {term.alternatives && term.alternatives.length > 0 && (
                             <span className="ml-2 text-sm text-text-tertiary">
-                              &mdash; {term.definition}
+                              &mdash; {term.alternatives.join(", ")}
                             </span>
                           )}
                         </div>

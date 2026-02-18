@@ -2,35 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe/client';
 import { createClient } from '@/lib/supabase/server';
 import { DEFAULT_USER_ID, APP_URL } from '@/lib/constants';
-import { PRICING_TIERS } from '@/lib/stripe/products';
+import { getServerPriceId, type PricingTier } from '@/lib/stripe/products';
+
+const VALID_TIERS: PricingTier[] = ['pro', 'agency'];
 
 export async function POST(request: NextRequest) {
   try {
-    const { price_id } = await request.json();
+    const body = await request.json();
 
-    if (!price_id || typeof price_id !== 'string' || price_id.length > 100) {
-      return NextResponse.json(
-        { error: 'Invalid price_id' },
-        { status: 400 }
-      );
+    // Accept either tier name or price_id for backwards compatibility
+    let priceId: string | null = null;
+
+    if (body.tier && VALID_TIERS.includes(body.tier)) {
+      priceId = getServerPriceId(body.tier);
+    } else if (body.price_id && typeof body.price_id === 'string') {
+      priceId = body.price_id;
     }
 
-    const validPriceIds = Object.values(PRICING_TIERS)
-      .map(tier => tier.priceId)
-      .filter(Boolean);
-
-    // Explicit null/undefined check before validation
-    // Prevents null price_ids from passing when env vars not set
-    if (!validPriceIds.length) {
+    if (!priceId) {
       return NextResponse.json(
-        { error: 'Stripe price IDs not configured - check STRIPE_PRO_PRICE_ID and STRIPE_AGENCY_PRICE_ID environment variables' },
-        { status: 500 }
-      );
-    }
-
-    if (!validPriceIds.includes(price_id)) {
-      return NextResponse.json(
-        { error: 'Invalid price_id - not a recognized pricing tier' },
+        { error: 'Invalid tier or price_id. Valid tiers: pro, agency' },
         { status: 400 }
       );
     }
@@ -59,15 +50,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Atomic customer retrieval/creation to prevent race conditions
-    // First check for existing subscription with customer ID
     let customerId: string;
     const { data: existingSub, error: subError } = await supabase
       .from('subscriptions')
       .select('stripe_customer_id')
       .eq('user_id', DEFAULT_USER_ID)
-      .maybeSingle(); // Use maybeSingle to avoid error if no rows
+      .maybeSingle();
 
-    // Check for actual DB errors (not PGRST116 which means no rows)
     if (subError && subError.code !== 'PGRST116') {
       console.error('Subscription lookup failed:', subError);
       return NextResponse.json(
@@ -79,7 +68,6 @@ export async function POST(request: NextRequest) {
     if (existingSub?.stripe_customer_id) {
       customerId = existingSub.stripe_customer_id;
     } else {
-      // No existing subscription - search Stripe for customer by user_id metadata
       const existingCustomers = await stripe.customers.list({
         email: user.email,
         limit: 1,
@@ -88,7 +76,6 @@ export async function POST(request: NextRequest) {
       if (existingCustomers.data.length > 0) {
         customerId = existingCustomers.data[0].id;
       } else {
-        // Create new customer only if none exists
         const customer = await stripe.customers.create({
           email: user.email,
           metadata: {
@@ -104,13 +91,13 @@ export async function POST(request: NextRequest) {
       client_reference_id: DEFAULT_USER_ID,
       line_items: [
         {
-          price: price_id,
+          price: priceId,
           quantity: 1,
         },
       ],
       mode: 'subscription',
-      success_url: `${APP_URL}/settings/billing?success=true`,
-      cancel_url: `${APP_URL}/pricing?canceled=true`,
+      success_url: `${APP_URL}/settings?tab=billing&success=true`,
+      cancel_url: `${APP_URL}/settings?tab=billing&canceled=true`,
       metadata: {
         user_id: DEFAULT_USER_ID,
       },

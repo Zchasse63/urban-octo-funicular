@@ -148,7 +148,7 @@ export default function EpisodesPage() {
                         {episode.title || "Untitled Episode"}
                       </p>
                       <div className="flex items-center gap-2 text-xs text-text-secondary">
-                        <span>{episode.shows?.[0]?.name || "Unknown Show"}</span>
+                        <span>{episode.shows?.name || "Unknown Show"}</span>
                         <span>·</span>
                         <span>{formatRelativeTime(episode.created_at)}</span>
                         {episode.audio_duration_seconds && (

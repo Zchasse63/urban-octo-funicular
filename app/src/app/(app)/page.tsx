@@ -156,7 +156,7 @@ export default function DashboardPage() {
                       {episode.title || "Untitled Episode"}
                     </p>
                     <p className="text-xs text-text-secondary">
-                      {episode.shows?.[0]?.name || "Unknown Show"} ·{" "}
+                      {episode.shows?.name || "Unknown Show"} ·{" "}
                       {formatRelativeTime(episode.created_at)}
                     </p>
                   </div>

@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { DEFAULT_USER_ID } from '@/lib/constants';
+import { devGuard } from '@/lib/api/dev-guard';
 
 export async function GET() {
+  const guard = devGuard();
+  if (guard) return guard;
+
   try {
     const supabase = await createClient();
 

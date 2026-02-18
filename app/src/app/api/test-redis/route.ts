@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { redis, set, get, del, checkRateLimit } from '@/lib/redis';
+import { devGuard } from '@/lib/api/dev-guard';
 
 export async function GET() {
+  const guard = devGuard();
+  if (guard) return guard;
+
   try {
     const testKey = `test:${Date.now()}`;
     const testValue = { message: 'Redis is working!', timestamp: Date.now() };

@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { devGuard } from '@/lib/api/dev-guard';
 
 const PLACEHOLDER_USER_ID = '00000000-0000-0000-0000-000000000001';
 
 export async function GET() {
+  const guard = devGuard();
+  if (guard) return guard;
+
   try {
     const supabase = await createClient();
 

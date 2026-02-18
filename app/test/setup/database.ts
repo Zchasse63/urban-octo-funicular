@@ -205,10 +205,26 @@ export function generateTestEpisodeTitle(): string {
  */
 export async function checkDatabaseConnection(): Promise<boolean> {
   try {
+    // Log env var presence (not values) for diagnostics
+    console.log('  ENV check:', {
+      hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      urlPrefix: process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 30) + '...',
+    })
+
     const adminClient = getAdminClient()
-    const { error } = await adminClient.from('users').select('id').limit(1)
-    return !error
-  } catch {
+    const { data, error } = await adminClient.from('shows').select('id').limit(1)
+
+    if (error) {
+      console.error('  Database connection error:', error.message, error.code, error.hint)
+      return false
+    }
+
+    console.log('  Database query succeeded, rows:', data?.length ?? 0)
+    return true
+  } catch (err) {
+    console.error('  Database connection exception:', err)
     return false
   }
 }

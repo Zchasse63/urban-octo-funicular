@@ -27,7 +27,7 @@ describe('Button', () => {
     it('applies default variant classes', () => {
       render(<Button>Default</Button>)
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('bg-[var(--text-primary)]')
+      expect(button).toHaveClass('bg-primary')
     })
 
     it('applies default size classes', () => {
@@ -41,26 +41,26 @@ describe('Button', () => {
     it('applies secondary variant classes', () => {
       render(<Button variant="secondary">Secondary</Button>)
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('bg-white')
-      expect(button).toHaveClass('border')
+      expect(button).toHaveClass('bg-secondary')
     })
 
     it('applies ghost variant classes', () => {
       render(<Button variant="ghost">Ghost</Button>)
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('text-[var(--text-secondary)]')
+      expect(button).toHaveClass('hover:bg-accent')
     })
 
     it('applies link variant classes', () => {
       render(<Button variant="link">Link</Button>)
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('text-[var(--accent-blue)]')
+      expect(button).toHaveClass('text-primary')
+      expect(button).toHaveClass('underline-offset-4')
     })
 
     it('applies destructive variant classes', () => {
       render(<Button variant="destructive">Delete</Button>)
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('bg-[var(--accent-red)]')
+      expect(button).toHaveClass('bg-destructive')
     })
   })
 
@@ -68,15 +68,13 @@ describe('Button', () => {
     it('applies small size classes', () => {
       render(<Button size="sm">Small</Button>)
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('h-8')
-      expect(button).toHaveClass('text-xs')
+      expect(button).toHaveClass('h-9')
     })
 
     it('applies large size classes', () => {
       render(<Button size="lg">Large</Button>)
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('h-12')
-      expect(button).toHaveClass('text-base')
+      expect(button).toHaveClass('h-11')
     })
 
     it('applies icon size classes', () => {

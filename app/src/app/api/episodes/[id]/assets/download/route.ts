@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { generateAssetsZipServer, type AssetForDownload } from '@/lib/export/zip-generator'
-import { getAssetDefinition, ASSET_CATEGORIES } from '@/lib/assets/asset-types'
+import { getAssetDefinition } from '@/lib/assets/asset-types'
+import { DEFAULT_USER_ID } from '@/lib/constants'
 
 /**
  * GET /api/episodes/[id]/assets/download
@@ -23,19 +24,21 @@ export async function GET(
 
     const supabase = createAdminClient()
 
-    // Fetch episode with show info
+    // Fetch episode with show info (scoped to user's shows)
     const { data: episode, error: episodeError } = await supabase
       .from('episodes')
       .select(`
         id,
         title,
         show_id,
-        shows (
+        shows!inner (
           id,
-          name
+          name,
+          user_id
         )
       `)
       .eq('id', episodeId)
+      .eq('shows.user_id', DEFAULT_USER_ID)
       .single()
 
     if (episodeError || !episode) {

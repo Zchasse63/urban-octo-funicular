@@ -70,13 +70,13 @@ export default function UploadPage() {
     interval: 3000,
     enabled: step === "processing" && !!state.episodeId,
     shouldStop: (data) =>
-      data?.data?.current_step === "completed" ||
-      data?.data?.current_step === "failed",
+      data?.data?.status === "COMPLETED" ||
+      data?.data?.status === "FAILED",
     onSuccess: (data) => {
-      if (data?.data?.current_step === "completed") {
+      if (data?.data?.status === "COMPLETED") {
         toast.success("Episode processed successfully!");
         router.push(`/episodes/${state.episodeId}`);
-      } else if (data?.data?.current_step === "failed") {
+      } else if (data?.data?.status === "FAILED") {
         toast.error("Processing failed", data?.data?.error || undefined);
       }
     },
@@ -118,7 +118,7 @@ export default function UploadPage() {
         setState((prev) => ({
           ...prev,
           file,
-          audioUrl: result.data?.url || result.url || "",
+          audioUrl: result.publicUrl || result.signedUrl || "",
           title: file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " "),
         }));
         setStep("context");
@@ -438,7 +438,13 @@ export default function UploadPage() {
             </p>
 
             <ProcessingProgressBar
-              progress={processingData?.data?.progress || 10}
+              progress={
+                processingData?.data?.status === "COMPLETED"
+                  ? 100
+                  : processingData?.data?.status === "EXECUTING"
+                    ? 50
+                    : 10
+              }
               label="Overall Progress"
               className="mt-8"
             />
@@ -455,9 +461,9 @@ export default function UploadPage() {
                   id: "2",
                   label: "Transcribing audio",
                   status:
-                    processingData?.data?.current_step === "transcribing"
+                    processingData?.data?.status === "EXECUTING"
                       ? "active"
-                      : processingData?.data?.progress > 20
+                      : processingData?.data?.status === "COMPLETED"
                         ? "completed"
                         : "pending",
                 },
@@ -465,32 +471,27 @@ export default function UploadPage() {
                   id: "3",
                   label: "Processing vocabulary",
                   status:
-                    processingData?.data?.current_step === "vocabulary_processing"
-                      ? "active"
-                      : processingData?.data?.progress > 40
-                        ? "completed"
+                    processingData?.data?.status === "COMPLETED"
+                      ? "completed"
+                      : processingData?.data?.status === "EXECUTING"
+                        ? "pending"
                         : "pending",
                 },
                 {
                   id: "4",
                   label: "Generating show notes",
                   status:
-                    processingData?.data?.current_step === "generating_show_notes"
-                      ? "active"
-                      : processingData?.data?.progress > 60
-                        ? "completed"
-                        : "pending",
+                    processingData?.data?.status === "COMPLETED"
+                      ? "completed"
+                      : "pending",
                 },
                 {
                   id: "5",
                   label: "SEO analysis & asset generation",
                   status:
-                    processingData?.data?.current_step === "generating_assets" ||
-                    processingData?.data?.current_step === "seo_analysis"
-                      ? "active"
-                      : processingData?.data?.progress > 80
-                        ? "completed"
-                        : "pending",
+                    processingData?.data?.status === "COMPLETED"
+                      ? "completed"
+                      : "pending",
                 },
               ]}
             />
