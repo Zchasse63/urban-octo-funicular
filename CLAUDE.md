@@ -79,8 +79,8 @@ Motion-rich UI built on Kokonut UI with cursor-aware interactions and AI-native 
 
 **Key Design Docs:**
 - `docs/kokonut/podbrain-kokonut-design-system.md` - Full design system
-- `docs/kokonut/podbrain-kokonut-quick-reference.md` - Component mapping
-- `docs/kokonut/KOKONUT-UI-MIGRATION-PLAN.md` - Implementation phases
+- `docs/kokonut/podbrain-kokonut-quick-reference.md` - Component quick reference
+- `docs/kokonut/kokonut-ui-pro-setup-guide.md` - Pro license setup
 
 **Core Tokens:**
 - `--bg-base: #FDFDFD` | `--bg-elevated: #FFFFFF` | `--bg-glass: rgba(255, 255, 255, 0.72)`
@@ -98,7 +98,7 @@ Motion-rich UI built on Kokonut UI with cursor-aware interactions and AI-native 
 | File | Purpose |
 |------|---------|
 | `docs/product/podbrain-prd.md` | Full product requirements |
-| `docs/kokonut/` | Kokonut UI design system + migration plan |
+| `docs/kokonut/` | Kokonut UI design system + quick reference + Pro setup |
 | `docs/testing/TEST_STRATEGY.md` | Testing approach |
 | `app/.env.local` | Environment variables (gitignored) |
 | `app/components.json` | Kokonut UI registry config |

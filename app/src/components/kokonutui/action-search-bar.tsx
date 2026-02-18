@@ -10,7 +10,7 @@
  * @github: https://github.com/kokonut-labs/kokonutui
  */
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import useDebounce from "@/hooks/use-debounce";
 
-export interface Action {
+interface Action {
     id: string;
     label: string;
     icon: React.ReactNode;
@@ -35,25 +35,6 @@ export interface Action {
 
 interface SearchResult {
     actions: Action[];
-}
-
-interface ActionSearchBarProps {
-    actions?: Action[];
-    defaultOpen?: boolean;
-    /** Controlled search value */
-    value?: string;
-    /** Called when search input changes */
-    onChange?: (value: string) => void;
-    /** Called when search is submitted (Enter key or action selected) */
-    onSearch?: (query: string) => void;
-    /** Called when an action is selected */
-    onActionSelect?: (action: Action) => void;
-    /** Placeholder text for the search input */
-    placeholder?: string;
-    /** Label text above the search input */
-    label?: string;
-    /** Additional class name */
-    className?: string;
 }
 
 const ANIMATION_VARIANTS = {
@@ -137,21 +118,16 @@ const allActionsSample = [
 function ActionSearchBar({
     actions = allActionsSample,
     defaultOpen = false,
-    value,
-    onChange,
-    onSearch,
-    onActionSelect,
-    placeholder = "What's up?",
-    label = "Search Commands",
-    className,
-}: ActionSearchBarProps) {
-    const [internalQuery, setInternalQuery] = useState(value || "");
+}: {
+    actions?: Action[];
+    defaultOpen?: boolean;
+}) {
+    const [query, setQuery] = useState("");
+    const [result, setResult] = useState<SearchResult | null>(null);
     const [isFocused, setIsFocused] = useState(defaultOpen);
+    const [isTyping, setIsTyping] = useState(false);
     const [selectedAction, setSelectedAction] = useState<Action | null>(null);
     const [activeIndex, setActiveIndex] = useState(-1);
-
-    const isControlled = value !== undefined;
-    const query = isControlled ? value : internalQuery;
     const debouncedQuery = useDebounce(query, 200);
 
     const filteredActions = useMemo(() => {
@@ -165,21 +141,24 @@ function ActionSearchBar({
         });
     }, [debouncedQuery, actions]);
 
-    const result = useMemo<SearchResult | null>(
-        () => (isFocused ? { actions: filteredActions } : null),
-        [filteredActions, isFocused]
-    );
+    useEffect(() => {
+        if (!isFocused) {
+            setResult(null);
+            setActiveIndex(-1);
+            return;
+        }
+
+        setResult({ actions: filteredActions });
+        setActiveIndex(-1);
+    }, [filteredActions, isFocused]);
 
     const handleInputChange = useCallback(
         (e: React.ChangeEvent<HTMLInputElement>) => {
-            const newValue = e.target.value;
-            if (!isControlled) {
-                setInternalQuery(newValue);
-            }
-            onChange?.(newValue);
+            setQuery(e.target.value);
+            setIsTyping(true);
             setActiveIndex(-1);
         },
-        [isControlled, onChange]
+        []
     );
 
     const handleKeyDown = useCallback(
@@ -202,12 +181,7 @@ function ActionSearchBar({
                 case "Enter":
                     e.preventDefault();
                     if (activeIndex >= 0 && result.actions[activeIndex]) {
-                        const action = result.actions[activeIndex];
-                        setSelectedAction(action);
-                        onActionSelect?.(action);
-                    } else {
-                        // No action selected, trigger search with current query
-                        onSearch?.(query);
+                        setSelectedAction(result.actions[activeIndex]);
                     }
                     break;
                 case "Escape":
@@ -216,13 +190,12 @@ function ActionSearchBar({
                     break;
             }
         },
-        [activeIndex, onActionSelect, onSearch, query, result]
+        [result?.actions, activeIndex]
     );
 
     const handleActionClick = useCallback((action: Action) => {
         setSelectedAction(action);
-        onActionSelect?.(action);
-    }, [onActionSelect]);
+    }, []);
 
     const handleFocus = useCallback(() => {
         setSelectedAction(null);
@@ -238,21 +211,19 @@ function ActionSearchBar({
     }, []);
 
     return (
-        <div className={className || "w-full max-w-xl mx-auto"}>
+        <div className="w-full max-w-xl mx-auto">
             <div className="relative flex flex-col justify-start items-center min-h-[300px]">
                 <div className="w-full max-w-sm sticky top-0 bg-background z-10 pt-4 pb-1">
-                    {label && (
-                        <label
-                            className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block"
-                            htmlFor="search"
-                        >
-                            {label}
-                        </label>
-                    )}
+                    <label
+                        className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block"
+                        htmlFor="search"
+                    >
+                        Search Commands
+                    </label>
                     <div className="relative">
                         <Input
                             type="text"
-                            placeholder={placeholder}
+                            placeholder="What's up?"
                             value={query}
                             onChange={handleInputChange}
                             onFocus={handleFocus}

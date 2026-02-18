@@ -1,125 +1,204 @@
-# PodBrain Design System Migration — Quick Reference
+# PodBrain Kokonut UI — Quick Reference
 
-## Complete Component Mapping Table
+**Companion to:** `podbrain-kokonut-design-system.md`
+**Last verified:** 2026-02-18
 
-| Alabaster Component | Kokonut UI Replacement | Package | WOW Enhancement |
-|---------------------|------------------------|---------|-----------------|
-| **LAYOUT** |
-| App Container | Custom with Motion | — | Staggered page entrance animation |
-| Sidebar | Morphic Navbar | `@kokonutui/morphic-navbar` | Active state morphs between items |
-| Nav Items | Smooth Tab | `@kokonutui/smooth-tab` | Sliding indicator animation |
-| Mobile Nav | Smooth Drawer | `@kokonutui/smooth-drawer` | Slide-in with overlay blur |
-| **CARDS** |
-| Topo Card (primary) | Liquid Glass Card | `@kokonutui/liquid-glass-card` | Apple-style glassmorphism with blur |
-| Interactive Card | Mouse Effect Card | `@kokonutui/mouse-effect-card` | Cursor-tracking dot pattern |
-| Metric Card | Apple Activity Card | `@kokonutui/apple-activity-card` | Animated circular progress rings |
-| Guest Item Card | Card-02 (Pro) | `@kokonutui-pro/card-02` | Contact card with social links |
-| Alert Card | Custom with Motion | — | Animated entrance/exit, slide-in |
-| Episode Cards | Card Stack | `@kokonutui/card-stack` | Expandable stacked reveal |
-| **BUTTONS** |
-| Primary Button | Gradient Button | `@kokonutui/gradient-button` | Animated gradient border |
-| Secondary Button | V0 Button | `@kokonutui/v0-button` | Subtle press animation |
-| Publish Action | Slide Text Button | `@kokonutui/slide-text-button` | Hover reveals "to Notion" |
-| Export Action | Command Button | `@kokonutui/command-button` | Shows ⌘E keyboard shortcut |
-| Dangerous Action | Hold Button | `@kokonutui/hold-button` | Press-hold to confirm (1s) |
-| **FORMS** |
-| Search Bar | Action Search Bar | `@kokonutui/action-search-bar` | Command palette with shortcuts |
-| File Upload | File Upload | `@kokonutui/file-upload` | Drag-drop with progress animation |
-| Text Input | — | Tailwind + Focus Ring | Focus ring animation |
-| **PROGRESS & METRICS** |
-| Progress Bar | Custom Motion | — | Spring-animated fill |
-| Health Scores | Apple Activity Card | `@kokonutui/apple-activity-card` | Animated rings fill on load |
-| Freshness Meter | Custom Motion | — | Color-coded animated fill |
-| **LOADING STATES** |
-| Spinner | Loader | `@kokonutui/loader` | Animated loading indicator |
-| AI Processing | AI State Loading | `@kokonutui/ai-loading` | Pulsing orb animation |
-| Text Loading | AI Text Loading | `@kokonutui/ai-text-loading` | "Thinking" shimmer effect |
-| Skeleton | Shimmer Text | `@kokonutui/shimmer-text` | CSS gradient sweep |
-| Content Reveal | Typewriter | `@kokonutui/typewriter` | Character-by-character reveal |
-| **TEXT EFFECTS** |
-| Page Titles | Swoosh Text | `@kokonutui/swoosh-text` | Flying-in entrance |
-| Animated Numbers | Dynamic Text | `@kokonutui/dynamic-text` | Counting/cycling animation |
-| Long Content | Scroll Text | `@kokonutui/scroll-text` | Reveal on scroll trigger |
-| **BACKGROUNDS** |
-| Upload Hero | Background Paths | `@kokonutui/background-paths` | Animated SVG path flow |
-| Dashboard Accent | Beams Background | `@kokonutui/beams-background` | Subtle light beams |
-| Dot Grid | Custom CSS | — | Radial gradient pattern |
-| **NAVIGATION** |
-| Profile Menu | Profile Dropdown | `@kokonutui/profile-dropdown` | Fade/slide dropdown |
-| Tab Switcher | Smooth Tab | `@kokonutui/smooth-tab` | Sliding active indicator |
+---
+
+## Component Usage by Feature
+
+### Layout & Shell
+
+| Use Case | Component | Package | Notes |
+|----------|-----------|---------|-------|
+| Sidebar nav | Morphic Navbar | `@kokonutui/morphic-navbar` | Active indicator morphs between items |
+| Tab sections | Smooth Tab | `@kokonutui/smooth-tab` | Sliding active indicator |
+| Mobile nav | Smooth Drawer | `@kokonutui/smooth-drawer` | Slide-in with overlay blur |
+| Profile menu | Profile Dropdown | `@kokonutui/profile-dropdown` | Fade/slide dropdown |
+| Action toolbar | Toolbar | `@kokonutui/toolbar` | Figma-style multi-action bar |
+
+### Cards & Surfaces
+
+| Use Case | Component | Package | Notes |
+|----------|-----------|---------|-------|
+| Show notes, panels | Liquid Glass Card | `@kokonutui/liquid-glass-card` | Apple-style glassmorphism with blur |
+| Episode list, experts | Mouse Effect Card | `@kokonutui/mouse-effect-card` | Cursor-tracking dot pattern |
+| Health metrics | Apple Activity Card | `@kokonutui/apple-activity-card` | Animated circular progress rings |
+| Expandable sections | Card Stack | `@kokonutui/card-stack` | Stacked card reveal |
+| Dashboard layout | Bento Grid | `@kokonutui/bento-grid` | Animated grid sections |
+| Guest info | Card-02 (Pro) | `@kokonutui-pro/card-02` | Contact card with photo, bio, links |
+
+### Buttons
+
+| Use Case | Component | Package | Notes |
+|----------|-----------|---------|-------|
+| Primary action | Gradient Button | `@kokonutui/gradient-button` | Animated gradient border |
+| Secondary action | V0 Button | `@kokonutui/v0-button` | Subtle press animation |
+| Publish to Notion | Slide Text Button | `@kokonutui/slide-text-button` | Hover reveals secondary text |
+| Export (⌘E) | Command Button | `@kokonutui/command-button` | Shows keyboard shortcut |
+| Delete / destructive | Hold Button | `@kokonutui/hold-button` | Press-hold to confirm (1s) |
+
+### Forms & Inputs
+
+| Use Case | Component | Package | Notes |
+|----------|-----------|---------|-------|
+| Search (⌘K) | Action Search Bar | `@kokonutui/action-search-bar` | Command palette with shortcuts |
+| Audio upload | File Upload | `@kokonutui/file-upload` | Drag-drop with progress animation |
+| Text fields | — | Tailwind + focus ring | Custom with design tokens |
+| Pro inputs | Input-02 through 09 | `@kokonutui-pro/input-*` | Label, search, KBD, password variants |
+| Pro forms | Form-01 through 06 | `@kokonutui-pro/form-*` | Contact, schedule, profile, etc. |
+
+### AI & Loading States
+
+| Use Case | Component | Package | Notes |
+|----------|-----------|---------|-------|
+| AI processing | AI State Loading | `@kokonutui/ai-loading` | Pulsing orb animation |
+| "Thinking..." | AI Text Loading | `@kokonutui/ai-text-loading` | Shimmer text effect |
+| Skeleton loading | Shimmer Text | `@kokonutui/shimmer-text` | CSS gradient sweep |
+| General spinner | Loader | `@kokonutui/loader` | Animated loading indicator |
+| Content reveal | Typing Text | `@kokonutui/typing-text` | Character-by-character typewriter |
+
+### Text Effects
+
+| Use Case | Component | Package | Notes |
+|----------|-----------|---------|-------|
+| Page titles | Swoosh Text | `@kokonutui/swoosh-text` | Flying-in entrance |
+| Animated numbers | Dynamic Text | `@kokonutui/dynamic-text` | Counting/cycling animation |
+| Scroll reveals | Scroll Text | `@kokonutui/scroll-text` | Reveal on scroll trigger |
+
+### Backgrounds
+
+| Use Case | Component | Package | Notes |
+|----------|-----------|---------|-------|
+| Upload hero | Background Paths | `@kokonutui/background-paths` | Animated SVG path flow |
+| Dashboard accent | Beams Background | `@kokonutui/beams-background` | Subtle light beams |
+| Dot grid | Custom CSS | — | Radial gradient pattern |
 
 ---
 
 ## The 10 "WOW" Factors
 
-### 1. Cursor-Aware Cards
-**Component:** `MouseEffectCard`  
-**Where:** Episode list, Expert discovery, Dashboard sections  
-**Effect:** Dot pattern follows cursor position, creating subtle depth awareness
-
-### 2. Morphing Navigation
-**Component:** `MorphicNavbar` + `layoutId` animation  
-**Where:** Sidebar navigation  
-**Effect:** Active indicator flows between items instead of snapping
-
-### 3. AI Processing States
-**Components:** `AILoading`, `AITextLoading`, `ShimmerText`  
-**Where:** Upload flow, content generation  
-**Effect:** Pulsing orb + "thinking" text shimmer feels genuinely intelligent
-
-### 4. Health Score Rings
-**Component:** Custom with Motion (inspired by `AppleActivityCard`)  
-**Where:** Dashboard, Episode metrics  
-**Effect:** Apple Watch-style rings animate on page load with number counting
-
-### 5. Hold-to-Confirm
-**Component:** `HoldButton`  
-**Where:** Delete actions, reset operations  
-**Effect:** Requires 1s press-hold with filling progress ring — prevents accidents
-
-### 6. Command Palette Search
-**Component:** `ActionSearchBar`  
-**Where:** Episode search, global search  
-**Effect:** ⌘K opens, keyboard shortcuts displayed, smooth dropdown
-
-### 7. Glassmorphism Surfaces
-**Component:** `LiquidGlassCard`  
-**Where:** Show notes, Guest intelligence panels  
-**Effect:** Frosted glass with backdrop blur feels premium and modern
-
-### 8. Background Atmosphere
-**Component:** `BackgroundPaths`  
-**Where:** Upload hero, empty states  
-**Effect:** Flowing SVG paths create visual drama without distraction
-
-### 9. Staggered List Reveals
-**Component:** Motion `variants` with `staggerChildren`  
-**Where:** Episode list, Alert cards, Metrics grid  
-**Effect:** Items enter in choreographed sequence, not all at once
-
-### 10. Content Typewriter
-**Component:** `Typewriter`  
-**Where:** AI-generated show notes reveal  
-**Effect:** Show notes appear character-by-character like AI is writing live
+| # | Effect | Component | Where |
+|---|--------|-----------|-------|
+| 1 | **Cursor-aware cards** | `MouseEffectCard` | Episode list, experts, dashboard |
+| 2 | **Morphing navigation** | `MorphicNavbar` + `layoutId` | Sidebar — indicator flows between items |
+| 3 | **AI processing states** | `AILoading` + `AITextLoading` + `ShimmerText` | Upload flow, content generation |
+| 4 | **Health score rings** | Custom with Motion (Activity Card style) | Dashboard, episode metrics |
+| 5 | **Hold-to-confirm** | `HoldButton` | Delete actions — 1s press-hold with progress ring |
+| 6 | **Command palette** | `ActionSearchBar` | ⌘K global search with keyboard shortcuts |
+| 7 | **Glassmorphism** | `LiquidGlassCard` | Show notes, guest intelligence panels |
+| 8 | **Background atmosphere** | `BackgroundPaths` | Upload hero, empty states |
+| 9 | **Staggered reveals** | Motion `variants` + `staggerChildren` | Episode list, alert cards, metrics grid |
+| 10 | **Content typewriter** | `TypingText` | AI-generated show notes reveal |
 
 ---
 
-## Installation Commands (Copy/Paste Ready)
+## Page-by-Page Component Map
 
-### Essential Free Components
+### Dashboard (`app/page.tsx`)
+- `BentoGrid` — Section layout
+- Apple Activity Card style — 5-column health scores with animated rings
+- `AlertCard` (custom) — Attention/Opportunities with animated entrance
+- `MouseEffectCard` — Interactive dashboard sections
+- `BeamsBackground` — Subtle accent
+
+### Episodes List (`app/episodes/`)
+- `ActionSearchBar` — Episode search with ⌘K
+- `MouseEffectCard` — Episode row hover interactivity
+- `CardStack` or Motion list — Episode rows
+- Staggered `variants` — Choreographed list entrance
+
+### Episode Detail (`app/episodes/[id]/`)
+- `LiquidGlassCard` — Show notes container
+- `MouseEffectCard` — Guest intelligence panel
+- Apple Activity Card style — Health metrics row
+- `SmoothTab` — Notes / Intelligence / Social tabs
+- `GradientButton` — Publish action
+- `CommandButton` — Export with ⌘E
+- `TypingText` — AI content reveal
+
+### Upload Flow (`app/upload/`)
+- `BackgroundPaths` — Hero background
+- `FileUpload` — Drag-drop zone with progress
+- `AILoading` — Processing orb
+- `AITextLoading` — "Analyzing..." shimmer
+- `motion.div` — Step transitions
+
+### Expert Discovery (`app/experts/`)
+- `ActionSearchBar` — Expert search
+- `MouseEffectCard` — Expert cards
+- `FreshnessMeter` (custom) — Data freshness indicator
+- `BentoGrid` — Results layout
+
+### Shows (`app/shows/`)
+- `LiquidGlassCard` — Show detail panels
+- `CardStack` — Episode list per show
+- `GradientButton` — Create new show
+
+### Settings (`app/settings/`)
+- Pro Form components — Profile, preferences
+- `HoldButton` — Destructive actions (delete show, reset)
+- `SmoothTab` — Settings categories
+
+---
+
+## Installation Commands (Copy/Paste)
+
+### Core Free Components
 ```bash
-# Run all at once
-bunx --bun shadcn@latest add @kokonutui/morphic-navbar @kokonutui/smooth-tab @kokonutui/smooth-drawer @kokonutui/profile-dropdown @kokonutui/liquid-glass-card @kokonutui/mouse-effect-card @kokonutui/apple-activity-card @kokonutui/card-stack @kokonutui/bento-grid @kokonutui/gradient-button @kokonutui/slide-text-button @kokonutui/hold-button @kokonutui/command-button @kokonutui/v0-button @kokonutui/action-search-bar @kokonutui/file-upload @kokonutui/ai-text-loading @kokonutui/ai-loading @kokonutui/shimmer-text @kokonutui/typewriter @kokonutui/loader @kokonutui/dynamic-text @kokonutui/swoosh-text @kokonutui/scroll-text @kokonutui/background-paths @kokonutui/beams-background
+bunx --bun shadcn@latest add \
+  @kokonutui/morphic-navbar \
+  @kokonutui/smooth-tab \
+  @kokonutui/smooth-drawer \
+  @kokonutui/profile-dropdown \
+  @kokonutui/toolbar \
+  @kokonutui/liquid-glass-card \
+  @kokonutui/mouse-effect-card \
+  @kokonutui/apple-activity-card \
+  @kokonutui/card-stack \
+  @kokonutui/bento-grid \
+  @kokonutui/gradient-button \
+  @kokonutui/slide-text-button \
+  @kokonutui/hold-button \
+  @kokonutui/command-button \
+  @kokonutui/v0-button \
+  @kokonutui/action-search-bar \
+  @kokonutui/file-upload \
+  @kokonutui/ai-loading \
+  @kokonutui/ai-text-loading \
+  @kokonutui/shimmer-text \
+  @kokonutui/typing-text \
+  @kokonutui/loader \
+  @kokonutui/dynamic-text \
+  @kokonutui/swoosh-text \
+  @kokonutui/scroll-text \
+  @kokonutui/background-paths \
+  @kokonutui/beams-background
 ```
 
-### Pro Components
+### Pro Components (requires KOKO_PRO_TOKEN)
 ```bash
-bunx --bun shadcn@latest add @kokonutui-pro/card-02 @kokonutui-pro/animated-list @kokonutui-pro/modal-01
+bunx --bun shadcn@latest add \
+  @kokonutui-pro/card-02 \
+  @kokonutui-pro/animated-list \
+  @kokonutui-pro/modal-01
+```
+
+### Additional Pro (install as needed)
+```bash
+# Forms & inputs
+bunx --bun shadcn@latest add @kokonutui-pro/form-01 @kokonutui-pro/input-05
+
+# Modals
+bunx --bun shadcn@latest add @kokonutui-pro/modal-05
+
+# Page blocks (heroes, pricing, features, etc.)
+bunx --bun shadcn@latest add @kokonutui-pro/hero-01 @kokonutui-pro/pricing-01
 ```
 
 ---
 
-## CSS Variables (globals.css)
+## CSS Design Tokens (globals.css)
 
 ```css
 @import "tailwindcss";
@@ -130,31 +209,31 @@ bunx --bun shadcn@latest add @kokonutui-pro/card-02 @kokonutui-pro/animated-list
   --color-bg-subtle: #F7F7F6;
   --color-bg-elevated: #FFFFFF;
   --color-bg-glass: rgba(255, 255, 255, 0.72);
-  
+
   /* Text */
   --color-text-primary: #121212;
   --color-text-secondary: #6A6A69;
   --color-text-tertiary: #9A9A99;
-  
+
   /* Accents */
   --color-accent-blue: #007AFF;
   --color-accent-green: #34C759;
   --color-accent-amber: #F59E0B;
   --color-accent-red: #EF4444;
-  
+
   /* Borders */
   --color-border-soft: #EDEDEC;
   --color-border-focus: #007AFF;
-  
+
   /* Shadows */
-  --shadow-topo: 
-    0 1px 2px rgba(0,0,0,0.02), 
-    0 4px 12px rgba(0,0,0,0.03), 
+  --shadow-topo:
+    0 1px 2px rgba(0,0,0,0.02),
+    0 4px 12px rgba(0,0,0,0.03),
     0 12px 32px rgba(0,0,0,0.04);
-  --shadow-glass: 
+  --shadow-glass:
     0 8px 32px rgba(0,0,0,0.08),
     inset 0 0 0 1px rgba(255,255,255,0.1);
-  
+
   /* Typography */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
@@ -174,110 +253,67 @@ export const springs = {
   bouncy: { type: "spring", stiffness: 300, damping: 15 },
 };
 
+// Stagger children pattern
+export const staggerContainer = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.05 } },
+};
+
+export const staggerItem = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: springs.smooth },
+};
+
 // Usage
 <motion.div transition={springs.snappy} />
 ```
 
 ---
 
-## Page-by-Page Component Usage
-
-### Episode Detail
-- `LiquidGlassCard` — Show notes container
-- `MouseEffectCard` — Guest intelligence
-- `AppleActivityCard` style — Health metrics row
-- `SmoothTab` — Notes/Intelligence/Social tabs
-- `GradientButton` — Publish action
-- `CommandButton` — Export with ⌘E
-
-### Upload Flow
-- `BackgroundPaths` — Hero background
-- `FileUpload` — Drag-drop zone
-- `AILoading` — Processing orb
-- `AITextLoading` — "Analyzing..." shimmer
-- `motion.div` — Step transitions
-
-### Dashboard
-- `BentoGrid` — Section layout
-- `AppleActivityCard` style — 5-column health scores
-- `AlertCard` (custom) — Attention/Opportunities
-- `MouseEffectCard` — Interactive sections
-
-### Episodes List
-- `ActionSearchBar` — Episode search
-- `CardStack` or Motion list — Episode rows
-- `MouseEffectCard` — Hover interactivity
-- Staggered `variants` — List reveal
-
-### Expert Discovery
-- `ActionSearchBar` — Expert search
-- `MouseEffectCard` — Expert cards
-- `FreshnessMeter` (custom) — Freshness indicator
-- `BentoGrid` — Results layout
-
-### Pre-Interview Brief
-- `LiquidGlassCard` — Guest profile
-- `CardStack` — Collapsible sections
-- Animated list — Questions to skip
-
----
-
-## File Structure
+## Target File Structure
 
 ```
-components/
-├── kokonutui/              # Auto-installed by CLI
-│   ├── liquid-glass-card.tsx
-│   ├── mouse-effect-card.tsx
-│   ├── morphic-navbar.tsx
-│   └── ...
-├── ui/                     # shadcn/ui base
-└── podbrain/               # Custom compositions
-    ├── app-shell.tsx
-    ├── sidebar.tsx
-    ├── content-card.tsx
-    ├── health-gauge.tsx
-    ├── freshness-meter.tsx
-    ├── alert-card.tsx
-    ├── guest-card.tsx
-    ├── episode-list.tsx
-    ├── processing-states.tsx
-    ├── buttons.tsx
-    ├── badge.tsx
-    ├── search.tsx
-    ├── audio-upload.tsx
-    ├── backgrounds.tsx
-    └── text-effects.tsx
-
-lib/
-└── motion.ts               # Spring presets
-
-app/
-├── layout.tsx              # AppShell wrapper
-├── page.tsx                # Dashboard
-├── episodes/
-│   └── [id]/page.tsx       # Episode detail
-├── upload/page.tsx         # Upload flow
-├── experts/page.tsx        # Expert discovery
-└── trending/page.tsx       # Trending topics
+src/
+├── components/
+│   ├── kokonutui/              # Auto-installed by CLI
+│   │   ├── liquid-glass-card.tsx
+│   │   ├── mouse-effect-card.tsx
+│   │   ├── morphic-navbar.tsx
+│   │   └── ...
+│   ├── kokonutui-pro/          # Pro components
+│   │   ├── card-02.tsx
+│   │   └── ...
+│   ├── ui/                     # shadcn/ui base
+│   └── podbrain/               # Custom PodBrain compositions
+│       ├── app-shell.tsx
+│       ├── sidebar.tsx
+│       ├── health-gauge.tsx
+│       ├── freshness-meter.tsx
+│       ├── alert-card.tsx
+│       ├── guest-card.tsx
+│       ├── episode-card.tsx
+│       ├── processing-states.tsx
+│       ├── buttons.tsx
+│       ├── badge.tsx
+│       ├── search.tsx
+│       ├── audio-upload.tsx
+│       ├── backgrounds.tsx
+│       └── text-effects.tsx
+├── lib/
+│   ├── motion.ts               # Spring presets
+│   └── utils.ts                # cn() helper
+└── app/
+    ├── layout.tsx              # AppShell wrapper
+    ├── globals.css             # Design tokens
+    ├── page.tsx                # Dashboard
+    ├── episodes/
+    │   └── [id]/page.tsx       # Episode detail
+    ├── upload/page.tsx         # Upload flow
+    ├── shows/page.tsx          # Show management
+    ├── experts/page.tsx        # Expert discovery
+    ├── settings/page.tsx       # User preferences
+    └── trending/page.tsx       # Trending topics
 ```
-
----
-
-## Before/After Comparison
-
-| Aspect | Alabaster (Before) | Kinetic Alabaster (After) |
-|--------|-------------------|---------------------------|
-| Card hover | `translateY(-2px)` | Cursor-tracking dot pattern |
-| Active nav | Background change | Morphing indicator flow |
-| Health scores | Static numbers | Animated filling rings |
-| Search | Basic input | Command palette with shortcuts |
-| Loading | Spinner | AI orb + shimmer text |
-| Buttons | Opacity hover | Gradient animation + hold-confirm |
-| Lists | Instant render | Staggered entrance |
-| Upload | Static zone | Animated background paths |
-| Content | Static text | Typewriter reveal |
-| Cards | Box shadow | Glassmorphism + blur |
 
 ---
 
@@ -299,4 +335,4 @@ Avoid motion for motion's sake. Each animation should either:
 
 ---
 
-*Reference companion to the full PodBrain Kokonut UI Design System*
+*Quick reference companion to the full PodBrain Kokonut UI Design System*

@@ -1,116 +1,116 @@
 "use client";
 
-import React from "react";
-import { motion, AnimatePresence, useReducedMotion } from "motion/react";
-import { X } from "lucide-react";
-import { springs } from "@/lib/motion";
+import { motion, AnimatePresence } from "motion/react";
+import { AlertTriangle, Lightbulb, Info, XCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { springs } from "@/lib/motion";
 
-export interface AlertCardProps {
-  variant: "warning" | "error" | "success" | "info";
+type AlertVariant = "attention" | "opportunity" | "info" | "error";
+
+interface AlertCardProps {
+  variant: AlertVariant;
   title: string;
-  description?: string;
+  description: string;
   onDismiss?: () => void;
-  action?: {
-    label: string;
-    onClick: () => void;
-  };
-  isVisible?: boolean;
+  className?: string;
 }
 
-const VARIANT_STYLES = {
-  warning: {
-    bg: "var(--color-status-warning-bg)",
-    border: "var(--accent-amber)",
-    text: "var(--color-status-warning-text)",
+const variantConfig: Record<
+  AlertVariant,
+  { icon: React.ElementType; bg: string; border: string; iconColor: string }
+> = {
+  attention: {
+    icon: AlertTriangle,
+    bg: "bg-status-warning-bg",
+    border: "border-amber-200",
+    iconColor: "text-status-warning-text",
   },
-  error: {
-    bg: "var(--color-status-error-bg)",
-    border: "var(--accent-red)",
-    text: "var(--color-status-error-text)",
-  },
-  success: {
-    bg: "var(--color-status-success-bg)",
-    border: "var(--accent-green)",
-    text: "var(--color-status-success-text)",
+  opportunity: {
+    icon: Lightbulb,
+    bg: "bg-status-success-bg",
+    border: "border-green-200",
+    iconColor: "text-status-success-text",
   },
   info: {
-    bg: "var(--color-status-info-bg)",
-    border: "var(--accent-blue)",
-    text: "var(--color-status-info-text)",
+    icon: Info,
+    bg: "bg-status-info-bg",
+    border: "border-blue-200",
+    iconColor: "text-status-info-text",
+  },
+  error: {
+    icon: XCircle,
+    bg: "bg-status-error-bg",
+    border: "border-red-200",
+    iconColor: "text-status-error-text",
   },
 };
 
-export function AlertCard({
+export default function AlertCard({
   variant,
   title,
   description,
   onDismiss,
-  action,
-  isVisible = true,
+  className,
 }: AlertCardProps) {
-  const styles = VARIANT_STYLES[variant];
-  const prefersReducedMotion = useReducedMotion();
+  const config = variantConfig[variant];
+  const Icon = config.icon;
 
   return (
-    <AnimatePresence>
-      {isVisible && (
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={prefersReducedMotion ? { duration: 0 } : springs.snappy}
-          className={cn(
-            "relative rounded-lg p-4 border-l-[3px]",
-            "shadow-[var(--shadow-elevation-1)]"
-          )}
-          style={{
-            backgroundColor: styles.bg,
-            borderLeftColor: styles.border,
-          }}
-          role="alert"
-          aria-live="polite"
-          aria-atomic="true"
-        >
-          <div className="flex items-start gap-3">
-            <div className="flex-1">
-              <h4
-                className="font-semibold text-sm"
-                style={{ color: styles.text }}
-              >
-                {title}
-              </h4>
-              {description && (
-                <p
-                  className="mt-1 text-sm"
-                  style={{ color: "var(--text-secondary)" }}
-                >
-                  {description}
-                </p>
-              )}
-              {action && (
-                <button
-                  onClick={action.onClick}
-                  className="mt-2 text-sm font-medium underline transition-opacity hover:opacity-80"
-                  style={{ color: styles.text }}
-                >
-                  {action.label}
-                </button>
-              )}
-            </div>
-            {onDismiss && (
-              <button
-                onClick={onDismiss}
-                className="shrink-0 rounded p-1 transition-colors hover:bg-black/5"
-                aria-label="Dismiss"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-        </motion.div>
+    <motion.div
+      initial={{ opacity: 0, y: 8, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -8, scale: 0.98 }}
+      transition={springs.smooth}
+      className={cn(
+        "flex gap-3 rounded-xl border p-4",
+        config.bg,
+        config.border,
+        className
       )}
-    </AnimatePresence>
+    >
+      <Icon className={cn("h-5 w-5 shrink-0 mt-0.5", config.iconColor)} />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-text-primary">{title}</p>
+        <p className="mt-0.5 text-xs text-text-secondary line-clamp-2">
+          {description}
+        </p>
+      </div>
+      {onDismiss && (
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="shrink-0 text-text-tertiary hover:text-text-secondary transition-colors"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      )}
+    </motion.div>
+  );
+}
+
+// Alert list with AnimatePresence
+export function AlertList({
+  alerts,
+  onDismiss,
+  className,
+}: {
+  alerts: { id: string; variant: AlertVariant; title: string; description: string }[];
+  onDismiss?: (id: string) => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn("space-y-2", className)}>
+      <AnimatePresence>
+        {alerts.map((alert) => (
+          <AlertCard
+            key={alert.id}
+            variant={alert.variant}
+            title={alert.title}
+            description={alert.description}
+            onDismiss={onDismiss ? () => onDismiss(alert.id) : undefined}
+          />
+        ))}
+      </AnimatePresence>
+    </div>
   );
 }

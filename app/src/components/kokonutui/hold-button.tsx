@@ -19,7 +19,6 @@ import {
   XCircleIcon,
 } from "lucide-react";
 import { motion, useAnimation } from "motion/react";
-import * as React from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -68,28 +67,19 @@ interface HoldButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof holdButtonVariants> {
   holdDuration?: number;
-  onConfirm?: () => void;
-  holdingText?: string;
-  icon?: React.ReactNode;
 }
 
 export default function HoldButton({
   className,
   variant = "red",
   holdDuration = 3000,
-  onConfirm,
-  holdingText = "Release",
-  icon,
-  children,
   ...props
 }: HoldButtonProps) {
   const [isHolding, setIsHolding] = useState(false);
   const controls = useAnimation();
-  const holdCompletedRef = React.useRef(false);
 
   async function handleHoldStart() {
     setIsHolding(true);
-    holdCompletedRef.current = false;
     controls.set({ width: "0%" });
     await controls.start({
       width: "100%",
@@ -98,9 +88,6 @@ export default function HoldButton({
         ease: "linear",
       },
     });
-    // Animation completed - trigger onConfirm
-    holdCompletedRef.current = true;
-    onConfirm?.();
   }
 
   function handleHoldEnd() {
@@ -135,16 +122,12 @@ export default function HoldButton({
         initial={{ width: "0%" }}
       />
       <span className="relative z-10 flex w-full items-center justify-center gap-2">
-        {icon !== undefined ? icon : (
-          <>
-            {(variant === "red" || !variant) && <Trash2Icon className="h-4 w-4" />}
-            {variant === "green" && <ArchiveXIcon className="h-4 w-4" />}
-            {variant === "blue" && <XCircleIcon className="h-4 w-4" />}
-            {variant === "orange" && <AlertCircleIcon className="h-4 w-4" />}
-            {variant === "grey" && <BanIcon className="h-4 w-4" />}
-          </>
-        )}
-        {isHolding ? holdingText : (children || "Hold me")}
+        {(variant === "red" || !variant) && <Trash2Icon className="h-4 w-4" />}
+        {variant === "green" && <ArchiveXIcon className="h-4 w-4" />}
+        {variant === "blue" && <XCircleIcon className="h-4 w-4" />}
+        {variant === "orange" && <AlertCircleIcon className="h-4 w-4" />}
+        {variant === "grey" && <BanIcon className="h-4 w-4" />}
+        {isHolding ? "Release" : "Hold me"}
       </span>
     </Button>
   );

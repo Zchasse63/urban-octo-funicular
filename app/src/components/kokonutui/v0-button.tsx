@@ -15,8 +15,8 @@ export default function V0Button({
             asChild
         >
             <a
-                // Dynamic path construction requires context not available in this component
-                // Using fixed community URL as fallback
+                // TODO: Add the correct path
+                // href={`https://v0.dev/chat/api/open?url=${prePath}/r/${name}.json`}
                 href="https://v0.dev/community/minimalist-card-G74jCSN5LYl"
                 target="_blank"
                 rel="noreferrer"

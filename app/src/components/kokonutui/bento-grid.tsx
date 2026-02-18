@@ -26,7 +26,7 @@ import {
   type Variants,
 } from "motion/react";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Anthropic from "@/components/kokonutui/anthropic";
 import AnthropicDark from "@/components/kokonutui/anthropic-dark";
 import DeepSeek from "@/components/kokonutui/deepseek";
@@ -345,6 +345,13 @@ const TypingCodeFeature = ({ text }: { text: string }) => {
     }
   }, [currentIndex, text]);
 
+  // Reset animation when component unmounts and remounts
+  useEffect(() => {
+    setDisplayedText("");
+    setCurrentIndex(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="relative mt-3">
       <div className="mb-2 flex items-center gap-2">
@@ -435,21 +442,23 @@ const MetricsFeature = ({
 function AIInput_Voice() {
   const [submitted, setSubmitted] = useState(false);
   const [time, setTime] = useState(0);
+  const [isClient, setIsClient] = useState(false);
   const [isDemo, setIsDemo] = useState(true);
-  const waveformHeights = useMemo(
-    () => Array.from({ length: 48 }, (_, index) => 20 + ((index * 37) % 81)),
-    []
-  );
-  const isClient = typeof window !== "undefined";
 
   useEffect(() => {
-    if (!submitted) {
-      return;
-    }
+    setIsClient(true);
+  }, []);
 
-    const intervalId = setInterval(() => {
-      setTime((t) => t + 1);
-    }, 1000);
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
+    if (submitted) {
+      intervalId = setInterval(() => {
+        setTime((t) => t + 1);
+      }, 1000);
+    } else {
+      setTime(0);
+    }
 
     return () => clearInterval(intervalId);
   }, [submitted]);
@@ -470,7 +479,6 @@ function AIInput_Voice() {
       setSubmitted(true);
       timeoutId = setTimeout(() => {
         setSubmitted(false);
-        setTime(0);
         timeoutId = setTimeout(runAnimation, 1000);
       }, 3000);
     };
@@ -486,15 +494,8 @@ function AIInput_Voice() {
     if (isDemo) {
       setIsDemo(false);
       setSubmitted(false);
-      setTime(0);
     } else {
-      setSubmitted((prev) => {
-        const next = !prev;
-        if (!next) {
-          setTime(0);
-        }
-        return next;
-      });
+      setSubmitted((prev) => !prev);
     }
   };
 
@@ -545,7 +546,7 @@ function AIInput_Voice() {
               style={
                 submitted && isClient
                   ? {
-                      height: `${waveformHeights[i]}%`,
+                      height: `${20 + Math.random() * 80}%`,
                       animationDelay: `${i * 0.05}s`,
                     }
                   : undefined
@@ -563,6 +564,7 @@ function AIInput_Voice() {
 }
 
 const BentoCard = ({ item }: { item: BentoItem }) => {
+  const [isHovered, setIsHovered] = useState(false);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const rotateX = useTransform(y, [-100, 100], [2, -2]);
@@ -583,12 +585,14 @@ const BentoCard = ({ item }: { item: BentoItem }) => {
   function handleMouseLeave() {
     x.set(0);
     y.set(0);
+    setIsHovered(false);
   }
 
   return (
     <motion.div
       className="h-full"
       onHoverEnd={handleMouseLeave}
+      onHoverStart={() => setIsHovered(true)}
       onMouseMove={handleMouseMove}
       style={{
         rotateX,

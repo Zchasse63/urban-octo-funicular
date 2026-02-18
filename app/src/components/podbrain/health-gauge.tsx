@@ -1,106 +1,120 @@
 "use client";
 
-import React, { useEffect } from "react";
-import { motion, useMotionValue, useTransform, animate, useReducedMotion } from "motion/react";
-import { springs } from "@/lib/motion";
+import { motion, useMotionValue, useTransform, animate } from "motion/react";
+import { useEffect, useRef } from "react";
+import { cn, getScoreColor } from "@/lib/utils";
 
-export interface HealthGaugeProps {
+interface HealthGaugeProps {
   value: number; // 0-100
   label: string;
-  color: string;
   size?: "sm" | "md" | "lg";
+  showLabel?: boolean;
+  className?: string;
 }
 
-const SIZE_CONFIG = {
-  sm: { width: 64, height: 64, strokeWidth: 6, fontSize: "text-lg" },
-  md: { width: 80, height: 80, strokeWidth: 8, fontSize: "text-xl" },
-  lg: { width: 120, height: 120, strokeWidth: 10, fontSize: "text-3xl" },
+const sizeConfig = {
+  sm: { dimension: 64, strokeWidth: 4, fontSize: "text-sm", labelSize: "text-[9px]" },
+  md: { dimension: 96, strokeWidth: 5, fontSize: "text-xl", labelSize: "text-[10px]" },
+  lg: { dimension: 128, strokeWidth: 6, fontSize: "text-2xl", labelSize: "text-xs" },
 };
 
-export function HealthGauge({
+export default function HealthGauge({
   value,
   label,
-  color,
   size = "md",
+  showLabel = true,
+  className,
 }: HealthGaugeProps) {
-  const prefersReducedMotion = useReducedMotion();
-  const config = SIZE_CONFIG[size];
-  const radius = (config.width - config.strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
+  const config = sizeConfig[size];
+  const radius = (config.dimension - config.strokeWidth * 2) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const center = config.dimension / 2;
 
-  // Motion values for animation
-  const progress = useMotionValue(0);
-  const displayValue = useTransform(progress, (p) => Math.round(p));
+  const color = getScoreColor(value);
 
-  // Calculate stroke-dashoffset based on progress
-  const dashoffset = circumference - (value / 100) * circumference;
+  // Animated counter
+  const countRef = useRef<HTMLSpanElement>(null);
+  const motionValue = useMotionValue(0);
 
   useEffect(() => {
-    const controls = animate(progress, value, {
-      ...springs.smooth,
-      duration: prefersReducedMotion ? 0 : 1.5,
+    const controls = animate(motionValue, value, {
+      duration: 1.2,
+      ease: [0.25, 1, 0.5, 1],
+      onUpdate: (latest) => {
+        if (countRef.current) {
+          countRef.current.textContent = Math.round(latest).toString();
+        }
+      },
     });
+    return () => controls.stop();
+  }, [value, motionValue]);
 
-    return controls.stop;
-  }, [value, progress, prefersReducedMotion]);
+  const reducedMotion =
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="relative" style={{ width: config.width, height: config.height }}>
+    <div className={cn("flex flex-col items-center gap-1.5", className)}>
+      <div className="relative" style={{ width: config.dimension, height: config.dimension }}>
         <svg
-          width={config.width}
-          height={config.height}
-          viewBox={`0 0 ${config.width} ${config.height}`}
-          className="transform -rotate-90"
-          aria-label={`${label} - ${value}%`}
+          viewBox={`0 0 ${config.dimension} ${config.dimension}`}
+          className="rotate-[-90deg]"
+          width={config.dimension}
+          height={config.dimension}
         >
-          <title>{`${label} - ${value}%`}</title>
-
-          {/* Background ring */}
+          {/* Background circle */}
           <circle
-            cx={config.width / 2}
-            cy={config.height / 2}
+            cx={center}
+            cy={center}
             r={radius}
             fill="none"
-            stroke="var(--border-soft)"
+            stroke="currentColor"
+            className="text-border-soft"
             strokeWidth={config.strokeWidth}
           />
-
-          {/* Progress ring */}
-          <circle
-            cx={config.width / 2}
-            cy={config.height / 2}
+          {/* Progress circle */}
+          <motion.circle
+            cx={center}
+            cy={center}
             r={radius}
             fill="none"
             stroke={color}
             strokeWidth={config.strokeWidth}
-            strokeDasharray={circumference}
-            strokeDashoffset={dashoffset}
             strokeLinecap="round"
-            style={{
-              filter: "drop-shadow(0 0 4px rgba(0,0,0,0.1))",
+            strokeDasharray={circumference}
+            initial={{ strokeDashoffset: circumference }}
+            animate={{
+              strokeDashoffset: circumference - (value / 100) * circumference,
             }}
+            transition={
+              reducedMotion
+                ? { duration: 0 }
+                : { duration: 1.2, ease: [0.25, 1, 0.5, 1] }
+            }
           />
         </svg>
 
-        {/* Center value */}
+        {/* Center text */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <motion.span
-            className={`font-bold tabular-nums ${config.fontSize}`}
-            style={{ color: "var(--text-primary)" }}
+          <span
+            ref={countRef}
+            className={cn("font-semibold tabular-nums text-text-primary", config.fontSize)}
           >
-            {displayValue}
-          </motion.span>
+            {reducedMotion ? value : 0}
+          </span>
         </div>
       </div>
 
-      {/* Label */}
-      <span
-        className="font-mono text-xs font-medium uppercase tracking-wider"
-        style={{ color: "var(--text-secondary)" }}
-      >
-        {label}
-      </span>
+      {showLabel && (
+        <span
+          className={cn(
+            "font-mono font-medium uppercase tracking-wider text-text-tertiary",
+            config.labelSize
+          )}
+        >
+          {label}
+        </span>
+      )}
     </div>
   );
 }

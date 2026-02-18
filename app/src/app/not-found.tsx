@@ -1,85 +1,25 @@
-'use client'
-
-import Link from 'next/link'
-import { Home, ArrowLeft, Search, Mic2 } from 'lucide-react'
-import { PrimaryButton, SecondaryButton } from '@/components/podbrain/buttons'
+import Link from "next/link";
 
 export default function NotFound() {
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center px-4"
-      style={{ backgroundColor: 'var(--bg-base)' }}
-    >
-      <div className="text-center max-w-md">
-        {/* Icon */}
-        <div
-          className="w-24 h-24 rounded-full mx-auto mb-8 flex items-center justify-center"
-          style={{ backgroundColor: 'var(--bg-subtle)' }}
-        >
-          <Mic2
-            className="w-12 h-12"
-            style={{ color: 'var(--text-tertiary)' }}
-          />
-        </div>
-
-        {/* Error Code */}
-        <h1
-          className="text-6xl font-bold mb-4"
-          style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}
-        >
+    <div className="flex min-h-screen items-center justify-center bg-bg-base font-sans">
+      <div className="max-w-md text-center">
+        <div className="mx-auto mb-6 text-7xl font-bold text-text-tertiary/20">
           404
-        </h1>
-
-        {/* Message */}
-        <h2
-          className="text-2xl font-semibold mb-4"
-          style={{ color: 'var(--text-primary)' }}
-        >
-          Page Not Found
-        </h2>
-        <p
-          className="mb-8"
-          style={{ color: 'var(--text-secondary)', lineHeight: '1.6' }}
-        >
-          Looks like this episode got lost in the feed. The page you&apos;re looking for
-          doesn&apos;t exist or has been moved.
-        </p>
-
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link href="/">
-            <PrimaryButton className="inline-flex items-center justify-center gap-2 min-h-[44px]">
-              <Home className="w-4 h-4" />
-              Go Home
-            </PrimaryButton>
-          </Link>
-          <Link href="/episodes">
-            <SecondaryButton className="inline-flex items-center justify-center gap-2 min-h-[44px]">
-              <Search className="w-4 h-4" />
-              Browse Episodes
-            </SecondaryButton>
-          </Link>
         </div>
-
-        {/* Back Link */}
-        <button
-          onClick={() => window.history.back()}
-          className="mt-8 inline-flex items-center gap-2 text-sm font-medium transition-colors"
-          style={{ color: 'var(--accent-blue)' }}
+        <h1 className="text-2xl font-semibold text-text-primary">
+          Page not found
+        </h1>
+        <p className="mt-2 text-sm text-text-secondary">
+          The page you&apos;re looking for doesn&apos;t exist or has been moved.
+        </p>
+        <Link
+          href="/"
+          className="mt-6 inline-flex items-center gap-2 rounded-lg bg-accent-blue px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent-blue/90"
         >
-          <ArrowLeft className="w-4 h-4" />
-          Go Back
-        </button>
+          Go to Dashboard
+        </Link>
       </div>
-
-      {/* Decorative Element */}
-      <div
-        className="absolute bottom-0 left-0 right-0 h-1"
-        style={{
-          background: 'linear-gradient(90deg, var(--accent-blue), var(--accent-green), var(--accent-blue))',
-          opacity: 0.5,
-        }}
-      />
     </div>
-  )
+  );
 }

@@ -1,203 +1,106 @@
 "use client";
 
-import React from "react";
-import { motion, useReducedMotion } from "motion/react";
-import { Linkedin, Twitter, Globe } from "lucide-react";
+import { Linkedin, Twitter, Globe, Mic2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export interface GuestCardProps {
+interface GuestCardProps {
   name: string;
   title?: string;
   company?: string;
-  avatar?: string;
-  socials?: {
+  avatarUrl?: string;
+  appearances?: number;
+  social?: {
     linkedin?: string;
     twitter?: string;
     website?: string;
   };
-  stats?: {
-    episodes?: number;
-    reach?: string;
-    engagement?: string;
-  };
   className?: string;
 }
 
-export function GuestCard({
+export default function GuestCard({
   name,
   title,
   company,
-  avatar,
-  socials,
-  stats,
+  avatarUrl,
+  appearances,
+  social,
   className,
 }: GuestCardProps) {
-  const prefersReducedMotion = useReducedMotion();
-  const initials = name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-
   return (
-    <motion.div
-      whileHover={{ x: prefersReducedMotion ? 0 : 4 }}
-      transition={
-        prefersReducedMotion
-          ? { duration: 0 }
-          : { type: "spring", stiffness: 400, damping: 30 }
-      }
+    <div
       className={cn(
-        "group relative overflow-hidden rounded-lg border bg-[var(--bg-elevated)] p-4",
-        "shadow-[var(--shadow-elevation-2)] transition-shadow hover:shadow-[var(--shadow-elevation-3)]",
+        "flex items-center gap-4 rounded-xl border border-border-soft bg-bg-elevated p-4 transition-shadow hover:shadow-[var(--shadow-topo)]",
         className
       )}
-      style={{ borderColor: "var(--border-soft)" }}
     >
-      <div className="flex items-start gap-3">
-        {/* Avatar */}
-        <div
-          className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full"
-          aria-label={`${name}'s avatar`}
-        >
-          {avatar ? (
-            <img
-              src={avatar}
-              alt={name}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div
-              className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--accent-blue)] to-[var(--accent-blue)]/60 font-semibold text-sm text-white"
-            >
-              {initials}
-            </div>
-          )}
-        </div>
+      {/* Avatar */}
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-blue/10 text-accent-blue">
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt={name}
+            className="h-12 w-12 rounded-full object-cover"
+          />
+        ) : (
+          <span className="text-lg font-semibold">
+            {name.charAt(0).toUpperCase()}
+          </span>
+        )}
+      </div>
 
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <h3
-            className="truncate font-semibold text-base"
-            style={{ color: "var(--text-primary)" }}
-          >
-            {name}
-          </h3>
-          {title && (
-            <p
-              className="truncate text-sm"
-              style={{ color: "var(--text-secondary)" }}
-            >
-              {title}
-            </p>
-          )}
-          {company && (
-            <p
-              className="truncate text-xs"
-              style={{ color: "var(--text-tertiary)" }}
-            >
-              {company}
-            </p>
-          )}
-        </div>
+      {/* Info */}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium text-text-primary">{name}</p>
+        {(title || company) && (
+          <p className="truncate text-xs text-text-secondary">
+            {[title, company].filter(Boolean).join(" · ")}
+          </p>
+        )}
+        {appearances !== undefined && (
+          <div className="mt-1 flex items-center gap-1 text-xs text-text-tertiary">
+            <Mic2 className="h-3 w-3" />
+            <span>
+              {appearances} appearance{appearances !== 1 ? "s" : ""}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Social Links */}
-      {socials && (Object.keys(socials).length > 0) && (
-        <div className="mt-3 flex items-center gap-2 border-t pt-3" style={{ borderColor: "var(--border-soft)" }}>
-          {socials.linkedin && (
+      {social && (
+        <div className="flex items-center gap-1.5">
+          {social.linkedin && (
             <a
-              href={socials.linkedin}
+              href={social.linkedin}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded p-1.5 transition-colors hover:bg-[var(--hover-overlay)]"
-              aria-label={`${name} on LinkedIn`}
-              style={{ color: "var(--text-secondary)" }}
+              className="rounded-lg p-1.5 text-text-tertiary hover:bg-bg-subtle hover:text-accent-blue transition-colors"
             >
               <Linkedin className="h-4 w-4" />
             </a>
           )}
-          {socials.twitter && (
+          {social.twitter && (
             <a
-              href={socials.twitter}
+              href={social.twitter}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded p-1.5 transition-colors hover:bg-[var(--hover-overlay)]"
-              aria-label={`${name} on Twitter`}
-              style={{ color: "var(--text-secondary)" }}
+              className="rounded-lg p-1.5 text-text-tertiary hover:bg-bg-subtle hover:text-accent-blue transition-colors"
             >
               <Twitter className="h-4 w-4" />
             </a>
           )}
-          {socials.website && (
+          {social.website && (
             <a
-              href={socials.website}
+              href={social.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded p-1.5 transition-colors hover:bg-[var(--hover-overlay)]"
-              aria-label={`${name}'s website`}
-              style={{ color: "var(--text-secondary)" }}
+              className="rounded-lg p-1.5 text-text-tertiary hover:bg-bg-subtle hover:text-accent-blue transition-colors"
             >
               <Globe className="h-4 w-4" />
             </a>
           )}
         </div>
       )}
-
-      {/* Stats */}
-      {stats && (
-        <div className="mt-3 grid grid-cols-3 gap-2 border-t pt-3" style={{ borderColor: "var(--border-soft)" }}>
-          {stats.episodes !== undefined && (
-            <div className="text-center">
-              <div
-                className="font-bold text-lg tabular-nums"
-                style={{ color: "var(--text-primary)" }}
-              >
-                {stats.episodes}
-              </div>
-              <div
-                className="font-mono text-xs uppercase tracking-wider"
-                style={{ color: "var(--text-tertiary)" }}
-              >
-                Episodes
-              </div>
-            </div>
-          )}
-          {stats.reach && (
-            <div className="text-center">
-              <div
-                className="font-bold text-lg tabular-nums"
-                style={{ color: "var(--text-primary)" }}
-              >
-                {stats.reach}
-              </div>
-              <div
-                className="font-mono text-xs uppercase tracking-wider"
-                style={{ color: "var(--text-tertiary)" }}
-              >
-                Reach
-              </div>
-            </div>
-          )}
-          {stats.engagement && (
-            <div className="text-center">
-              <div
-                className="font-bold text-lg tabular-nums"
-                style={{ color: "var(--text-primary)" }}
-              >
-                {stats.engagement}
-              </div>
-              <div
-                className="font-mono text-xs uppercase tracking-wider"
-                style={{ color: "var(--text-tertiary)" }}
-              >
-                Engage
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </motion.div>
+    </div>
   );
 }

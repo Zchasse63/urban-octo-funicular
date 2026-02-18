@@ -76,47 +76,4 @@ const CardFooter = React.forwardRef<
 ))
 CardFooter.displayName = "CardFooter"
 
-const MetricCard = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "rounded-xl border p-4 bg-white shadow-sm",
-      "border-[var(--border-soft)]",
-      className
-    )}
-    {...props}
-  />
-))
-MetricCard.displayName = "MetricCard"
-
-const MetricValue = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("text-3xl font-bold tracking-tight my-2", className)}
-    {...props}
-  />
-))
-MetricValue.displayName = "MetricValue"
-
-const MetricLabel = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]",
-      className
-    )}
-    {...props}
-  />
-))
-MetricLabel.displayName = "MetricLabel"
-
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent, MetricCard, MetricValue, MetricLabel }
+export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }

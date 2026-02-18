@@ -46,7 +46,6 @@ export default function SlideTextButton({
       <Link
         className={cn(
           "group relative inline-flex h-10 items-center justify-center overflow-hidden rounded-lg px-8 font-medium text-md tracking-tighter transition-all duration-300 md:min-w-56",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-300",
           variantStyles,
           className
         )}

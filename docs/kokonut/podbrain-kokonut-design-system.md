@@ -1,17 +1,17 @@
 # PodBrain Design System — Kokonut UI Edition
 ## Visual Language: "Kinetic Alabaster"
 
-**Migration from:** Alabaster Topography (CSS-based)  
-**Migration to:** Kokonut UI + Kokonut UI Pro (React/Motion-based)  
+**Built with:** Kokonut UI (free) + Kokonut UI Pro (licensed)
 **Stack:** React 19 · Next.js 16 · Tailwind CSS v4 · Motion 12+
+**Last verified:** 2026-02-18
 
 ---
 
-## Executive Summary: What Changes
+## Executive Summary
 
-This design system evolves "Alabaster Topography" into "Kinetic Alabaster" — retaining the calm, content-first aesthetic while adding purposeful motion, cursor-aware interactivity, and AI-native feedback patterns that create genuine "wow" moments.
+"Kinetic Alabaster" is a motion-rich, content-first visual language built on Kokonut UI. It pairs a calm, high-contrast aesthetic with purposeful animation, cursor-aware interactivity, and AI-native feedback patterns.
 
-### Philosophy Shift
+### Design Principles
 
 | Alabaster Topography | Kinetic Alabaster |
 |---------------------|-------------------|
@@ -2053,89 +2053,224 @@ export default function DashboardPage() {
 
 ---
 
-## Part 5: Complete Component Installation Checklist
+## Part 5: Complete Component Catalog
 
-### Free Components (Required)
-```bash
-# Core layout & navigation
-bunx --bun shadcn@latest add @kokonutui/morphic-navbar
-bunx --bun shadcn@latest add @kokonutui/smooth-tab
-bunx --bun shadcn@latest add @kokonutui/smooth-drawer
-bunx --bun shadcn@latest add @kokonutui/profile-dropdown
+All components verified against kokonutui.com and kokonutui.pro as of 2026-02-18.
 
-# Cards
-bunx --bun shadcn@latest add @kokonutui/liquid-glass-card
-bunx --bun shadcn@latest add @kokonutui/mouse-effect-card
-bunx --bun shadcn@latest add @kokonutui/apple-activity-card
-bunx --bun shadcn@latest add @kokonutui/card-stack
-bunx --bun shadcn@latest add @kokonutui/bento-grid
+### Free Components (kokonutui.com)
 
-# Buttons
-bunx --bun shadcn@latest add @kokonutui/gradient-button
-bunx --bun shadcn@latest add @kokonutui/slide-text-button
-bunx --bun shadcn@latest add @kokonutui/hold-button
-bunx --bun shadcn@latest add @kokonutui/command-button
-bunx --bun shadcn@latest add @kokonutui/v0-button
+Install syntax: `bunx --bun shadcn@latest add @kokonutui/{name}`
 
-# Forms & inputs
-bunx --bun shadcn@latest add @kokonutui/action-search-bar
-bunx --bun shadcn@latest add @kokonutui/file-upload
+**Layout & Navigation:**
+| Component | Package Name | Purpose |
+|-----------|-------------|---------|
+| Morphic Navbar | `morphic-navbar` | Dynamic navbar with morphing animation |
+| Smooth Tab | `smooth-tab` | Animated tab switcher with sliding indicator |
+| Smooth Drawer | `smooth-drawer` | Slide-in drawer for mobile nav |
+| Profile Dropdown | `profile-dropdown` | Menu dropdown with action buttons |
+| Toolbar | `toolbar` | Multi-action toolbar (Figma-inspired) |
 
-# AI & loading
-bunx --bun shadcn@latest add @kokonutui/ai-text-loading
-bunx --bun shadcn@latest add @kokonutui/ai-loading
-bunx --bun shadcn@latest add @kokonutui/shimmer-text
-bunx --bun shadcn@latest add @kokonutui/typewriter
-bunx --bun shadcn@latest add @kokonutui/loader
+**Cards & Surfaces:**
+| Component | Package Name | Purpose |
+|-----------|-------------|---------|
+| Liquid Glass Card | `liquid-glass-card` | Apple-style glassmorphism card |
+| Mouse Effect Card | `mouse-effect-card` | Cursor-tracking dot pattern card |
+| Apple Activity Card | `apple-activity-card` | Animated circular progress rings |
+| Card Stack | `card-stack` | Expandable stacked card reveal |
+| Bento Grid | `bento-grid` | Grid of cards with animations |
+| Card Flip | `card-flip` | Animated flip card |
+| X Card | `x-card` | Gradient-on-hover card |
 
-# Text effects
-bunx --bun shadcn@latest add @kokonutui/dynamic-text
-bunx --bun shadcn@latest add @kokonutui/swoosh-text
-bunx --bun shadcn@latest add @kokonutui/scroll-text
+**Buttons:**
+| Component | Package Name | Purpose |
+|-----------|-------------|---------|
+| Gradient Button | `gradient-button` | Animated gradient border button |
+| Slide Text Button | `slide-text-button` | Vertical slide text transition |
+| Hold Button | `hold-button` | Press-hold to confirm (configurable duration) |
+| Command Button | `command-button` | Shows keyboard shortcut hint |
+| V0 Button | `v0-button` | Subtle press animation button |
+| Particle Button | `particle-button` | Particle animation on click |
+| Magnet Button | `magnet-button` | Cursor-attracting particles |
+| Social Button | `social-button` | Animated social media show-up |
+| Switch Button | `switch-button` | Animated theme switcher |
 
-# Backgrounds
-bunx --bun shadcn@latest add @kokonutui/background-paths
-bunx --bun shadcn@latest add @kokonutui/beams-background
-```
+**Forms & Inputs:**
+| Component | Package Name | Purpose |
+|-----------|-------------|---------|
+| Action Search Bar | `action-search-bar` | Command palette with shortcuts |
+| File Upload | `file-upload` | Drag-drop with upload animation |
 
-### Pro Components (Recommended)
-```bash
-# Cards collection
-bunx --bun shadcn@latest add @kokonutui-pro/card-02   # Contact/guest cards
+**AI & Loading:**
+| Component | Package Name | Purpose |
+|-----------|-------------|---------|
+| AI State Loading | `ai-loading` | Pulsing orb "processing" animation |
+| AI Text Loading | `ai-text-loading` | "Thinking" shimmer effect |
+| AI Input Selector | `ai-input-selector` | Chat AI input selector |
+| AI Input Search | `ai-input-search` | AI input with search mode |
+| AI Voice | `ai-voice` | Voice mode interface |
+| Shimmer Text | `shimmer-text` | CSS gradient sweep skeleton |
+| Loader | `loader` | Animated loading indicator |
 
-# Lists
-bunx --bun shadcn@latest add @kokonutui-pro/animated-list
+**Text Effects:**
+| Component | Package Name | Purpose |
+|-----------|-------------|---------|
+| Typing Text | `typing-text` | Typewriter with multiple options |
+| Dynamic Text | `dynamic-text` | Number counting/cycling animation |
+| Swoosh Text | `swoosh-text` | Flying-in entrance animation |
+| Scroll Text | `scroll-text` | Reveal on scroll trigger |
+| Glitch Text | `glitch-text` | Glitch distortion effect |
+| Matrix Text | `matrix-text` | Binary-style animated text |
+| Sliced Text | `sliced-text` | Stylized sliced text |
 
-# Modals (for dialogs)
-bunx --bun shadcn@latest add @kokonutui-pro/modal-01
-```
+**Backgrounds:**
+| Component | Package Name | Purpose |
+|-----------|-------------|---------|
+| Background Paths | `background-paths` | Animated SVG path flow |
+| Beams Background | `beams-background` | Customizable light beams |
+| Shapes Hero | `shapes-hero` | Falling shapes animation |
+
+**Other:**
+| Component | Package Name | Purpose |
+|-----------|-------------|---------|
+| Currency Transfer | `currency-transfer` | Multi-step transaction animation |
+| Team Selector | `team-selector` | Group selector with distinct style |
+
+### Pro Components (kokonutui.pro)
+
+Install syntax: `bunx --bun shadcn@latest add @kokonutui-pro/{name}`
+
+Requires `KOKO_PRO_TOKEN` in environment. See `kokonut-ui-pro-setup-guide.md`.
+
+**Cards (card-01 through card-09):**
+| Component | Purpose |
+|-----------|---------|
+| `card-01` | User profile dropdown (avatar, email, settings, logout) |
+| `card-02` | Contact info card (photo, name, title, email, phone, bio) |
+| `card-03` | AI image generator card (model selection, prompts) |
+| `card-04` | Course/education card (instructor, pricing, enrollment) |
+| `card-05` | Checkout/purchase card (product, quantity, payment) |
+| `card-06` | Job listing card (company, salary, requirements, apply) |
+| `card-07` | Poll/voting card (options, vote counts, discussion) |
+| `card-08` | Product announcement card (status badge, tags) |
+| `card-09` | Profile card (photo, name, followers, follow button) |
+
+**Modals (modal-01 through modal-06):**
+| Component | Purpose |
+|-----------|---------|
+| `modal-01` | Premium features modal |
+| `modal-02` | Newsletter subscription modal |
+| `modal-03` | User settings modal |
+| `modal-04` | Pricing modal |
+| `modal-05` | Multi-step wizard modal |
+| `modal-06` | Form modal |
+
+**Buttons:** `button-01` through `button-10` (10 variants with interactive states)
+
+**Inputs (input-02 through input-09):**
+| Component | Purpose |
+|-----------|---------|
+| `input-02` | Basic input |
+| `input-03` | Input with label |
+| `input-04` | Search input with icon |
+| `input-05` | Input with keyboard shortcut indicator (KBD) |
+| `input-07` | Password input |
+| `input-08` | TouchID/biometric input |
+| `input-09` | Video/audio/camera mode input |
+
+**Forms (form-01 through form-07):**
+| Component | Purpose |
+|-----------|---------|
+| `form-01` | Contact support form (category, priority, message) |
+| `form-02` | Schedule appointment (date/time picker, service) |
+| `form-03` | Create project / Request feature form |
+| `form-04` | Customize product (multi-step with pricing) |
+| `form-05` | Flight/travel search form |
+| `form-06` | Edit profile form |
+
+**Animated List:** `animated-list` — List items with stagger/enter animations
+
+**Blocks & Sections:**
+| Category | Variants | Description |
+|----------|----------|-------------|
+| Heroes | 8 variants | AI Hero, Developer Hero, Light Effects, Studio, Startup, etc. |
+| Pricing | 6 variants | Cards, toggles, feature comparisons, animated |
+| Features | 9 variants | Bento grid, cards+text, image+list, dropdown, articles |
+| Login | 5 variants | Form+image, providers, magic link, double card |
+| FAQs | 5 variants | Various accordion/list styles |
+| Footers | 4 variants | Newsletter, social links, navigation |
+| Testimonials | 3 variants | Various quote/avatar layouts |
+
+**Page Templates:** `page-01` through `page-05` (complete page designs)
+
+**Other Pro Components:**
+| Component | Purpose |
+|-----------|---------|
+| `card-recording` | Input recording/saving card |
+| `team-invitation` | Team invite with validation |
+| `calendar-schedule` | Animated calendar scheduling |
+
+**Full Templates (complete sites):**
+Agenta, Lume, Sonae, AI, Futur, Postly, Startup
 
 ---
 
-## Part 6: Migration Path
+## Part 6: Build Plan
 
-### Phase 1: Foundation (Week 1)
-1. Set up Tailwind v4 CSS variables
-2. Install Motion and configure springs
-3. Create base typography and spacing utilities
-4. Build AppShell with Morphic Navbar sidebar
+The UI layer was stripped clean on 2026-02-18. All business logic, API routes, database schema, and background jobs remain intact. This is a fresh build, not a migration.
 
-### Phase 2: Core Components (Week 2)
-1. Migrate cards to Liquid Glass + Mouse Effect
-2. Implement Health Gauge with animated rings
-3. Build button variants (Gradient, Hold, Command)
-4. Create Badge component with variants
+### Current State
 
-### Phase 3: Pages (Week 3)
-1. Episode Detail with two-column layout
-2. Upload flow with Background Paths hero
-3. Dashboard with Bento Grid metrics
+- **Preserved:** 27 API routes, Supabase schema, Trigger.dev jobs, lib/ utilities, environment config
+- **Stripped:** All components, hooks, pages, layout, globals.css (only `@import "tailwindcss"` remains)
+- **Stubs in place:** Minimal `layout.tsx` and `page.tsx` for compilation
+- **Branch:** `ui-rebuild`
 
-### Phase 4: Polish (Week 4)
-1. Add staggered animations to lists
-2. Implement AI loading states
-3. Mobile responsive with Smooth Drawer
-4. Accessibility audit
+### Phase 1: Foundation
+
+1. Restore `globals.css` with Kinetic Alabaster design tokens (Part 2 of this doc)
+2. Install Motion, configure spring presets in `lib/motion.ts`
+3. Restore `lib/utils.ts` with `cn()` helper (clsx + tailwind-merge)
+4. Install core Kokonut UI free components (see Part 5)
+5. Install needed Kokonut UI Pro components (see Part 5)
+6. Build `AppShell` layout with `MorphicNavbar` sidebar + `SmoothDrawer` for mobile
+7. Wire up Inter + JetBrains Mono fonts in layout
+
+### Phase 2: Shared Components
+
+1. Build PodBrain composition components in `components/podbrain/`:
+   - `health-gauge.tsx` — Apple Activity Card-style animated rings
+   - `freshness-meter.tsx` — Color-coded animated fill bar
+   - `alert-card.tsx` — Animated entrance/exit notification cards
+   - `episode-card.tsx` — Episode list item with Mouse Effect Card
+   - `guest-card.tsx` — Guest info using Pro Card-02
+   - `badge.tsx` — Status/category badges with variants
+   - `buttons.tsx` — Composed button variants (Gradient, Hold, Command, V0)
+   - `search.tsx` — ActionSearchBar wrapper with ⌘K
+   - `processing-states.tsx` — AI Loading, AI Text Loading, Shimmer compositions
+   - `audio-upload.tsx` — File Upload with Background Paths hero
+   - `backgrounds.tsx` — Page background compositions
+   - `text-effects.tsx` — Swoosh, Dynamic, Scroll, Typing Text wrappers
+
+### Phase 3: Pages
+
+1. **Dashboard** (`app/page.tsx`) — Bento Grid layout, health score rings, alert cards, Mouse Effect sections
+2. **Episodes List** (`app/episodes/`) — ActionSearchBar, staggered episode card list, Card Stack
+3. **Episode Detail** (`app/episodes/[id]/`) — Two-column with Liquid Glass show notes, tabbed sections (SmoothTab), Guest intelligence panel, export/publish buttons
+4. **Upload** (`app/upload/`) — Background Paths hero, File Upload zone, AI processing states, step transitions
+5. **Shows** (`app/shows/`) — Show management CRUD
+6. **Expert Discovery** (`app/experts/`) — Search, Mouse Effect expert cards, Freshness Meter
+7. **Settings** (`app/settings/`) — Subscription management, vocabulary, preferences
+8. **Trending** (`app/trending/`) — Topic cards with metrics
+
+### Phase 4: Polish & Optimization
+
+1. Staggered list animations using Motion `variants` with `staggerChildren`
+2. Mobile responsive pass — Smooth Drawer nav, touch targets, breakpoints
+3. Reduced motion support via `useReducedMotion` (see Part 7)
+4. Accessibility audit — ARIA, keyboard nav, focus indicators, contrast ratios
+5. Loading states for every async boundary — Shimmer skeletons, AI loading indicators
+6. Error boundaries with graceful fallback UI
+7. Empty states with inviting illustrations + call-to-action
 
 ---
 

@@ -11,7 +11,7 @@
  */
 
 import type { LucideIcon } from "lucide-react";
-import { AnimatePresence, motion, type Transition, type Variants } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
@@ -258,7 +258,7 @@ interface SmoothTabProps {
   onChange?: (tabId: string) => void;
 }
 
-const slideVariants: Variants = {
+const slideVariants = {
   enter: (direction: number) => ({
     x: direction > 0 ? "100%" : "-100%",
     opacity: 0,
@@ -282,7 +282,7 @@ const slideVariants: Variants = {
   }),
 };
 
-const transition: Transition = {
+const transition = {
   duration: 0.4,
   ease: [0.32, 0.72, 0, 1],
 };
@@ -371,8 +371,8 @@ export default function SmoothTab({
                   backfaceVisibility: "hidden",
                   WebkitBackfaceVisibility: "hidden",
                 }}
-                transition={transition}
-                variants={slideVariants}
+                transition={transition as any}
+                variants={slideVariants as any}
               >
                 {selectedItem?.cardContent}
               </motion.div>

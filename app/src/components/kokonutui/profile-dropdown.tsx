@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { Settings, CreditCard, FileText, LogOut, User, Sparkles } from "lucide-react";
+import { Settings, CreditCard, FileText, LogOut, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -12,9 +12,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-// Placeholder for Gemini icon - using Sparkles from lucide-react
-const Gemini = Sparkles;
+import Gemini from "./gemini";
 
 interface Profile {
     name: string;

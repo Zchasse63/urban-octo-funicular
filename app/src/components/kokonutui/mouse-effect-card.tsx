@@ -349,9 +349,9 @@ export default function MouseEffectCard({
             {(subtitle || children) && (
               <div className="relative">
                 <div className="absolute inset-0 rounded-lg bg-white/60 blur-xl dark:bg-zinc-950/60" />
-                <div className="relative max-w-sm text-center font-medium text-base text-zinc-700 leading-relaxed dark:text-zinc-300">
+                <p className="relative max-w-sm text-center font-medium text-base text-zinc-700 leading-relaxed dark:text-zinc-300">
                   {children || subtitle}
-                </div>
+                </p>
               </div>
             )}
             <div className="mt-2 flex items-center gap-3">

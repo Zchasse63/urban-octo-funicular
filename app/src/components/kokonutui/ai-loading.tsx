@@ -155,40 +155,48 @@ const LoadingAnimation = ({ progress }: { progress: number }) => (
     </div>
 );
 
-interface SequenceScrollerProps {
-    sequence: (typeof TASK_SEQUENCES)[number];
-    onAdvanceSequence: () => void;
-}
-
-function SequenceScroller({ sequence, onAdvanceSequence }: SequenceScrollerProps) {
+export default function AILoadingState() {
+    const [sequenceIndex, setSequenceIndex] = useState(0);
+    const [visibleLines, setVisibleLines] = useState<
+        Array<{ text: string; number: number }>
+    >([]);
+    const [scrollPosition, setScrollPosition] = useState(0);
     const codeContainerRef = useRef<HTMLDivElement>(null);
     const lineHeight = 28;
-    const totalLines = sequence.lines.length;
 
-    const [visibleLines, setVisibleLines] = useState(() => {
-        const initialLines: Array<{ text: string; number: number }> = [];
+    const currentSequence = TASK_SEQUENCES[sequenceIndex];
+    const totalLines = currentSequence.lines.length;
+
+    useEffect(() => {
+        const initialLines = [];
         for (let i = 0; i < Math.min(5, totalLines); i++) {
             initialLines.push({
-                text: sequence.lines[i],
+                text: currentSequence.lines[i],
                 number: i + 1,
             });
         }
-        return initialLines;
-    });
-    const [scrollPosition, setScrollPosition] = useState(0);
+        setVisibleLines(initialLines);
+        setScrollPosition(0);
+    }, [sequenceIndex, currentSequence.lines, totalLines]);
 
+    // Handle line advancement
     useEffect(() => {
         const advanceTimer = setInterval(() => {
+            // Get the current first visible line index
             const firstVisibleLineIndex = Math.floor(
                 scrollPosition / lineHeight
             );
             const nextLineIndex = (firstVisibleLineIndex + 3) % totalLines;
 
+            // If we're about to wrap around, move to next sequence
             if (nextLineIndex < firstVisibleLineIndex && nextLineIndex !== 0) {
-                onAdvanceSequence();
+                setSequenceIndex(
+                    (prevIndex) => (prevIndex + 1) % TASK_SEQUENCES.length
+                );
                 return;
             }
 
+            // Add the next line if needed
             if (
                 nextLineIndex >= visibleLines.length &&
                 nextLineIndex < totalLines
@@ -196,25 +204,27 @@ function SequenceScroller({ sequence, onAdvanceSequence }: SequenceScrollerProps
                 setVisibleLines((prevLines) => [
                     ...prevLines,
                     {
-                        text: sequence.lines[nextLineIndex],
+                        text: currentSequence.lines[nextLineIndex],
                         number: nextLineIndex + 1,
                     },
                 ]);
             }
 
+            // Scroll to the next line
             setScrollPosition((prevPosition) => prevPosition + lineHeight);
-        }, 2000);
+        }, 2000); // Slightly slower than the example for better readability
 
         return () => clearInterval(advanceTimer);
     }, [
-        lineHeight,
-        onAdvanceSequence,
         scrollPosition,
-        sequence.lines,
-        totalLines,
         visibleLines,
+        totalLines,
+        sequenceIndex,
+        currentSequence.lines,
+        lineHeight,
     ]);
 
+    // Apply scroll position
     useEffect(() => {
         if (codeContainerRef.current) {
             codeContainerRef.current.scrollTop = scrollPosition;
@@ -222,64 +232,47 @@ function SequenceScroller({ sequence, onAdvanceSequence }: SequenceScrollerProps
     }, [scrollPosition]);
 
     return (
-        <div className="relative">
-            <div
-                ref={codeContainerRef}
-                className="font-mono text-xs overflow-hidden w-full h-[84px] relative rounded-lg"
-                style={{ scrollBehavior: "smooth" }}
-            >
-                <div>
-                    {visibleLines.map((line) => (
-                        <div
-                            key={`${line.number}-${line.text}`}
-                            className="flex h-[28px] items-center px-2"
-                        >
-                            <div className="text-gray-400 dark:text-gray-500 pr-3 select-none w-6 text-right">
-                                {line.number}
-                            </div>
-
-                            <div className="text-gray-800 dark:text-gray-200 flex-1 ml-1">
-                                {line.text}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            <div
-                className="absolute top-0 left-0 right-0 bottom-0 pointer-events-none rounded-lg from-white/90 via-white/50 to-transparent dark:from-black/90 dark:via-black/50 dark:to-transparent"
-                style={{
-                    background:
-                        "linear-gradient(to bottom, var(--tw-gradient-from) 0%, var(--tw-gradient-via) 30%, var(--tw-gradient-to) 100%)",
-                }}
-            />
-        </div>
-    );
-}
-
-export default function AILoadingState() {
-    const [sequenceIndex, setSequenceIndex] = useState(0);
-    const currentSequence = TASK_SEQUENCES[sequenceIndex];
-
-    return (
         <div className="flex items-center justify-center min-h-full w-full">
             <div className="space-y-4 w-auto">
                 <div className="ml-2 flex items-center space-x-2 text-gray-600 dark:text-gray-300 font-medium">
                     <LoadingAnimation
-                        progress={((sequenceIndex + 1) / TASK_SEQUENCES.length) * 100}
+                        progress={(sequenceIndex / TASK_SEQUENCES.length) * 100}
                     />
                     <span className="text-sm">{currentSequence.status}...</span>
                 </div>
 
-                <SequenceScroller
-                    key={sequenceIndex}
-                    sequence={currentSequence}
-                    onAdvanceSequence={() =>
-                        setSequenceIndex(
-                            (prevIndex) => (prevIndex + 1) % TASK_SEQUENCES.length
-                        )
-                    }
-                />
+                <div className="relative">
+                    <div
+                        ref={codeContainerRef}
+                        className="font-mono text-xs overflow-hidden w-full h-[84px] relative rounded-lg"
+                        style={{ scrollBehavior: "smooth" }}
+                    >
+                        <div>
+                            {visibleLines.map((line, index) => (
+                                <div
+                                    key={`${line.number}-${line.text}`}
+                                    className="flex h-[28px] items-center px-2"
+                                >
+                                    <div className="text-gray-400 dark:text-gray-500 pr-3 select-none w-6 text-right">
+                                        {line.number}
+                                    </div>
+
+                                    <div className="text-gray-800 dark:text-gray-200 flex-1 ml-1">
+                                        {line.text}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div
+                        className="absolute top-0 left-0 right-0 bottom-0 pointer-events-none rounded-lg from-white/90 via-white/50 to-transparent dark:from-black/90 dark:via-black/50 dark:to-transparent"
+                        style={{
+                            background:
+                                "linear-gradient(to bottom, var(--tw-gradient-from) 0%, var(--tw-gradient-via) 30%, var(--tw-gradient-to) 100%)",
+                        }}
+                    />
+                </div>
             </div>
         </div>
     );

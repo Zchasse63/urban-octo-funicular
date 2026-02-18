@@ -1,56 +1,74 @@
 "use client";
 
-import React from "react";
-import { LiquidGlassCard } from "@/components/kokonutui/liquid-glass-card";
 import { cn } from "@/lib/utils";
+import { LiquidGlassCard, type LiquidGlassCardProps } from "@/components/kokonutui/liquid-glass-card";
 
-export interface ContentCardProps extends React.HTMLAttributes<HTMLDivElement> {
-  title: string;
-  subtitle?: string;
-  variant?: "primary" | "secondary";
-}
-
-export function ContentCard({
-  title,
-  subtitle,
-  variant = "primary",
+// Wrapper around LiquidGlassCard with PodBrain defaults
+export function GlassCard({
   className,
   children,
   ...props
-}: ContentCardProps) {
+}: LiquidGlassCardProps) {
   return (
     <LiquidGlassCard
       className={cn(
-        "bg-[var(--bg-elevated)] border border-[var(--border-soft)]",
-        variant === "primary" ? "shadow-[var(--shadow-elevation-2)]" : "shadow-[var(--shadow-elevation-1)]",
+        "rounded-xl border border-border-soft bg-bg-elevated/80",
         className
       )}
-      glassEffect={true}
       {...props}
     >
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1">
-          <h3
-            className="font-mono text-xs font-medium uppercase tracking-wider"
-            style={{ color: "var(--text-secondary)" }}
-          >
-            {title}
-          </h3>
-          {subtitle && (
-            <p
-              className="text-sm"
-              style={{ color: "var(--text-tertiary)" }}
-            >
-              {subtitle}
-            </p>
-          )}
-        </div>
-        {children && (
-          <div style={{ color: "var(--text-primary)" }}>
-            {children}
-          </div>
-        )}
-      </div>
+      {children}
     </LiquidGlassCard>
+  );
+}
+
+// Simple elevated card without glass effect
+export function ElevatedCard({
+  className,
+  children,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn(
+        "rounded-xl border border-border-soft bg-bg-elevated p-6 shadow-[var(--shadow-topo)] transition-shadow hover:shadow-[var(--shadow-topo-hover)]",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
+
+// Stat card for dashboard metrics
+export function StatCard({
+  label,
+  value,
+  sublabel,
+  className,
+}: {
+  label: string;
+  value: string | number;
+  sublabel?: string;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-xl border border-border-soft bg-bg-elevated p-4",
+        className
+      )}
+    >
+      <p className="font-mono text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+        {label}
+      </p>
+      <p className="mt-1 text-2xl font-semibold tabular-nums text-text-primary">
+        {value}
+      </p>
+      {sublabel && (
+        <p className="mt-0.5 text-xs text-text-secondary">{sublabel}</p>
+      )}
+    </div>
   );
 }
