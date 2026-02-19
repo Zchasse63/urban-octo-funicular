@@ -10,7 +10,7 @@ An AI-powered platform for podcasters that transforms audio into SEO-optimized s
 ## Tech Stack
 
 - **Frontend:** Next.js 16+ (App Router), React 19, TypeScript, Tailwind CSS v4
-- **UI Components:** Kokonut UI + Kokonut UI Pro, shadcn/ui, Motion (animations)
+- **UI Components:** TBD — UI is being rebuilt from scratch (see `ui-rebuild-v2` branch)
 - **Database:** Supabase (PostgreSQL with pgvector for embeddings)
 - **AI:** xAI Grok (content generation), AssemblyAI (transcription)
 - **Background Jobs:** Trigger.dev v4
@@ -73,35 +73,29 @@ RESTful endpoints under `/api/`:
 /api/episodes/:id/guest-package - Guest promo package
 ```
 
-## Design System: "Kinetic Alabaster"
+## UI Status: Blank Slate Rebuild
 
-Motion-rich UI built on Kokonut UI with cursor-aware interactions and AI-native feedback patterns.
+The UI is being rebuilt from scratch on the `ui-rebuild-v2` branch. All previous component libraries (Kokonut UI, shadcn/ui, custom PodBrain components) have been removed.
 
-**Key Design Docs:**
-- `docs/kokonut/podbrain-kokonut-design-system.md` - Full design system
-- `docs/kokonut/podbrain-kokonut-quick-reference.md` - Component quick reference
-- `docs/kokonut/kokonut-ui-pro-setup-guide.md` - Pro license setup
+**Current state:**
+- `app/src/components/` — empty, ready for new components
+- `app/src/app/layout.tsx` — minimal root layout
+- `app/src/app/page.tsx` — placeholder page
+- `app/src/app/globals.css` — Tailwind import only, no design tokens yet
 
-**Core Tokens:**
-- `--bg-base: #FDFDFD` | `--bg-elevated: #FFFFFF` | `--bg-glass: rgba(255, 255, 255, 0.72)`
-- `--text-primary: #121212` | `--accent-blue: #007AFF`
-- **Fonts:** Inter (body), JetBrains Mono (labels/code)
+**Previous design system docs** (for reference only, describes the OLD UI on `main`):
+- `docs/kokonut/` — Kokonut UI design system docs from the previous build
 
-**Component Libraries:**
-- `src/components/kokonutui/` - Free Kokonut UI components
-- `src/components/kokonutui-pro/` - Pro components (card-02, modal-01)
-- `src/components/podbrain/` - Custom compositions
-- `src/components/ui/` - shadcn/ui base components
+**Backend code is fully intact** — all API routes, lib utilities, hooks, types, and Trigger.dev jobs are unchanged.
 
 ## Key Files Reference
 
 | File | Purpose |
 |------|---------|
 | `docs/product/podbrain-prd.md` | Full product requirements |
-| `docs/kokonut/` | Kokonut UI design system + quick reference + Pro setup |
+| `docs/kokonut/` | Previous UI design system docs (reference only) |
 | `docs/testing/TEST_STRATEGY.md` | Testing approach |
 | `app/.env.local` | Environment variables (gitignored) |
-| `app/components.json` | Kokonut UI registry config |
 | `trigger/` | Background job definitions |
 | `supabase/migrations/` | Database schema |
 
@@ -154,7 +148,7 @@ STRIPE_PUBLISHABLE_KEY
 STRIPE_SECRET_KEY
 RESEND_API_KEY
 BUZZSPROUT_API_KEY
-KOKO_PRO_TOKEN          # Kokonut UI Pro license
+KOKO_PRO_TOKEN          # Kokonut UI Pro license (not currently in use)
 ```
 
 ## Pricing Tiers

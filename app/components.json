@@ -16,14 +16,5 @@
     "ui": "@/components/ui",
     "lib": "@/lib",
     "hooks": "@/hooks"
-  },
-  "registries": {
-    "@kokonutui": "https://kokonutui.com/r/{name}.json",
-    "@kokonutui-pro": {
-      "url": "https://kokonutui.pro/api/r/{name}",
-      "headers": {
-        "X-API-Key": "${KOKO_PRO_TOKEN}"
-      }
-    }
   }
 }
