@@ -10,7 +10,7 @@ An AI-powered platform for podcasters that transforms audio into SEO-optimized s
 ## Tech Stack
 
 - **Frontend:** Next.js 16+ (App Router), React 19, TypeScript, Tailwind CSS v4
-- **UI Components:** TBD — UI is being rebuilt from scratch (see `ui-rebuild-v2` branch)
+- **UI Components:** Custom "Swiss Broadcast" design system (see `ui-architect-checkpoint-podbrain.md`)
 - **Database:** Supabase (PostgreSQL with pgvector for embeddings)
 - **AI:** xAI Grok (content generation), AssemblyAI (transcription)
 - **Background Jobs:** Trigger.dev v4
@@ -73,15 +73,34 @@ RESTful endpoints under `/api/`:
 /api/episodes/:id/guest-package - Guest promo package
 ```
 
-## UI Status: Blank Slate Rebuild
+## UI Design System: "Swiss Broadcast"
 
-The UI is being rebuilt from scratch on the `ui-rebuild-v2` branch. All previous component libraries (Kokonut UI, shadcn/ui, custom PodBrain components) have been removed.
+The UI uses a custom design system called "Swiss Broadcast" — precise grid layout, editorial typography, warm stone surfaces with paper grain texture. Supports light and dark modes.
 
-**Current state:**
-- `app/src/components/` — empty, ready for new components
-- `app/src/app/layout.tsx` — minimal root layout
-- `app/src/app/page.tsx` — placeholder page
-- `app/src/app/globals.css` — Tailwind import only, no design tokens yet
+**Design checkpoint:** `ui-architect-checkpoint-podbrain.md` (full spec)
+
+**Typography:** Space Grotesk (display) + Source Serif 4 (body) + JetBrains Mono (mono)
+**Colors (light):** Warm stone background (#EDEAE5), warm white cards (#FAFAF8), electric blue accent (#2563EB), terracotta warmth (#C2693D)
+**Colors (dark):** Deep charcoal (#1A1A1E), elevated surface (#232328), brightened blue (#3B82F6), warm copper (#D97A4A)
+**Signature:** Status indicator dots cascade through the interface like a system status board
+**Dark mode:** Class-based toggle via `data-theme="dark"` on `<html>`, stored in localStorage, FOUC prevention script in root layout
+
+**Component structure:**
+- `app/src/components/ui/` — Primitive building blocks (button, card, badge, input, tabs, skeleton, empty-state, dropdown-menu, progress, theme-toggle)
+- `app/src/components/layout/` — Structural (sidebar, page-header, nav-item, show-selector)
+- `app/src/components/episodes/` — Episode-specific (episode-row, episode-header, status-dot, seo-score, signal-chain)
+- `app/src/components/upload/` — Upload flow (dropzone)
+
+**Route structure:**
+- `/episodes` — Episode list with search/filter
+- `/episodes/[id]` — Episode workspace with 5-tab interface (Notes, Assets, Transcript, Guest Package, Intelligence)
+- `/upload` — 3-step upload flow (file → details → processing)
+- `/vocabulary` — Custom vocabulary management
+- `/experts` — AI-powered expert/guest discovery
+- `/settings` — Subscription management and integrations
+- `/support` — Help center and FAQ
+
+**Responsive:** Mobile-first with slide-out sidebar overlay on screens < 768px, hamburger menu in mobile header
 
 **Previous design system docs** (for reference only, describes the OLD UI on `main`):
 - `docs/kokonut/` — Kokonut UI design system docs from the previous build
