@@ -80,7 +80,7 @@ function ShowNotesTab({ episode }: ShowNotesTabProps) {
                     key={i}
                     className="text-[var(--text-caption)] text-[var(--color-text-secondary)]"
                   >
-                    {s}
+                    {typeof s === "string" ? s : (s as Record<string, string>).title ?? (s as Record<string, string>).description ?? ""}
                   </li>
                 ))}
               </ul>
