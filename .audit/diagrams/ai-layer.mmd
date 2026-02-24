@@ -1,0 +1,49 @@
+flowchart TD
+    subgraph Clients["AI Clients"]
+        XAIClient["lib/xai-client.ts\ncreateGrokClient()\n- createChatCompletion()\n- createEmbedding()"]
+        AssemblyClient["lib/assemblyai/client.ts\ntranscribeAudio()"]
+    end
+
+    subgraph Services["Service Layer"]
+        ContentGen["lib/content/generator.ts\ngenerateAsset()\ngenerateMultipleAssets()"]
+        ViralDetect["lib/viral-moments/detector.ts\ndetectViralMoments()"]
+        ExpertDiscover["lib/experts/discovery.ts\ndiscoverExperts()"]
+        CrossEp["lib/cross-episode/embeddings.ts\ncreateEpisodeEmbedding()"]
+        GuestPkg["lib/guest-package/generator.ts"]
+        GuestIntel["lib/guest-intel/service.ts"]
+    end
+
+    subgraph Validation["Response Validation"]
+        ViralSchema["DetectionResponseSchema\nZod validation\n+ HTML encoding\n+ size check"]
+        ExpertSchema["DiscoveryResponseSchema\nZod validation\n+ URL regex"]
+        AssetParse["JSON.parse only\nNO schema validation"]
+    end
+
+    subgraph External["External APIs"]
+        XAI_API["xAI API\napi.x.ai/v1\nModel: grok-beta\n(unstable ID)"]
+        AssemblyAPI["AssemblyAI API\nSpeaker diarization\nWord boost"]
+    end
+
+    subgraph Infra["Storage"]
+        PGVector["pgvector\nHNSW index\n1536d embeddings"]
+        Redis["Upstash Redis\n7-day expert cache"]
+        DB["Supabase\ngenerated_assets"]
+    end
+
+    ContentGen --> XAIClient
+    ViralDetect --> XAIClient
+    ExpertDiscover --> XAIClient
+    CrossEp --> XAIClient
+    GuestPkg --> XAIClient
+    GuestIntel --> XAIClient
+
+    AssemblyClient --> AssemblyAPI
+    XAIClient --> XAI_API
+
+    ViralDetect --> ViralSchema
+    ExpertDiscover --> ExpertSchema
+    ContentGen --> AssetParse
+
+    CrossEp --> PGVector
+    ExpertDiscover --> Redis
+    ContentGen --> DB

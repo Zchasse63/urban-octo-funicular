@@ -1,0 +1,31 @@
+graph TD
+    subgraph Tested["Well Tested"]
+        SEO["lib/seo/\n(unit + integration)"]
+        Val["lib/validation.ts\n(unit)"]
+        Utils["lib/utils.ts\n(unit)"]
+        Errors["lib/errors.ts\n(unit)"]
+        Button["components/ui/Button\n(unit)"]
+        APIRoutes["API routes\n(API integration)"]
+        DBOps["DB operations\n(DB integration)"]
+        E2E["User flows\n(Playwright E2E)"]
+    end
+
+    subgraph PartiallyTested["Partially Tested"]
+        Viral["lib/viral-moments/\n(co-located unit)"]
+        BuzzContent["lib/buzzsprout/\n(via API tests)"]
+        StripeLib["lib/stripe/\n(via API tests)"]
+    end
+
+    subgraph Untested["Not Tested"]
+        Hooks["hooks/ (11 files)"]
+        UIComponents["UI Components (41 of 42)"]
+        ContentGen["lib/content/generator.ts"]
+        AssemblyAI["lib/assemblyai/"]
+        GuestPkg["lib/guest-package/"]
+        CrossEp["lib/cross-episode/"]
+        Corrections["lib/corrections/"]
+    end
+
+    style Tested fill:#22c55e,color:#fff
+    style PartiallyTested fill:#f59e0b,color:#fff
+    style Untested fill:#ef4444,color:#fff

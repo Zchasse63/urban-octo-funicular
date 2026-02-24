@@ -49,7 +49,7 @@ export const PAGINATION = {
   maxPageSize: 100,
 } as const
 
-// Subscription Tiers
+// Subscription Tiers — aligned with stripe/products.ts (source of truth)
 export const SUBSCRIPTION_TIERS = {
   free: {
     name: 'Free',
@@ -60,15 +60,15 @@ export const SUBSCRIPTION_TIERS = {
   },
   pro: {
     name: 'Pro',
-    episodesPerMonth: Infinity,
-    maxShows: 3,
+    episodesPerMonth: 50,
+    maxShows: 5,
     teamSeats: 1,
     priceMonthly: 19,
   },
   agency: {
     name: 'Agency',
-    episodesPerMonth: Infinity,
-    maxShows: 20,
+    episodesPerMonth: 200,
+    maxShows: 999,
     teamSeats: 5,
     priceMonthly: 49,
   },
@@ -87,16 +87,61 @@ export const SUPPORTED_AUDIO_FORMATS = [
   'audio/webm',
 ] as const
 
-// Asset Types for Content Multiplication
+// Asset Types for Content Multiplication — synced with DB asset_type enum
 export const ASSET_TYPES = [
+  // Core content
   'show_notes',
-  'linkedin_post',
-  'twitter_thread',
-  'instagram_carousel',
-  'newsletter',
+  'episode_titles',
+  'key_takeaways',
+  'chapter_markers',
+  // Long-form
   'blog_post',
-  'youtube_description',
+  'newsletter',
+  'newsletter_email',
+  'press_release',
+  'transcript_summary',
+  'seo_description',
+  // LinkedIn
+  'linkedin_post',
+  'linkedin_post_host',
+  'linkedin_post_guest',
+  'linkedin_article',
+  // Twitter/X
+  'twitter_thread',
+  'twitter_single',
+  // Instagram
+  'instagram_carousel',
+  'instagram_caption',
+  'instagram_reel_script',
+  // TikTok
   'tiktok_hook',
+  'tiktok_hooks',
+  'tiktok_script',
+  // YouTube
+  'youtube_description',
+  'youtube_shorts_script',
+  'youtube_title_tags',
+  // Visual content
   'quote_card',
+  'quote_cards',
   'audiogram',
+  'audiogram_clips',
+  'infographic_outline',
+  // Engagement
+  'discussion_questions',
+  'poll_ideas',
+  'call_to_action',
+  // Guest content
+  'guest_bio_short',
+  'guest_promo_kit',
+  // Distribution
+  'podcast_teaser',
+  'cross_promo_script',
+  // Repurposing
+  'medium_article',
+  'substack_post',
+  // AI summaries
+  'ai_summary_short',
+  'ai_summary_detailed',
+  'highlight_reel',
 ] as const

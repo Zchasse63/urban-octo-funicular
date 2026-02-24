@@ -1,0 +1,55 @@
+flowchart TD
+    subgraph Browser["Browser (React 19)"]
+        Pages["(app)/* Pages"]
+        Components["Feature Components"]
+        Hooks["Custom Hooks (11)"]
+    end
+
+    subgraph AppRouter["Next.js 16 App Router"]
+        RootLayout["Root Layout\n(FOUC prevention, Toaster)"]
+        AppShell["AppShell\n(Sidebar + MobileHeader)"]
+        API["API Routes (26)\n/api/*"]
+    end
+
+    subgraph Services["Service Libraries (lib/)"]
+        Content["content/generator\n(xAI Grok)"]
+        SEO["seo/analyzer\n+ schema-generator"]
+        Vocab["vocabulary/service"]
+        GuestPkg["guest-package/generator"]
+        Corrections["corrections/service"]
+        CrossEp["cross-episode/embeddings"]
+        Export["export/zip-generator"]
+        Email["email/service (Resend)"]
+        RateLimit["redis/rate-limit"]
+    end
+
+    subgraph Background["Background Jobs (Trigger.dev v4)"]
+        ProcessJob["episode-processing job\n(30 min max)"]
+    end
+
+    subgraph External["External Services"]
+        Supabase["Supabase\n(PostgreSQL + pgvector)"]
+        AssemblyAI["AssemblyAI\n(transcription)"]
+        Grok["xAI Grok\n(content generation)"]
+        Redis["Upstash Redis\n(cache + rate limit)"]
+        Stripe["Stripe\n(payments)"]
+        Resend["Resend\n(email)"]
+        Buzzsprout["Buzzsprout API\n(hosting integration)"]
+        Storage["Supabase Storage\n(audio files)"]
+    end
+
+    Pages --> Components
+    Components --> Hooks
+    Hooks -->|"fetch /api/*"| API
+    API --> Services
+    API --> Background
+    Services --> Supabase
+    Services --> Redis
+    Services --> Grok
+    Services --> Email
+    Background --> AssemblyAI
+    Background --> Grok
+    Background --> Supabase
+    API -->|"upload"| Storage
+    Services -->|"stripe SDK"| Stripe
+    Services -->|"buzzsprout client"| Buzzsprout

@@ -1,0 +1,41 @@
+graph LR
+    App["PodBrain App"]
+
+    subgraph Supabase["Supabase"]
+        DB["PostgreSQL\n(pgvector)"]
+        Storage["Supabase Storage\n(audio files)"]
+    end
+
+    subgraph Processing["Processing Pipeline"]
+        AssemblyAI["AssemblyAI\n(transcription)"]
+        TriggerDev["Trigger.dev v4\n(background jobs)"]
+        Grok["xAI Grok\n(content generation\n+ embeddings)"]
+    end
+
+    subgraph Commerce["Commerce"]
+        Stripe["Stripe\n(payments\n+ webhooks)"]
+    end
+
+    subgraph Communication["Communication"]
+        Resend["Resend\n(transactional email)"]
+    end
+
+    subgraph Cache["Cache"]
+        Redis["Upstash Redis\n(REST API)"]
+    end
+
+    subgraph PodcastHosting["Podcast Hosting"]
+        Buzzsprout["Buzzsprout API\n(encrypted credentials)"]
+    end
+
+    App --> DB
+    App --> Storage
+    App --> TriggerDev
+    TriggerDev --> AssemblyAI
+    TriggerDev --> Grok
+    App --> Grok
+    App --> Stripe
+    Stripe -->|webhooks| App
+    App --> Resend
+    App --> Redis
+    App --> Buzzsprout

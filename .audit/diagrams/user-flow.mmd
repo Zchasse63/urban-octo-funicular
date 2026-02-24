@@ -1,0 +1,40 @@
+sequenceDiagram
+    actor User
+    participant UploadWizard as Upload Wizard
+    participant API as API Routes
+    participant TriggerDev as Trigger.dev
+    participant AssemblyAI as AssemblyAI
+    participant Grok as xAI Grok
+    participant EpisodeWorkspace as Episode Workspace
+
+    User->>UploadWizard: Navigate to /upload
+    UploadWizard->>User: Step 1 - Select Audio
+    User->>UploadWizard: Drop file or paste URL
+    User->>UploadWizard: Continue
+
+    UploadWizard->>User: Step 2 - Expert Context
+    User->>UploadWizard: Continue
+
+    UploadWizard->>User: Step 3 - Style and Assets
+    User->>UploadWizard: Process Episode
+
+    UploadWizard->>API: POST /api/upload
+    API-->>UploadWizard: signedUrl
+
+    UploadWizard->>API: POST /api/episodes
+    Note over UploadWizard,API: BUG - No title field sent
+    API-->>UploadWizard: episodeId
+
+    UploadWizard->>API: POST /api/episodes/:id/process
+    API->>TriggerDev: triggerEpisodeProcessing
+    API-->>UploadWizard: runId
+
+    UploadWizard->>EpisodeWorkspace: redirect to /episodes/:id
+
+    TriggerDev->>AssemblyAI: Transcribe audio
+    AssemblyAI-->>TriggerDev: Transcript
+    TriggerDev->>Grok: Generate content
+    Grok-->>TriggerDev: Assets
+    TriggerDev->>API: Update status = completed
+
+    User->>EpisodeWorkspace: View results

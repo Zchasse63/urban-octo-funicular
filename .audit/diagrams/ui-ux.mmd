@@ -1,0 +1,58 @@
+graph TD
+    subgraph Primitives["UI Primitives (16 components)"]
+        Button["Button\n(6 variants)"]
+        Badge["Badge\n(6 variants)"]
+        Input["Input + Textarea"]
+        Tabs["Tabs system"]
+        Skeleton["Skeleton"]
+        EmptyState["EmptyState"]
+        Progress["Progress + CircularProgress"]
+        ThemeToggle["ThemeToggle"]
+        SearchBar["SearchBar"]
+        FilterPills["FilterPills"]
+    end
+
+    subgraph Layout["Layout Chrome (6 components)"]
+        AppShell["AppShell"]
+        Sidebar["Sidebar\n(collapsible 240px->64px)"]
+        MobileHeader["MobileHeader"]
+        NavItem["NavItem"]
+        ShowSelector["ShowSelector"]
+        PlanCard["PlanCard"]
+    end
+
+    subgraph Episodes["Episode Domain (11 components)"]
+        EpisodeList["EpisodeList"]
+        EpisodeRow["EpisodeRow"]
+        EpisodeTabs["EpisodeTabs\n(5 tabs)"]
+        ShowNotesTab["ShowNotesTab"]
+        AssetsTab["AssetsTab"]
+        TranscriptTab["TranscriptTab"]
+        GuestPackageTab["GuestPackageTab"]
+        IntelligenceTab["IntelligenceTab"]
+    end
+
+    subgraph Upload["Upload Flow (3 components)"]
+        UploadWizard["UploadWizard\n(3-step)"]
+        Dropzone["Dropzone"]
+        StepIndicator["StepIndicator"]
+    end
+
+    AppShell --> Sidebar
+    AppShell --> MobileHeader
+    Sidebar --> NavItem
+    Sidebar --> ShowSelector
+    Sidebar --> PlanCard
+    Sidebar --> ThemeToggle
+    EpisodeList --> EpisodeRow
+    EpisodeList --> SearchBar
+    EpisodeList --> FilterPills
+    EpisodeList --> Skeleton
+    EpisodeList --> EmptyState
+    EpisodeTabs --> ShowNotesTab
+    EpisodeTabs --> AssetsTab
+    EpisodeTabs --> TranscriptTab
+    EpisodeTabs --> GuestPackageTab
+    EpisodeTabs --> IntelligenceTab
+    UploadWizard --> Dropzone
+    UploadWizard --> StepIndicator

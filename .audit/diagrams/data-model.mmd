@@ -1,0 +1,88 @@
+erDiagram
+    users {
+        UUID id PK
+        TEXT email
+        TEXT subscription_tier
+        JSONB preferences
+        TIMESTAMPTZ created_at
+    }
+    shows {
+        UUID id PK
+        UUID user_id FK
+        TEXT name
+        TEXT default_language
+        JSONB style_preferences
+    }
+    episodes {
+        UUID id PK
+        UUID show_id FK
+        TEXT title
+        episode_status status
+        TEXT transcript
+        TEXT show_notes
+        INTEGER seo_score
+        JSONB viral_moments
+        JSONB metadata
+    }
+    episode_sections {
+        UUID id PK
+        UUID episode_id FK
+        TEXT content
+        vector_1536 embedding
+        TEXT speaker
+    }
+    generated_assets {
+        UUID id PK
+        UUID episode_id FK
+        asset_type asset_type
+        TEXT content
+        JSONB metadata
+    }
+    corrections {
+        UUID id PK
+        UUID episode_id FK
+        TEXT original_text
+        TEXT corrected_text
+        BOOLEAN applied_to_vocabulary
+    }
+    vocabulary_terms {
+        UUID id PK
+        UUID show_id FK
+        TEXT term
+        TEXT_ARRAY alternatives
+        vector_1536 embedding
+        INTEGER occurrence_count
+    }
+    hosting_connections {
+        UUID id PK
+        UUID user_id FK
+        TEXT provider
+        JSONB credentials
+        TEXT status
+    }
+    subscriptions {
+        UUID id PK
+        UUID user_id FK
+        TEXT stripe_customer_id
+        TEXT stripe_subscription_id
+        TEXT status
+        TEXT price_id
+    }
+    experts {
+        UUID id PK
+        UUID show_id FK
+        TEXT name
+        TEXT category
+        INTEGER freshness_score
+        TIMESTAMPTZ cached_at
+    }
+
+    users ||--o{ shows : "owns"
+    users ||--o{ hosting_connections : "has"
+    users ||--o{ subscriptions : "has"
+    shows ||--o{ episodes : "contains"
+    shows ||--o{ vocabulary_terms : "defines"
+    shows ||--o{ experts : "caches"
+    episodes ||--o{ episode_sections : "divided into"
+    episodes ||--o{ generated_assets : "has"
+    episodes ||--o{ corrections : "receives"

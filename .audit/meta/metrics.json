@@ -1,0 +1,83 @@
+{
+  "completed_at": "2026-02-24T00:00:00Z",
+  "agents_executed": [
+    "project-structure",
+    "data-model",
+    "api-surface",
+    "testing-quality",
+    "ui-ux",
+    "user-flow",
+    "ai-layer",
+    "integration",
+    "security",
+    "performance-infra",
+    "audit-synthesizer"
+  ],
+  "agents_skipped": [],
+  "waves_completed": 5,
+  "architecture_health_score": 58,
+  "total_findings": {
+    "critical": 5,
+    "high": 17,
+    "medium": 30,
+    "low": 14,
+    "info": 10,
+    "total": 76
+  },
+  "layer_reports": {
+    "project-structure": ".audit/layers/project-structure.md",
+    "data-model": ".audit/layers/data-model.md",
+    "api-surface": ".audit/layers/api-surface.md",
+    "testing-quality": ".audit/layers/testing-quality.md",
+    "ui-ux": ".audit/layers/ui-ux.md",
+    "user-flow": ".audit/layers/user-flow.md",
+    "ai-layer": ".audit/layers/ai-layer.md",
+    "integration": ".audit/layers/integration.md",
+    "security": ".audit/layers/security.md",
+    "performance-infra": ".audit/layers/performance-infra.md"
+  },
+  "synthesis_artifacts": {
+    "cross_references": ".audit/synthesis/cross-references.md",
+    "contradictions": ".audit/synthesis/contradictions.md",
+    "gaps": ".audit/synthesis/gaps.md"
+  },
+  "finding_files": {
+    "critical": ".audit/findings/critical.md",
+    "high": ".audit/findings/high.md",
+    "medium": ".audit/findings/medium.md",
+    "low_info": ".audit/findings/low-info.md"
+  },
+  "final_report": ".audit/AUDIT-SUMMARY.md",
+  "cross_layer_discoveries": [
+    {
+      "id": "CRIT-03",
+      "description": "Upload wizard audio URL field mismatch — primary upload flow broken",
+      "severity": "critical",
+      "discovered_by": "synthesis_contradiction_analysis",
+      "layers_involved": ["api-surface", "user-flow"]
+    },
+    {
+      "id": "cross-ref-timeout",
+      "description": "Job timeout fundamentally incompatible with 4-hour audio transcription",
+      "severity": "critical",
+      "discovered_by": "synthesis_cross_reference",
+      "layers_involved": ["performance-infra", "integration", "ai-layer"]
+    },
+    {
+      "id": "cross-ref-rate-limit",
+      "description": "Rate limiting implemented but not applied — AI cost exposure",
+      "severity": "critical",
+      "discovered_by": "synthesis_cross_reference",
+      "layers_involved": ["api-surface", "security", "performance-infra", "integration"]
+    }
+  ],
+  "notable_strengths": [
+    "Swiss Broadcast design system is sophisticated and cohesive",
+    "Stripe webhook HMAC validation is correctly implemented",
+    "Buzzsprout credential encryption is production-grade (AES-256-GCM + PBKDF2)",
+    "Viral moments detector has excellent AI response security practices",
+    "Four-way test segregation infrastructure is rare for early-stage SaaS",
+    "Three-client Supabase pattern is correctly implemented",
+    "prefers-reduced-motion support is complete"
+  ]
+}

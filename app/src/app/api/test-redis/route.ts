@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { redis, set, get, del, checkRateLimit } from '@/lib/redis';
+import { redis, set, get, del } from '@/lib/redis';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { devGuard } from '@/lib/api/dev-guard';
 
 export async function GET() {

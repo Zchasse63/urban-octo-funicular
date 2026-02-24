@@ -1,0 +1,53 @@
+flowchart LR
+    Client["Browser Client"]
+
+    subgraph ShowAPIs["Show APIs"]
+        S1["GET /api/shows"]
+        S2["POST /api/shows"]
+        S3["GET /api/shows/:id/experts"]
+        S4["GET /api/shows/:id/related-episodes"]
+    end
+
+    subgraph EpisodeAPIs["Episode APIs"]
+        E1["GET /api/episodes"]
+        E2["GET/PUT/DELETE /api/episodes/:id"]
+        E3["POST /api/episodes/:id/process"]
+        E4["GET /api/episodes/:id/assets"]
+        E5["GET /api/episodes/:id/seo"]
+        E6["GET /api/episodes/:id/guest-package"]
+        E7["GET /api/episodes/:id/viral-moments"]
+        E8["GET /api/episodes/:id/related"]
+    end
+
+    subgraph Integration["Integration APIs"]
+        B1["POST /api/buzzsprout/connect"]
+        B2["POST /api/buzzsprout/push-notes"]
+        P1["POST /api/stripe/checkout"]
+        P2["POST /api/stripe/webhooks\n(signature verified)"]
+        U1["POST /api/upload"]
+    end
+
+    subgraph Backend["Backend Services"]
+        Supabase["Supabase DB"]
+        TriggerDev["Trigger.dev v4"]
+        Grok["xAI Grok"]
+        Storage["Supabase Storage"]
+        StripeAPI["Stripe API"]
+        BuzzsproutAPI["Buzzsprout API"]
+    end
+
+    Client --> ShowAPIs
+    Client --> EpisodeAPIs
+    Client --> Integration
+
+    ShowAPIs --> Supabase
+    EpisodeAPIs --> Supabase
+    E3 --> TriggerDev
+    E4 --> Grok
+    E5 --> Grok
+    E6 --> Grok
+    U1 --> Storage
+    B1 --> BuzzsproutAPI
+    B2 --> BuzzsproutAPI
+    P1 --> StripeAPI
+    P2 --> StripeAPI

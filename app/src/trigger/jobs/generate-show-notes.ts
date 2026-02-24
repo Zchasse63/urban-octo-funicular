@@ -190,7 +190,12 @@ async function generateShowNotesWithGrok(
     throw new Error("No content in xAI response");
   }
 
-  return JSON.parse(content);
+  try {
+    return JSON.parse(content);
+  } catch (error) {
+    logger.error("Failed to parse xAI response as JSON", { content: content.slice(0, 500) });
+    throw new Error("xAI returned malformed JSON response");
+  }
 }
 
 /**
@@ -338,80 +343,6 @@ function generateSchemaMarkup(
   }
 
   return schema;
-}
-
-/**
- * Create mock show notes response for development/testing
- */
-function createMockShowNotesResponse(guestName?: string): GrokShowNotesResponse {
-  return {
-    show_notes_markdown: `# Episode Show Notes
-
-## Summary
-In this episode, we explore the fascinating world of AI-powered podcasting tools and how they're revolutionizing content creation.
-
-## Key Topics
-- The rise of AI in podcasting
-- Transcription technology advances
-- Content repurposing strategies
-- SEO optimization for podcasts
-
-## Timestamps
-- **[0:00]** Introduction and welcome
-- **[2:30]** Discussion on AI transcription
-- **[8:15]** Content multiplication strategies
-- **[15:00]** SEO best practices
-- **[22:45]** Final thoughts and wrap-up
-
-## Notable Quotes
-> "AI isn't replacing podcasters, it's empowering them to reach wider audiences."
-
-## Resources Mentioned
-- PodBrain AI platform
-- AssemblyAI transcription
-- SEO tools for podcasters
-
-## Connect With ${guestName || "the Host"}
-- Twitter: @example
-- LinkedIn: /in/example
-`,
-    summary:
-      "This episode dives deep into how AI is transforming the podcasting landscape, from automated transcription to content multiplication. We discuss practical strategies for leveraging these tools while maintaining authentic connections with your audience.",
-    key_topics: [
-      "AI transcription",
-      "Content repurposing",
-      "Podcast SEO",
-      "Show notes automation",
-      "Audience growth",
-    ],
-    timestamps: [
-      { time: "0:00", time_seconds: 0, topic: "Introduction and welcome" },
-      { time: "2:30", time_seconds: 150, topic: "Discussion on AI transcription" },
-      { time: "8:15", time_seconds: 495, topic: "Content multiplication strategies" },
-      { time: "15:00", time_seconds: 900, topic: "SEO best practices for podcasts" },
-      { time: "22:45", time_seconds: 1365, topic: "Final thoughts and wrap-up" },
-    ],
-    viral_moments: [
-      {
-        start_time: 495000,
-        end_time: 510000,
-        text: "AI isn't replacing podcasters, it's empowering them to reach wider audiences while spending less time on repetitive tasks.",
-        score: 85,
-        reason: "Addresses common fear about AI with positive reframing",
-        type: "quotable",
-      },
-      {
-        start_time: 720000,
-        end_time: 735000,
-        text: "The podcasters who are winning right now aren't just making great audio - they're multiplying every episode into 30+ pieces of content.",
-        score: 78,
-        reason: "Provides actionable insight with specific number",
-        type: "revelation",
-      },
-    ],
-    suggested_title: "How AI is Revolutionizing Podcast Content Creation",
-    suggested_description: `Discover how artificial intelligence is transforming the podcasting industry in this eye-opening episode. ${guestName ? `Join us with ${guestName} as we` : "We"} explore the latest advancements in AI-powered transcription, content repurposing, and SEO optimization that are helping podcasters reach wider audiences with less effort. Learn practical strategies you can implement today to multiply your content output and grow your show.`,
-  };
 }
 
 export default generateShowNotesTask;

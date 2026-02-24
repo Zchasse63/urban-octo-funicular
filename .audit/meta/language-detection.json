@@ -1,0 +1,24 @@
+{
+  "primary_language": "TypeScript",
+  "languages": ["TypeScript", "JavaScript", "CSS", "SQL", "HTML"],
+  "frameworks": ["Next.js 16.1.6", "React 19.2.3", "Tailwind CSS 4", "Radix UI", "Trigger.dev v4"],
+  "has_frontend": true,
+  "has_backend": true,
+  "ai_detected": true,
+  "test_frameworks": ["Vitest", "Playwright", "@testing-library/react", "@testing-library/dom"],
+  "database": "Supabase (PostgreSQL with pgvector)",
+  "package_manager": "npm",
+  "key_directories": [
+    "app/src/app",
+    "app/src/components",
+    "app/src/lib",
+    "app/src/trigger",
+    "app/src/hooks",
+    "app/src/types",
+    "supabase/migrations",
+    "app/test"
+  ],
+  "ai_services": ["xAI Grok", "AssemblyAI", "pgvector embeddings"],
+  "external_integrations": ["Stripe", "Resend", "Upstash Redis", "Buzzsprout API"],
+  "api_routes_count": 26
+}

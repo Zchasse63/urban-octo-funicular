@@ -1,0 +1,45 @@
+graph TD
+    subgraph CI["CI/CD Pipeline"]
+        Lint["Lint + Kokonut Drift Check"]
+        UnitTests["Unit Tests"]
+        Build["Build\n(webpack, TURBOPACK=false)"]
+        IntegTests["Integration Tests\n(conditional on HAS_TEST_SECRETS)"]
+        E2ETests["E2E Tests\n(conditional on HAS_TEST_SECRETS)"]
+        Deploy["Deploy to Netlify"]
+    end
+
+    subgraph Hosting["Netlify Hosting"]
+        NetlifyFunc["Serverless Functions\n(@netlify/plugin-nextjs)"]
+        StaticAssets["Static Assets\n(CDN)"]
+    end
+
+    subgraph ProcessingPipeline["Processing Pipeline (Trigger.dev)"]
+        MainJob["process-episode\nmaxDuration: 30 min\n3 retries"]
+        TranscribeJob["transcribe-audio\n(AssemblyAI)\ncan take up to 8h"]
+        ShowNotesJob["generate-show-notes\n(Grok)"]
+        AssetsJob["generate-assets\n(Grok, parallel)"]
+
+        note1["WARNING: 30min timeout\nvs up to 8h transcription"]
+    end
+
+    subgraph DB["Database Performance"]
+        HNSW1["HNSW Index\nvocabulary embeddings"]
+        HNSW2["HNSW Index\nepisode section embeddings"]
+        CompositeIdx["Composite Indexes\nshow_id + status\nshow_id + created_at"]
+    end
+
+    Lint --> UnitTests
+    UnitTests --> Build
+    Build --> Deploy
+    Build --> IntegTests
+    Build --> E2ETests
+
+    NetlifyFunc -->|"No Cache-Control headers"| Client["Browser Client"]
+    MainJob --> TranscribeJob
+    TranscribeJob -->|"TIMEOUT RISK"| note1
+    MainJob --> ShowNotesJob
+    MainJob --> AssetsJob
+
+    style note1 fill:#ef4444,color:#fff
+    style IntegTests fill:#f59e0b,color:#fff
+    style E2ETests fill:#f59e0b,color:#fff

@@ -1,0 +1,40 @@
+graph TD
+    subgraph Public["Public Internet"]
+        Attacker["Unauthenticated Client\n(anyone with URL)"]
+        LegitUser["Legitimate User"]
+    end
+
+    subgraph API["API Routes (26 routes - NO AUTH)"]
+        Episodes["Episode routes\n(read/write/delete)"]
+        Shows["Show routes\n(read/write/delete)"]
+        Process["Processing trigger\n(AI cost exposure)"]
+        Upload["Upload endpoint"]
+        StripeWebhook["Stripe webhooks\n(HMAC verified)"]
+        DevRoutes["Dev routes\n(/seed, /test-*)\n(devGuard only)"]
+    end
+
+    subgraph Data["Data Layer (RLS USING true)"]
+        DB["Supabase DB\n(all tables accessible\nwith anon key)"]
+        Storage["Supabase Storage\n(audio files)"]
+    end
+
+    subgraph AI["AI Costs Exposed"]
+        AssemblyAI["AssemblyAI\n(transcription cost)"]
+        Grok["xAI Grok\n(generation cost)"]
+    end
+
+    Attacker -->|No auth required| Episodes
+    Attacker -->|No auth required| Process
+    LegitUser --> Episodes
+    LegitUser --> Process
+    LegitUser --> Upload
+
+    Episodes --> DB
+    Process --> AssemblyAI
+    Process --> Grok
+    Upload --> Storage
+    StripeWebhook -->|Secured| DB
+
+    style Attacker fill:#ef4444,color:#fff
+    style StripeWebhook fill:#22c55e,color:#fff
+    style DevRoutes fill:#f59e0b,color:#fff
