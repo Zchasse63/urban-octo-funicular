@@ -1,5 +1,5 @@
 /**
- * PodBrain Motion Presets — Kinetic Alabaster
+ * PodBrain Motion Presets
  * Physics-based spring animations for purposeful motion.
  */
 

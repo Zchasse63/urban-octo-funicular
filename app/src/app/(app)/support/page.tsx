@@ -46,25 +46,25 @@ export default function SupportPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-[var(--color-accent-blue)]" />
+              <BookOpen className="h-4 w-4 text-blue-500" />
               <CardTitle>Frequently Asked Questions</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col divide-y divide-[var(--color-border)]">
+            <div className="flex flex-col divide-y divide-border">
               {faqs.map((faq, i) => (
                 <div key={i} className="py-3">
                   <button
                     onClick={() => setExpandedFaq(expandedFaq === i ? null : i)}
                     className={cn(
-                      "w-full text-left font-[family-name:var(--font-display)] text-[var(--text-body-sm)] font-medium",
-                      "text-[var(--color-text-ink)] transition-colors hover:text-[var(--color-accent-blue)]"
+                      "w-full text-left font-sans text-sm font-medium",
+                      "text-foreground transition-colors hover:text-blue-500"
                     )}
                   >
                     {faq.q}
                   </button>
                   {expandedFaq === i && (
-                    <p className="mt-2 text-[var(--text-caption)] text-[var(--color-text-secondary)]">
+                    <p className="mt-2 text-xs text-muted-foreground">
                       {faq.a}
                     </p>
                   )}
@@ -78,7 +78,7 @@ export default function SupportPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4 text-[var(--color-accent-warm)]" />
+              <MessageSquare className="h-4 w-4 text-orange-500" />
               <CardTitle>Send Feedback</CardTitle>
             </div>
           </CardHeader>

@@ -31,8 +31,7 @@ function AppShell({ children }: AppShellProps) {
     setMobileSidebarOpen((prev) => !prev)
   }, [])
 
-  // Close mobile sidebar on route change (Next.js handles this via pathname)
-  // and on escape key
+  // Close mobile sidebar on escape key
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape" && mobileSidebarOpen) {
@@ -44,26 +43,28 @@ function AppShell({ children }: AppShellProps) {
   }, [mobileSidebarOpen])
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-background text-foreground font-sans">
       {/* Desktop sidebar */}
-      <Sidebar
-        collapsed={collapsed}
-        onToggleCollapse={toggleCollapse}
-        className="hidden md:flex"
-      />
+      <div className="hidden md:flex">
+        <Sidebar
+          collapsed={collapsed}
+          onToggleCollapse={toggleCollapse}
+        />
+      </div>
 
       {/* Mobile sidebar overlay */}
       {mobileSidebarOpen && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-[var(--color-bg-overlay)] md:hidden"
+            className="fixed inset-0 z-40 bg-black/30 md:hidden"
             onClick={() => setMobileSidebarOpen(false)}
           />
-          <Sidebar
-            collapsed={false}
-            onToggleCollapse={() => setMobileSidebarOpen(false)}
-            className="fixed inset-y-0 left-0 z-50 w-60 md:hidden"
-          />
+          <div className="fixed inset-y-0 left-0 z-50 md:hidden">
+            <Sidebar
+              collapsed={false}
+              onToggleCollapse={() => setMobileSidebarOpen(false)}
+            />
+          </div>
         </>
       )}
 
@@ -74,12 +75,7 @@ function AppShell({ children }: AppShellProps) {
           onToggleSidebar={toggleMobileSidebar}
         />
 
-        <main
-          className={cn(
-            "flex-1 overflow-y-auto",
-            "px-4 py-6 sm:px-6 lg:px-8"
-          )}
-        >
+        <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-[1400px]">{children}</div>
         </main>
       </div>

@@ -32,7 +32,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('podbrain-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.setAttribute('data-theme','dark')}}catch(e){}})()`,
+            __html: `(function(){try{var t=localStorage.getItem('podbrain-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})()`,
           }}
         />
       </head>
@@ -41,13 +41,7 @@ export default function RootLayout({
         <Toaster
           position="bottom-right"
           toastOptions={{
-            style: {
-              fontFamily: "var(--font-body)",
-              background: "var(--color-bg-surface)",
-              border: "1px solid var(--color-border)",
-              color: "var(--color-text-ink)",
-              boxShadow: "var(--shadow-dropdown)",
-            },
+            className: "font-sans bg-card text-card-foreground border border-border shadow-xl",
           }}
         />
       </body>

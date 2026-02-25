@@ -4,57 +4,26 @@ import { cn } from "@/lib/utils"
 import { forwardRef } from "react"
 
 const buttonVariants = cva(
-  [
-    "inline-flex items-center justify-center gap-2",
-    "font-[family-name:var(--font-display)] font-medium",
-    "rounded-[var(--radius-sm)] transition-all",
-    "duration-[var(--duration-fast)]",
-    "focus-visible:outline-none focus-visible:shadow-[var(--shadow-focus)]",
-    "disabled:pointer-events-none disabled:opacity-50",
-    "cursor-pointer select-none",
-  ].join(" "),
+  "inline-flex items-center justify-center gap-2 font-sans font-medium rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 cursor-pointer select-none",
   {
     variants: {
       variant: {
-        primary: [
-          "bg-[var(--color-text-ink)] text-[var(--color-text-on-accent)]",
-          "shadow-[var(--shadow-button)]",
-          "hover:bg-[var(--color-text-ink)]/90",
-          "active:shadow-[var(--shadow-button-active)]",
-        ].join(" "),
-        secondary: [
-          "bg-[var(--color-bg-surface)] text-[var(--color-text-ink)]",
-          "border border-[var(--color-border-strong)]",
-          "shadow-[var(--shadow-button)]",
-          "hover:bg-[var(--color-bg-hover)]",
-          "active:shadow-[var(--shadow-button-active)]",
-        ].join(" "),
-        ghost: [
-          "text-[var(--color-text-secondary)]",
-          "hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-ink)]",
-        ].join(" "),
-        warm: [
-          "bg-[var(--color-accent-warm)] text-[var(--color-text-on-accent)]",
-          "shadow-[var(--shadow-button)]",
-          "hover:bg-[var(--color-accent-warm-hover)]",
-          "active:shadow-[var(--shadow-button-active)]",
-        ].join(" "),
-        danger: [
-          "bg-[var(--color-status-error)] text-[var(--color-text-on-accent)]",
-          "shadow-[var(--shadow-button)]",
-          "hover:bg-[var(--color-status-error)]/90",
-          "active:shadow-[var(--shadow-button-active)]",
-        ].join(" "),
-        link: [
-          "text-[var(--color-accent-blue)] underline-offset-4",
-          "hover:underline",
-          "p-0 h-auto",
-        ].join(" "),
+        primary:
+          "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 active:shadow-none",
+        secondary:
+          "bg-card text-foreground border border-border shadow-sm hover:bg-accent active:shadow-none",
+        ghost:
+          "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+        warm:
+          "bg-orange-600 text-white shadow-sm hover:bg-orange-700 active:shadow-none",
+        danger:
+          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 active:shadow-none",
+        link: "text-primary underline-offset-4 hover:underline p-0 h-auto",
       },
       size: {
-        sm: "h-8 px-3 text-[var(--text-caption)]",
-        md: "h-9 px-4 text-[var(--text-body-sm)]",
-        lg: "h-10 px-5 text-[var(--text-body)]",
+        sm: "h-8 px-3 text-xs",
+        md: "h-9 px-4 text-sm",
+        lg: "h-10 px-5 text-base",
         icon: "h-9 w-9",
       },
     },

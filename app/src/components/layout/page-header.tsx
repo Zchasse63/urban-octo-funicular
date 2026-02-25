@@ -1,5 +1,4 @@
 import { cn } from "@/lib/utils"
-import { Badge } from "@/components/ui/badge"
 import type { ReactNode } from "react"
 
 interface PageHeaderProps {
@@ -7,7 +6,6 @@ interface PageHeaderProps {
   description?: string
   badge?: {
     label: string
-    variant?: "default" | "success" | "processing" | "warm" | "blue"
   }
   actions?: ReactNode
   className?: string
@@ -29,15 +27,17 @@ function PageHeader({
     >
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-3">
-          <h1 className="font-[family-name:var(--font-display)] text-[var(--text-display)] font-bold text-[var(--color-text-ink)]">
+          <h1 className="font-sans text-2xl font-bold text-foreground">
             {title}
           </h1>
           {badge && (
-            <Badge variant={badge.variant || "default"}>{badge.label}</Badge>
+            <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+              {badge.label}
+            </span>
           )}
         </div>
         {description && (
-          <p className="text-[var(--text-body-sm)] text-[var(--color-text-secondary)]">
+          <p className="text-sm text-muted-foreground">
             {description}
           </p>
         )}

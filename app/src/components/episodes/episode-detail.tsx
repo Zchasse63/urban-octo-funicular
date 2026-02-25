@@ -1,0 +1,1282 @@
+"use client"
+
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ArrowLeft, CheckCircle2, Loader2, Circle, ChevronRight, BarChart2, Zap, FileText, Package, AlignLeft, User, Brain, RefreshCw, Download, Copy, Check, Sparkles, Link2, Hash, Target, TrendingUp, AlertCircle, Globe, Clock, Mic2, MessageSquare, Twitter, Linkedin, Youtube, Mail, Image, BookOpen, Users, Wand2, Play, Volume2, ExternalLink, ChevronDown, ArrowUpRight, Radio, Activity, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+type Tab = 'show-notes' | 'assets' | 'transcript' | 'guest' | 'intelligence';
+type ProcessingStep = 'upload' | 'transcribe' | 'generate' | 'ready';
+type StepStatus = 'done' | 'active' | 'pending';
+type AssetStatus = 'generated' | 'generating' | 'idle';
+interface SignalStep {
+  id: ProcessingStep;
+  label: string;
+  status: StepStatus;
+}
+interface AssetItem {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  description: string;
+  status: AssetStatus;
+  accentColor: string;
+}
+interface AssetCategory {
+  id: string;
+  label: string;
+  dot: string;
+  iconBg: string;
+  countColor: string;
+  assets: AssetItem[];
+}
+interface TranscriptSegment {
+  id: string;
+  speaker: string;
+  speakerInitial: string;
+  speakerColor: string;
+  timestamp: string;
+  text: string;
+}
+
+// ─── Signal Chain ─────────────────────────────────────────────────────────────
+
+const SIGNAL_STEPS: SignalStep[] = [{
+  id: 'upload',
+  label: 'Upload',
+  status: 'done'
+}, {
+  id: 'transcribe',
+  label: 'Transcribe',
+  status: 'done'
+}, {
+  id: 'generate',
+  label: 'Generate',
+  status: 'done'
+}, {
+  id: 'ready',
+  label: 'Ready',
+  status: 'done'
+}];
+const stepStatusConfig: Record<StepStatus, {
+  dot: string;
+  text: string;
+  connector: string;
+}> = {
+  done: {
+    dot: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.45)] border-emerald-400',
+    text: 'text-emerald-700',
+    connector: 'bg-emerald-300'
+  },
+  active: {
+    dot: 'bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)] border-amber-300 animate-pulse',
+    text: 'text-amber-700',
+    connector: 'bg-muted'
+  },
+  pending: {
+    dot: 'bg-stone-200 border-stone-300',
+    text: 'text-muted-foreground/70',
+    connector: 'bg-muted'
+  }
+};
+const SignalChain = ({
+  steps
+}: {
+  steps: SignalStep[];
+}) => <div className="flex items-center gap-0">
+    {steps.map((step, i) => {
+    const cfg = stepStatusConfig[step.status];
+    return <React.Fragment key={step.id}>
+          <div className="flex flex-col items-center gap-1">
+            <div className={cn('w-2.5 h-2.5 rounded-full border', cfg.dot)} />
+            <span className={cn('font-mono text-[9px] font-bold uppercase tracking-widest', cfg.text)}>
+              {step.label}
+            </span>
+          </div>
+          {i < steps.length - 1 && <div className={cn('h-[2px] w-7 mb-3 rounded-full', step.status === 'done' ? 'bg-emerald-300' : 'bg-muted')} />}
+        </React.Fragment>;
+  })}
+  </div>;
+
+// ─── Tab Bar ─────────────────────────────────────────────────────────────────
+
+const TAB_CONFIG: {
+  id: Tab;
+  label: string;
+  icon: React.ElementType;
+}[] = [{
+  id: 'show-notes',
+  label: 'Show Notes',
+  icon: FileText
+}, {
+  id: 'assets',
+  label: 'Assets',
+  icon: Package
+}, {
+  id: 'transcript',
+  label: 'Transcript',
+  icon: AlignLeft
+}, {
+  id: 'guest',
+  label: 'Guest Package',
+  icon: User
+}, {
+  id: 'intelligence',
+  label: 'Intelligence',
+  icon: Brain
+}];
+
+// ─── SEO Score Gauge ─────────────────────────────────────────────────────────
+
+const SEOGauge = ({
+  score
+}: {
+  score: number;
+}) => {
+  const radius = 36;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - score / 100 * circumference;
+  const color = score >= 90 ? '#10b981' : score >= 75 ? '#0ea5e9' : score >= 60 ? '#f59e0b' : '#ef4444';
+  const label = score >= 90 ? 'Excellent' : score >= 75 ? 'Good' : score >= 60 ? 'Fair' : 'Poor';
+  return <div className="flex flex-col items-center gap-2">
+      <div className="relative">
+        <svg width="96" height="96" viewBox="0 0 96 96">
+          <circle cx="48" cy="48" r={radius} fill="none" stroke="#e7e5e4" strokeWidth="6" />
+          <motion.circle cx="48" cy="48" r={radius} fill="none" stroke={color} strokeWidth="6" strokeLinecap="round" strokeDasharray={circumference} initial={{
+          strokeDashoffset: circumference
+        }} animate={{
+          strokeDashoffset
+        }} transition={{
+          duration: 1.2,
+          ease: 'easeOut' as const,
+          delay: 0.2
+        }} transform="rotate(-90 48 48)" style={{
+          filter: `drop-shadow(0 0 4px ${color}60)`
+        }} />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="font-mono text-2xl font-bold text-foreground leading-none">{score}</span>
+          <span className="font-sans text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70 leading-none mt-0.5">SEO</span>
+        </div>
+      </div>
+      <span className="font-sans text-xs font-semibold" style={{
+      color
+    }}>{label}</span>
+    </div>;
+};
+
+// ─── SEO Breakdown ───────────────────────────────────────────────────────────
+
+interface SEOMetric {
+  label: string;
+  score: number;
+  icon: React.ElementType;
+  note: string;
+}
+const SEO_METRICS: SEOMetric[] = [{
+  label: 'Title Optimisation',
+  score: 96,
+  icon: Hash,
+  note: 'Strong keyword match'
+}, {
+  label: 'Description',
+  score: 88,
+  icon: FileText,
+  note: 'Good length & density'
+}, {
+  label: 'Keyword Density',
+  score: 91,
+  icon: Target,
+  note: '3 primary, 8 secondary'
+}, {
+  label: 'Readability',
+  score: 84,
+  icon: BookOpen,
+  note: 'Flesch score: 72'
+}, {
+  label: 'Internal Links',
+  score: 72,
+  icon: Link2,
+  note: 'Add 2 more links'
+}, {
+  label: 'Media Tags',
+  score: 100,
+  icon: Globe,
+  note: 'All tags complete'
+}];
+const SEOMetricRow = ({
+  metric
+}: {
+  metric: SEOMetric;
+}) => {
+  const Icon = metric.icon;
+  const color = metric.score >= 90 ? 'bg-emerald-400' : metric.score >= 75 ? 'bg-sky-400' : 'bg-amber-400';
+  return <div className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
+      <div className="w-6 h-6 rounded bg-muted flex items-center justify-center flex-shrink-0">
+        <Icon className="w-3 h-3 text-muted-foreground/70" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-1">
+          <span className="font-sans text-[11px] font-medium text-foreground/80 truncate">{metric.label}</span>
+          <span className="font-mono text-[10px] font-bold text-muted-foreground ml-2">{metric.score}</span>
+        </div>
+        <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+          <motion.div initial={{
+          width: 0
+        }} animate={{
+          width: `${metric.score}%`
+        }} transition={{
+          duration: 0.7,
+          ease: 'easeOut' as const,
+          delay: 0.4
+        }} className={cn('h-full rounded-full', color)} />
+        </div>
+      </div>
+    </div>;
+};
+
+// ─── Show Notes Tab ───────────────────────────────────────────────────────────
+
+const CopyButton = ({
+  text
+}: {
+  text: string;
+}) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
+  return <button onClick={handleCopy} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-muted-foreground/70 hover:text-foreground/80 hover:bg-accent border border-transparent hover:border-border transition-all text-[11px] font-sans font-medium">
+      {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+      {copied ? 'Copied' : 'Copy'}
+    </button>;
+};
+const listVariants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.06
+    }
+  }
+};
+const listItemVariants = {
+  hidden: {
+    opacity: 0,
+    y: 10
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.22,
+      ease: 'easeOut' as const
+    }
+  }
+};
+const ShowNotesTab = () => <div className="flex gap-6 h-full">
+    {/* ── Left: Rich show notes ── */}
+    <div className="flex-1 min-w-0">
+      <div className="bg-card border border-border rounded-lg overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-muted/50">
+          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Show Notes</span>
+          <div className="flex items-center gap-1">
+            <CopyButton text="Show notes content" />
+            <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-muted-foreground/70 hover:text-foreground/80 hover:bg-accent border border-transparent hover:border-border transition-all text-[11px] font-sans font-medium">
+              <Download className="w-3 h-3" />
+              Export
+            </button>
+            <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-stone-900 text-white hover:bg-stone-800 transition-colors text-[11px] font-sans font-semibold ml-1 shadow-sm">
+              <RefreshCw className="w-3 h-3" />
+              Regenerate
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="px-8 py-7 space-y-5 font-serif text-foreground/80 leading-relaxed max-h-[calc(100vh-320px)] overflow-y-auto">
+          <h2 className="font-sans font-bold text-xl text-foreground tracking-tight leading-tight">
+            The Stoic Entrepreneur — Lessons from Marcus Aurelius
+          </h2>
+
+          <p className="text-[14.5px] leading-[1.8] text-muted-foreground">
+            What happens when you apply 2,000-year-old Stoic philosophy to the chaos of modern startup culture? In this episode, we dive deep into{' '}
+            <em>Meditations</em> by Marcus Aurelius and extract surprisingly actionable frameworks for founders navigating uncertainty, pressure, and rapid change.
+          </p>
+
+          <div>
+            <h3 className="font-sans font-semibold text-sm text-foreground uppercase tracking-widest mb-3 flex items-center gap-2">
+              <span className="w-4 h-[2px] bg-border rounded-full inline-block" />
+              What You'll Learn
+            </h3>
+            <ul className="space-y-2.5 text-[14px] text-muted-foreground">
+              {['The "obstacle is the way" reframe for startup setbacks and pivots', 'Marcus Aurelius\'s daily journaling practice and how to adapt it for founder reflection', 'Why Stoic indifference to outcomes can paradoxically improve decision-making', 'How to apply the Dichotomy of Control to team management and investor relationships', 'The role of <em>memento mori</em> thinking in long-term product vision'].map((item, i) => <li key={i} className="flex items-start gap-3">
+                  <span className="font-mono text-[10px] text-muted-foreground/70 mt-1 select-none">{String(i + 1).padStart(2, '0')}</span>
+                  <span dangerouslySetInnerHTML={{
+                __html: item
+              }} />
+                </li>)}
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="font-sans font-semibold text-sm text-foreground uppercase tracking-widest mb-3 flex items-center gap-2">
+              <span className="w-4 h-[2px] bg-border rounded-full inline-block" />
+              Key Quotes
+            </h3>
+            <blockquote className="border-l-[3px] border-border pl-4 py-1 my-4">
+              <p className="text-[14px] italic text-muted-foreground leading-relaxed">
+                "You have power over your mind — not outside events. Realise this and you will find strength."
+              </p>
+              <cite className="font-mono text-[10px] text-muted-foreground/70 not-italic mt-1 block">— Marcus Aurelius, Meditations</cite>
+            </blockquote>
+          </div>
+
+          <div>
+            <h3 className="font-sans font-semibold text-sm text-foreground uppercase tracking-widest mb-3 flex items-center gap-2">
+              <span className="w-4 h-[2px] bg-border rounded-full inline-block" />
+              Resources Mentioned
+            </h3>
+            <div className="space-y-2">
+              {[{
+              title: 'Meditations — Marcus Aurelius',
+              url: '#',
+              type: 'Book'
+            }, {
+              title: 'The Obstacle Is The Way — Ryan Holiday',
+              url: '#',
+              type: 'Book'
+            }, {
+              title: 'Daily Stoic Newsletter',
+              url: '#',
+              type: 'Newsletter'
+            }].map((res, i) => <div key={i} className="flex items-center gap-2.5 py-1.5 group cursor-pointer">
+                  <ExternalLink className="w-3 h-3 text-muted-foreground/70 group-hover:text-accent-foreground transition-colors flex-shrink-0" />
+                  <span className="text-[13px] text-muted-foreground group-hover:text-foreground transition-colors">{res.title}</span>
+                  <span className="font-mono text-[9px] text-muted-foreground/70 bg-muted px-1.5 py-0.5 rounded-full border border-border">{res.type}</span>
+                </div>)}
+            </div>
+          </div>
+
+          <div className="h-4" />
+        </div>
+      </div>
+    </div>
+
+    {/* ── Right: SEO Panel ── */}
+    <div className="w-[248px] flex-shrink-0 space-y-3">
+      {/* Score card */}
+      <div className="bg-card border border-border rounded-lg p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+        <div className="flex items-center justify-between mb-4">
+          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">SEO Score</span>
+          <BarChart2 aria-label="SEO score breakdown" className="w-3.5 h-3.5 text-muted-foreground/70" />
+        </div>
+        <div className="flex justify-center mb-4">
+          <SEOGauge score={94} />
+        </div>
+        <div className="space-y-0">
+          {SEO_METRICS.map(m => <SEOMetricRow key={m.label} metric={m} />)}
+        </div>
+      </div>
+
+      {/* Keywords card */}
+      <div className="bg-card border border-border rounded-lg p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 block mb-3">Top Keywords</span>
+        <div className="flex flex-wrap gap-1.5">
+          {['stoic philosophy', 'entrepreneur mindset', 'Marcus Aurelius', 'startup resilience', 'mental models', 'meditations', 'decision making'].map(kw => <span key={kw} className="font-sans text-[10px] text-muted-foreground bg-muted/80 border border-border px-2 py-0.5 rounded-full">
+              {kw}
+            </span>)}
+        </div>
+      </div>
+
+      {/* Suggestions card */}
+      <div className="bg-amber-50 border border-amber-200/60 rounded-lg p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+          <span className="font-sans text-[11px] font-semibold text-amber-700">2 Suggestions</span>
+        </div>
+        <ul className="space-y-2">
+          {['Add 2 more internal links to related episodes', 'Consider a FAQ section for featured snippet targeting'].map((s, i) => <li key={i} className="flex items-start gap-2 text-[11px] text-amber-700 leading-relaxed">
+              <span className="font-mono text-amber-400 mt-0.5">→</span>
+              {s}
+            </li>)}
+        </ul>
+      </div>
+    </div>
+  </div>;
+
+// ─── Assets Tab ───────────────────────────────────────────────────────────────
+
+const ASSET_CATEGORIES: AssetCategory[] = [{
+  id: 'core',
+  label: 'Core',
+  dot: 'bg-emerald-500',
+  iconBg: 'bg-emerald-50 border-emerald-200/60',
+  countColor: 'text-emerald-600 bg-emerald-50 border-emerald-200/60',
+  assets: [{
+    id: 'show-notes',
+    label: 'Show Notes',
+    icon: FileText,
+    description: 'Full editorial show notes with timestamps',
+    status: 'generated',
+    accentColor: 'text-emerald-600'
+  }, {
+    id: 'chapter-markers',
+    label: 'Chapter Markers',
+    icon: Hash,
+    description: 'Timestamped chapter titles for podcast apps',
+    status: 'generated',
+    accentColor: 'text-emerald-600'
+  }, {
+    id: 'episode-description',
+    label: 'Episode Description',
+    icon: AlignLeft,
+    description: 'RSS feed description (500 chars)',
+    status: 'generated',
+    accentColor: 'text-emerald-600'
+  }]
+}, {
+  id: 'social',
+  label: 'Social',
+  dot: 'bg-sky-500',
+  iconBg: 'bg-sky-50 border-sky-200/60',
+  countColor: 'text-sky-600 bg-sky-50 border-sky-200/60',
+  assets: [{
+    id: 'twitter-thread',
+    label: 'Twitter/X Thread',
+    icon: Twitter,
+    description: '8-tweet thread with key insights',
+    status: 'generated',
+    accentColor: 'text-sky-600'
+  }, {
+    id: 'linkedin-post',
+    label: 'LinkedIn Post',
+    icon: Linkedin,
+    description: 'Long-form professional post',
+    status: 'idle',
+    accentColor: 'text-sky-600'
+  }, {
+    id: 'instagram-captions',
+    label: 'Instagram Captions',
+    icon: Image,
+    description: '3 caption variations with hashtags',
+    status: 'idle',
+    accentColor: 'text-sky-600'
+  }]
+}, {
+  id: 'longform',
+  label: 'Long-form',
+  dot: 'bg-violet-500',
+  iconBg: 'bg-violet-50 border-violet-200/60',
+  countColor: 'text-violet-600 bg-violet-50 border-violet-200/60',
+  assets: [{
+    id: 'blog-post',
+    label: 'Blog Article',
+    icon: BookOpen,
+    description: '1,200-word SEO article with structure',
+    status: 'generated',
+    accentColor: 'text-violet-600'
+  }, {
+    id: 'newsletter',
+    label: 'Newsletter Issue',
+    icon: Mail,
+    description: 'Email digest of episode highlights',
+    status: 'idle',
+    accentColor: 'text-violet-600'
+  }]
+}, {
+  id: 'guest',
+  label: 'Guest',
+  dot: 'bg-amber-500',
+  iconBg: 'bg-amber-50 border-amber-200/60',
+  countColor: 'text-amber-600 bg-amber-50 border-amber-200/60',
+  assets: [{
+    id: 'guest-bio',
+    label: 'Guest Bio',
+    icon: User,
+    description: 'Formatted guest bio for show notes',
+    status: 'idle',
+    accentColor: 'text-amber-600'
+  }, {
+    id: 'guest-email',
+    label: 'Post-show Email',
+    icon: Mail,
+    description: 'Thank-you email template for guest',
+    status: 'idle',
+    accentColor: 'text-amber-600'
+  }]
+}, {
+  id: 'visual',
+  label: 'Visual',
+  dot: 'bg-rose-500',
+  iconBg: 'bg-rose-50 border-rose-200/60',
+  countColor: 'text-rose-600 bg-rose-50 border-rose-200/60',
+  assets: [{
+    id: 'audiogram-script',
+    label: 'Audiogram Script',
+    icon: Volume2,
+    description: 'Key quote for 60s audiogram clip',
+    status: 'generated',
+    accentColor: 'text-rose-600'
+  }, {
+    id: 'youtube-desc',
+    label: 'YouTube Description',
+    icon: Youtube,
+    description: 'Full YT description with timestamps',
+    status: 'idle',
+    accentColor: 'text-rose-600'
+  }]
+}, {
+  id: 'ai-summary',
+  label: 'AI Summary',
+  dot: 'bg-stone-500',
+  iconBg: 'bg-muted border-border',
+  countColor: 'text-muted-foreground bg-muted border-border',
+  assets: [{
+    id: '1-liner',
+    label: 'One-liner Summary',
+    icon: Zap,
+    description: 'One sentence episode summary',
+    status: 'generated',
+    accentColor: 'text-muted-foreground'
+  }, {
+    id: 'tldr',
+    label: 'TL;DR Bullets',
+    icon: AlignLeft,
+    description: '5 key takeaways from the episode',
+    status: 'generated',
+    accentColor: 'text-muted-foreground'
+  }]
+}];
+
+// ─── Generate All Progress Overlay ───────────────────────────────────────────
+
+const IDLE_ASSETS_BY_CAT = ASSET_CATEGORIES.filter(cat => cat.assets.some(a => a.status === 'idle')).map(cat => ({
+  id: cat.id,
+  label: cat.label,
+  dot: cat.dot,
+  idleCount: cat.assets.filter(a => a.status === 'idle').length
+}));
+interface GenerateAllOverlayProps {
+  onComplete: () => void;
+  onDismiss: () => void;
+}
+const GenerateAllOverlay = ({
+  onComplete,
+  onDismiss
+}: GenerateAllOverlayProps) => {
+  const [completedIds, setCompletedIds] = useState<string[]>([]);
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [done, setDone] = useState(false);
+  const total = IDLE_ASSETS_BY_CAT.reduce((sum, c) => sum + c.idleCount, 0);
+  const completedAssets = IDLE_ASSETS_BY_CAT.filter(c => completedIds.includes(c.id)).reduce((sum, c) => sum + c.idleCount, 0);
+  useEffect(() => {
+    if (currentIdx >= IDLE_ASSETS_BY_CAT.length) {
+      setTimeout(() => {
+        setDone(true);
+        setTimeout(() => onComplete(), 900);
+      }, 400);
+      return;
+    }
+    const cat = IDLE_ASSETS_BY_CAT[currentIdx];
+    // stagger per-asset delay within each category
+    const delay = 600 + cat.idleCount * 280;
+    const timer = setTimeout(() => {
+      setCompletedIds(prev => [...prev, cat.id]);
+      setCurrentIdx(i => i + 1);
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [currentIdx]);
+  const progress = total > 0 ? completedAssets / total * 100 : 0;
+  return <motion.div initial={{
+    opacity: 0,
+    y: 8,
+    scale: 0.98
+  }} animate={{
+    opacity: 1,
+    y: 0,
+    scale: 1
+  }} exit={{
+    opacity: 0,
+    y: -6,
+    scale: 0.98
+  }} transition={{
+    duration: 0.22,
+    ease: 'easeOut' as const
+  }} className="bg-stone-900 rounded-xl border border-stone-700/60 shadow-[0_8px_32px_rgba(0,0,0,0.22)] overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-4 border-b border-stone-700/50">
+        <div className="flex items-center gap-2.5">
+          <div className="relative">
+            {done ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />}
+          </div>
+          <span className="font-sans text-[13px] font-semibold text-stone-100">
+            {done ? 'All assets generated!' : 'Generating remaining assets\u2026'}
+          </span>
+        </div>
+        <button onClick={onDismiss} aria-label="Dismiss" className="p-1 rounded-md text-stone-500 hover:text-stone-300 hover:bg-stone-800 transition-colors">
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Progress bar */}
+      <div className="px-5 pt-4 pb-2">
+        <div className="flex items-center gap-1 mb-2">
+          <span className="font-mono text-[10px] text-stone-500 font-bold uppercase tracking-widest">
+            Progress
+          </span>
+          <span className="font-mono text-[11px] text-stone-300 font-bold">
+            {completedAssets}/{total} assets
+          </span>
+        </div>
+        <div className="h-1.5 w-full bg-stone-700/60 rounded-full overflow-hidden">
+          <motion.div animate={{
+          width: `${progress}%`
+        }} transition={{
+          duration: 0.5,
+          ease: 'easeOut' as const
+        }} className={cn('h-full rounded-full', done ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.4)]')} />
+        </div>
+      </div>
+
+      {/* Category checklist */}
+      <div className="px-5 py-3 space-y-1.5">
+        {IDLE_ASSETS_BY_CAT.map((cat, i) => {
+        const isCompleted = completedIds.includes(cat.id);
+        const isRunning = i === currentIdx;
+        return <motion.div key={cat.id} initial={{
+          opacity: 0,
+          x: -6
+        }} animate={{
+          opacity: 1,
+          x: 0
+        }} transition={{
+          delay: i * 0.06,
+          duration: 0.2
+        }} className={cn('flex items-center gap-3 px-3 py-2 rounded-lg transition-colors', isRunning && !isCompleted ? 'bg-stone-800/80' : 'bg-transparent')}>
+              <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
+                {isCompleted ? <motion.div initial={{
+              scale: 0
+            }} animate={{
+              scale: 1
+            }} transition={{
+              type: 'spring',
+              stiffness: 400,
+              damping: 20
+            }}>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  </motion.div> : isRunning ? <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin" /> : <div className="w-3.5 h-3.5 rounded-full border border-stone-600" />}
+              </div>
+              <div className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', cat.dot)} />
+              <span className={cn('font-sans text-[12px] font-medium flex-1', isCompleted ? 'text-stone-400 line-through decoration-stone-600' : isRunning ? 'text-stone-100' : 'text-stone-500')}>
+                {cat.label}
+              </span>
+              <span className="font-mono text-[10px] text-muted-foreground">
+                {cat.idleCount} asset{cat.idleCount > 1 ? 's' : ''}
+              </span>
+            </motion.div>;
+      })}
+      </div>
+
+      {done && <motion.div initial={{
+      opacity: 0
+    }} animate={{
+      opacity: 1
+    }} className="px-5 pb-4 pt-1">
+          <p className="font-sans text-[11px] text-emerald-400/80 text-center">
+            All {total} assets are ready to use
+          </p>
+        </motion.div>}
+    </motion.div>;
+};
+
+// ─── Asset Row (with category-colored icon bg) ───────────────────────────────
+
+const AssetRow = ({
+  asset,
+  iconBg,
+  index
+}: {
+  asset: AssetItem;
+  iconBg: string;
+  index: number;
+}) => {
+  const [status, setStatus] = useState<AssetStatus>(asset.status);
+  const Icon = asset.icon;
+  const handleGenerate = () => {
+    if (status !== 'idle') return;
+    setStatus('generating');
+    setTimeout(() => setStatus('generated'), 2200);
+  };
+  return <motion.div variants={listItemVariants} className="flex items-center gap-4 py-2.5 px-4 rounded-lg hover:bg-accent/50 transition-colors group">
+      <div className={cn('w-8 h-8 rounded-lg border flex items-center justify-center flex-shrink-0', iconBg)}>
+        <Icon className={cn('w-3.5 h-3.5', asset.accentColor)} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-0.5">
+          <span className="font-sans text-[13px] font-medium text-foreground">{asset.label}</span>
+          {status === 'generated' && <span className="flex items-center gap-1 font-mono text-[9px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+              <CheckCircle2 className="w-2.5 h-2.5" />
+              Ready
+            </span>}
+        </div>
+        <p className="font-sans text-[11px] text-muted-foreground/70">{asset.description}</p>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {status === 'generated' && <>
+            <button aria-label={`Copy ${asset.label}`} className="p-1.5 rounded-md text-muted-foreground/70 hover:text-accent-foreground hover:bg-accent transition-all opacity-0 group-hover:opacity-100">
+              <Copy className="w-3.5 h-3.5" />
+            </button>
+            <button aria-label={`Download ${asset.label}`} className="p-1.5 rounded-md text-muted-foreground/70 hover:text-accent-foreground hover:bg-accent transition-all opacity-0 group-hover:opacity-100">
+              <Download className="w-3.5 h-3.5" />
+            </button>
+          </>}
+        {status === 'generating' && <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-50 border border-amber-200/60 text-[10px] font-sans font-semibold text-amber-600">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            Generating…
+          </div>}
+        {status === 'idle' && <button onClick={handleGenerate} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-stone-900 text-white text-[10px] font-sans font-semibold hover:bg-stone-800 transition-colors shadow-sm">
+            <Wand2 className="w-3 h-3" />
+            Generate
+          </button>}
+      </div>
+    </motion.div>;
+};
+
+// ─── Category Card with stagger ──────────────────────────────────────────────
+
+const CategoryCard = ({
+  cat,
+  catIndex
+}: {
+  cat: AssetCategory;
+  catIndex: number;
+}) => {
+  const readyCount = cat.assets.filter(a => a.status === 'generated').length;
+  const total = cat.assets.length;
+  const allReady = readyCount === total;
+  return <motion.div variants={listVariants} className="bg-card border border-border rounded-lg overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+      {/* Category Header */}
+      <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border/50 bg-muted/50">
+        <div className={cn('w-2 h-2 rounded-full flex-shrink-0', cat.dot)} />
+        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{cat.label}</span>
+        <span className="ml-auto">
+          <span className={cn('font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-full border', allReady ? 'text-emerald-600 bg-emerald-50 border-emerald-200/60' : cat.countColor)}>
+            {readyCount}/{total} ready
+          </span>
+        </span>
+      </div>
+
+      {/* Assets */}
+      <motion.div className="divide-y divide-border/50" variants={listVariants} initial="hidden" animate="visible">
+        {cat.assets.map((asset, i) => <AssetRow key={asset.id} asset={asset} iconBg={cat.iconBg} index={i} />)}
+      </motion.div>
+    </motion.div>;
+};
+const AssetsTab = () => {
+  const [showOverlay, setShowOverlay] = useState(false);
+  const [allGenerated, setAllGenerated] = useState(false);
+  const handleGenerateAll = () => {
+    setShowOverlay(true);
+    setAllGenerated(false);
+  };
+  return <div className="space-y-4">
+      {/* Header row */}
+      <div className="flex items-center justify-between px-1">
+        <div>
+          <p className="font-sans text-sm text-muted-foreground">
+            <span className="font-semibold text-foreground">7 of 14</span> assets generated
+          </p>
+        </div>
+        <button onClick={handleGenerateAll} disabled={showOverlay} className={cn('flex items-center gap-2 px-4 py-2 rounded-lg text-[12px] font-sans font-semibold transition-all shadow-sm', showOverlay ? 'bg-stone-700 text-stone-400 cursor-not-allowed' : 'bg-stone-900 text-white hover:bg-stone-800')}>
+          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+          Generate All Remaining
+        </button>
+      </div>
+
+      {/* Generate All Progress Overlay */}
+      <AnimatePresence>
+        {showOverlay && <GenerateAllOverlay onComplete={() => {
+        setAllGenerated(true);
+        setShowOverlay(false);
+      }} onDismiss={() => setShowOverlay(false)} />}
+      </AnimatePresence>
+
+      {/* Category Cards with stagger */}
+      <motion.div className="space-y-4" variants={listVariants} initial="hidden" animate="visible">
+        {ASSET_CATEGORIES.map((cat, i) => <CategoryCard key={cat.id} cat={cat} catIndex={i} />)}
+      </motion.div>
+    </div>;
+};
+
+// ─── Transcript Tab ───────────────────────────────────────────────────────────
+
+const TRANSCRIPT: TranscriptSegment[] = [{
+  id: 't1',
+  speaker: 'Host',
+  speakerInitial: 'H',
+  speakerColor: 'bg-stone-800 text-stone-100',
+  timestamp: '00:00',
+  text: "Welcome back to The Daily Focus. I'm your host, and today we're doing something a little different — instead of a guest interview, I want to walk you through something I've been personally obsessing over for the past three months."
+}, {
+  id: 't2',
+  speaker: 'Host',
+  speakerInitial: 'H',
+  speakerColor: 'bg-stone-800 text-stone-100',
+  timestamp: '00:22',
+  text: "That thing is Marcus Aurelius. Specifically, his private journal — which we now call Meditations. A Roman emperor who never intended his writing to be published, just talking to himself about how to be better. How to think clearer. How to lead without losing himself."
+}, {
+  id: 't3',
+  speaker: 'Host',
+  speakerInitial: 'H',
+  speakerColor: 'bg-stone-800 text-stone-100',
+  timestamp: '01:04',
+  text: "And I've been thinking — what would Marcus do with a startup? With a team of twelve people burning through runway? With a launch that just flopped? Let's get into it."
+}, {
+  id: 't4',
+  speaker: 'Marcus [AI Voice]',
+  speakerInitial: 'M',
+  speakerColor: 'bg-amber-600 text-white',
+  timestamp: '03:17',
+  text: "\"You have power over your mind — not outside events. Realise this and you will find strength.\" This was not a motivational poster. This was a man reminding himself, daily, that the only domain he truly controlled was his own rational faculty."
+}, {
+  id: 't5',
+  speaker: 'Host',
+  speakerInitial: 'H',
+  speakerColor: 'bg-stone-800 text-stone-100',
+  timestamp: '04:01',
+  text: "And this is directly applicable. Because as a founder, as a creator, as anyone building something — you are surrounded by things you cannot control. Algorithms. Investor moods. Co-founder disagreements. Platform changes. The market."
+}, {
+  id: 't6',
+  speaker: 'Host',
+  speakerInitial: 'H',
+  speakerColor: 'bg-stone-800 text-stone-100',
+  timestamp: '05:44',
+  text: "The Stoic move is not detachment — it's discernment. Knowing what's yours to act on, and what you release. This is the dichotomy of control. And it's not passive. It's surgical. You focus all your energy on the slice that matters."
+}, {
+  id: 't7',
+  speaker: 'Marcus [AI Voice]',
+  speakerInitial: 'M',
+  speakerColor: 'bg-amber-600 text-white',
+  timestamp: '08:33',
+  text: "\"The impediment to action advances action. What stands in the way becomes the way.\" This is perhaps the most startup-relevant line in all of Meditations. The obstacle isn't a detour from the path. It is the path."
+}, {
+  id: 't8',
+  speaker: 'Host',
+  speakerInitial: 'H',
+  speakerColor: 'bg-stone-800 text-stone-100',
+  timestamp: '09:12',
+  text: "Ryan Holiday built an entire movement around this one idea. And rightly so. Because when you're building — you will hit walls. Not occasionally. Constantly. And the Stoic reframe is: what is this teaching me? How does solving this sharpen the product?"
+}];
+
+// ─── Highlight matched text ───────────────────────────────────────────────────
+
+const HighlightedText = ({
+  text,
+  query
+}: {
+  text: string;
+  query: string;
+}) => {
+  if (!query.trim()) return <>{text}</>;
+  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  const parts = text.split(regex);
+  return <>
+      {parts.map((part, i) => regex.test(part) ? <mark key={i} className="bg-amber-200/70 text-amber-900 rounded-sm px-0.5 not-italic">
+            {part}
+          </mark> : <React.Fragment key={i}>{part}</React.Fragment>)}
+    </>;
+};
+const TranscriptTab = () => {
+  const [searchQ, setSearchQ] = useState('');
+  const filtered = TRANSCRIPT.filter(s => !searchQ || s.text.toLowerCase().includes(searchQ.toLowerCase()) || s.speaker.toLowerCase().includes(searchQ.toLowerCase()));
+  const matchCount = searchQ.trim() ? filtered.reduce((acc, seg) => {
+    const re = new RegExp(searchQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    return acc + (seg.text.match(re)?.length ?? 0);
+  }, 0) : 0;
+  return <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Activity className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/70 pointer-events-none" />
+          <input type="text" placeholder="Search transcript…" value={searchQ} onChange={e => setSearchQ(e.target.value)} className="w-full pl-9 pr-4 py-2 rounded-lg text-sm font-sans text-foreground placeholder:text-muted-foreground bg-card border border-border focus:outline-none focus:border-ring focus:shadow-[0_0_0_3px_rgba(120,113,108,0.1)] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.04)]" />
+          {/* Match count badge */}
+          <AnimatePresence>
+            {searchQ.trim() && <motion.span initial={{
+            opacity: 0,
+            scale: 0.8
+          }} animate={{
+            opacity: 1,
+            scale: 1
+          }} exit={{
+            opacity: 0,
+            scale: 0.8
+          }} transition={{
+            duration: 0.15
+          }} className="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-[10px] font-bold text-amber-700 bg-amber-100 border border-amber-200/70 px-1.5 py-0.5 rounded-full">
+                {matchCount} match{matchCount !== 1 ? 'es' : ''}
+              </motion.span>}
+          </AnimatePresence>
+        </div>
+        <div className="flex items-center gap-1.5 px-3 py-2 bg-card border border-border rounded-lg">
+          <Radio className="w-3 h-3 text-emerald-500" />
+          <span className="font-mono text-[10px] font-bold text-muted-foreground">{TRANSCRIPT.length} segments</span>
+        </div>
+        <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-muted-foreground hover:text-accent-foreground bg-card border border-border hover:border-border transition-all text-[11px] font-sans font-medium">
+          <Download className="w-3.5 h-3.5" />
+          Export SRT
+        </button>
+      </div>
+
+      <div className="bg-card border border-border rounded-lg overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+        <AnimatePresence mode="wait">
+          <motion.div key={searchQ} variants={listVariants} initial="hidden" animate="visible" className="divide-y divide-border/50">
+            {filtered.length === 0 ? <motion.div variants={listItemVariants} className="flex flex-col items-center justify-center py-14 gap-3">
+                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                  <Activity className="w-5 h-5 text-muted-foreground/70" />
+                </div>
+                <p className="font-sans text-sm text-muted-foreground/70">No results for <span className="font-semibold text-muted-foreground">&quot;{searchQ}&quot;</span></p>
+              </motion.div> : filtered.map((seg, i) => <motion.div key={seg.id} variants={listItemVariants} className="flex gap-4 px-5 py-4 hover:bg-accent/50 transition-colors group">
+                  {/* Timestamp */}
+                  <div className="flex-shrink-0 w-12 text-right pt-0.5">
+                    <span className="font-mono text-[10px] font-bold text-muted-foreground/70 group-hover:text-muted-foreground transition-colors">
+                      {seg.timestamp}
+                    </span>
+                  </div>
+
+                  {/* Speaker avatar */}
+                  <div className="flex-shrink-0">
+                    <div className={cn('w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-mono font-bold mt-0.5', seg.speakerColor)}>
+                      {seg.speakerInitial}
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="font-sans text-[11px] font-semibold text-muted-foreground">{seg.speaker}</span>
+                      {seg.speaker.includes('AI') && <span className="font-mono text-[9px] text-amber-600 bg-amber-50 border border-amber-200/60 px-1.5 py-0.5 rounded-full">AI Voice</span>}
+                    </div>
+                    <p className="font-serif text-[13.5px] text-muted-foreground leading-[1.75]">
+                      <HighlightedText text={seg.text} query={searchQ} />
+                    </p>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-start gap-1 pt-0.5">
+                    <button className="p-1 rounded text-muted-foreground/70 hover:text-accent-foreground hover:bg-accent transition-all">
+                      <Copy className="w-3 h-3" />
+                    </button>
+                    <button className="p-1 rounded text-muted-foreground/70 hover:text-accent-foreground hover:bg-accent transition-all">
+                      <Play className="w-3 h-3" />
+                    </button>
+                  </div>
+                </motion.div>)}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </div>;
+};
+
+// ─── Guest Package Tab ────────────────────────────────────────────────────────
+
+const GuestPackageTab = () => <div className="space-y-4">
+    <div className="grid grid-cols-2 gap-4">
+      {/* Guest Card */}
+      <div className="bg-card border border-border rounded-lg p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)] col-span-2">
+        <div className="flex items-start gap-5">
+          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-stone-700 to-stone-900 flex items-center justify-center text-white font-mono font-bold text-lg shadow-lg flex-shrink-0">
+            MA
+          </div>
+          <div className="flex-1">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-sans font-bold text-base text-foreground tracking-tight">Marcus Aurelius</h3>
+                <p className="font-sans text-sm text-muted-foreground">Roman Emperor · Stoic Philosopher · Author</p>
+              </div>
+              <span className="font-mono text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200/60 px-2 py-1 rounded-full">Solo Episode</span>
+            </div>
+            <p className="font-serif text-[13px] text-muted-foreground leading-relaxed mt-3">
+              This was a solo episode exploring Marcus Aurelius&apos;s <em>Meditations</em>. No live guest — AI voice synthesis used for direct quotes.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {[{
+    label: 'Guest Bio',
+    icon: User,
+    description: 'Formatted bio for show notes and website',
+    status: 'idle' as AssetStatus
+  }, {
+    label: 'Post-show Email',
+    icon: Mail,
+    description: 'Personalised thank-you email template with episode link',
+    status: 'idle' as AssetStatus
+  }, {
+    label: 'Social Mention Copy',
+    icon: MessageSquare,
+    description: 'Twitter/LinkedIn mention text tagging the guest',
+    status: 'idle' as AssetStatus
+  }, {
+    label: 'Guest Audiogram',
+    icon: Volume2,
+    description: 'Best quote clip formatted for guest to share',
+    status: 'idle' as AssetStatus
+  }].map(item => {
+    const Icon = item.icon;
+    return <div key={item.label} className="flex items-center gap-4 bg-card border border-border rounded-lg p-4 shadow-[0_1px_4px_rgba(0,0,0,0.03)]">
+          <div className="w-9 h-9 rounded-lg bg-muted border border-border flex items-center justify-center flex-shrink-0">
+            <Icon className="w-4 h-4 text-muted-foreground" />
+          </div>
+          <div className="flex-1">
+            <span className="font-sans text-sm font-medium text-foreground block">{item.label}</span>
+            <span className="font-sans text-[11px] text-muted-foreground/70">{item.description}</span>
+          </div>
+          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-stone-900 text-white text-[10px] font-sans font-semibold hover:bg-stone-800 transition-colors shadow-sm">
+            <Wand2 className="w-3 h-3" />
+            Generate
+          </button>
+        </div>;
+  })}
+  </div>;
+
+// ─── Intelligence Tab ─────────────────────────────────────────────────────────
+
+const IntelligenceTab = () => <div className="space-y-4">
+    <div className="grid grid-cols-3 gap-3">
+      {[{
+      label: 'Topics Detected',
+      value: '14',
+      icon: Hash,
+      accent: 'text-sky-600',
+      bg: 'bg-sky-50 border-sky-200/60'
+    }, {
+      label: 'Entities Found',
+      value: '23',
+      icon: Users,
+      accent: 'text-violet-600',
+      bg: 'bg-violet-50 border-violet-200/60'
+    }, {
+      label: 'Sentiment Score',
+      value: '+0.82',
+      icon: TrendingUp,
+      accent: 'text-emerald-600',
+      bg: 'bg-emerald-50 border-emerald-200/60'
+    }].map(stat => {
+      const Icon = stat.icon;
+      return <div key={stat.label} className={cn('bg-card border rounded-lg p-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1),0_1px_0_rgba(255,255,255,1)_inset] border-border')}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-sans text-[11px] text-muted-foreground font-medium">{stat.label}</span>
+              <div className={cn('w-6 h-6 rounded-md border flex items-center justify-center', stat.bg)}>
+                <Icon className={cn('w-3 h-3', stat.accent)} />
+              </div>
+            </div>
+            <span className="font-mono text-2xl font-bold text-foreground">{stat.value}</span>
+          </div>;
+    })}
+    </div>
+
+    {/* Topics */}
+    <div className="bg-card border border-border rounded-lg p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+      <div className="flex items-center justify-between mb-4">
+        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Topic Clusters</span>
+        <span className="font-mono text-[10px] text-muted-foreground/70">by prominence</span>
+      </div>
+      <div className="space-y-2.5">
+        {[{
+        topic: 'Stoic Philosophy',
+        weight: 94,
+        color: 'bg-sky-400'
+      }, {
+        topic: 'Startup Culture',
+        weight: 78,
+        color: 'bg-violet-400'
+      }, {
+        topic: 'Mental Resilience',
+        weight: 71,
+        color: 'bg-emerald-400'
+      }, {
+        topic: 'Decision Making',
+        weight: 65,
+        color: 'bg-amber-400'
+      }, {
+        topic: 'Leadership',
+        weight: 58,
+        color: 'bg-rose-400'
+      }, {
+        topic: 'Ancient History',
+        weight: 43,
+        color: 'bg-muted-foreground/70'
+      }].map(t => <div key={t.topic} className="flex items-center gap-3">
+            <span className="font-sans text-[12px] text-foreground/80 w-36 flex-shrink-0 truncate">{t.topic}</span>
+            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+              <motion.div initial={{
+            width: 0
+          }} animate={{
+            width: `${t.weight}%`
+          }} transition={{
+            duration: 0.7,
+            ease: 'easeOut' as const,
+            delay: 0.3
+          }} className={cn('h-full rounded-full', t.color)} />
+            </div>
+            <span className="font-mono text-[10px] text-muted-foreground/70 w-6 text-right">{t.weight}</span>
+          </div>)}
+      </div>
+    </div>
+
+    {/* Sentiment + Engagement */}
+    <div className="grid grid-cols-2 gap-3">
+      <div className="bg-card border border-border rounded-lg p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 block mb-3">Sentiment Arc</span>
+        <div className="flex items-end gap-1 h-12">
+          {[0.6, 0.72, 0.65, 0.85, 0.9, 0.82, 0.88, 0.95, 0.78, 0.92, 0.85, 0.8].map((v, i) => <motion.div key={i} initial={{
+          height: 0
+        }} animate={{
+          height: `${v * 100}%`
+        }} transition={{
+          delay: i * 0.05,
+          duration: 0.4,
+          ease: 'easeOut' as const
+        }} className="flex-1 bg-emerald-400 rounded-t-sm opacity-80" />)}
+        </div>
+        <div className="flex justify-between mt-1.5">
+          <span className="font-mono text-[9px] text-muted-foreground/70">00:00</span>
+          <span className="font-mono text-[9px] text-muted-foreground/70">1:12:44</span>
+        </div>
+      </div>
+
+      <div className="bg-card border border-border rounded-lg p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 block mb-3">Predicted Engagement</span>
+        <div className="space-y-2">
+          {[{
+          label: 'Hook Strength',
+          value: 91,
+          color: 'bg-emerald-400'
+        }, {
+          label: 'Retention Score',
+          value: 84,
+          color: 'bg-sky-400'
+        }, {
+          label: 'Share Potential',
+          value: 78,
+          color: 'bg-violet-400'
+        }].map(m => <div key={m.label}>
+              <div className="flex justify-between mb-0.5">
+                <span className="font-sans text-[10px] text-muted-foreground">{m.label}</span>
+                <span className="font-mono text-[10px] text-muted-foreground font-bold">{m.value}</span>
+              </div>
+              <div className="h-1 bg-muted rounded-full overflow-hidden">
+                <motion.div initial={{
+              width: 0
+            }} animate={{
+              width: `${m.value}%`
+            }} transition={{
+              duration: 0.6,
+              ease: 'easeOut' as const,
+              delay: 0.5
+            }} className={cn('h-full rounded-full', m.color)} />
+              </div>
+            </div>)}
+        </div>
+      </div>
+    </div>
+  </div>;
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+export const EpisodeDetail = () => {
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<Tab>('show-notes');
+  return <div className="flex-1 h-full overflow-y-auto relative" style={{
+    background: '#EDEAE5',
+    backgroundImage: `radial-gradient(circle, rgba(0,0,0,0.065) 1px, transparent 1px)`,
+    backgroundSize: '22px 22px'
+  }}>
+      <div className="max-w-5xl mx-auto px-6 py-7">
+        {/* ── Header ── */}
+        <div className="mb-6">
+          {/* Back link */}
+          <button onClick={() => router.push('/episodes')} aria-label="Back to all episodes" className="flex items-center gap-1.5 text-muted-foreground/70 hover:text-foreground/80 transition-colors mb-5 group">
+            <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+            <span className="font-sans text-[12px] font-medium">All Episodes</span>
+          </button>
+
+          <div className="flex items-start justify-between gap-6">
+            {/* Left: title + meta */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3 mb-2.5">
+                <span className="font-mono text-[11px] font-bold text-muted-foreground/70 uppercase tracking-widest">EP 12</span>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200/60">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
+                  <span className="font-sans text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Completed</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-muted-foreground/70">
+                  <Clock className="w-3 h-3" />
+                  <span className="font-mono text-[10px]">1:12:44</span>
+                </div>
+              </div>
+              <h1 className="font-sans font-bold text-[22px] text-foreground tracking-tight leading-tight mb-1.5">
+                The Stoic Entrepreneur — Lessons from Marcus Aurelius
+              </h1>
+              <p className="font-serif text-sm text-muted-foreground/70 leading-relaxed">
+                How ancient philosophy maps onto modern startup culture, mental resilience, and building with intention.
+              </p>
+            </div>
+
+            {/* Right: Signal chain */}
+            <div className="flex-shrink-0 bg-card border border-border rounded-xl px-5 py-4 shadow-[0_2px_4px_rgba(0,0,0,0.05)] flex flex-col items-center gap-2">
+              <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70 mb-1">Signal Chain</span>
+              <SignalChain steps={SIGNAL_STEPS} />
+            </div>
+          </div>
+        </div>
+
+        {/* ── Tab Bar ── */}
+        <div className="relative mb-5">
+          <div className="flex items-stretch bg-muted/40 rounded-xl p-1 border border-border gap-1">
+            {TAB_CONFIG.map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn('relative flex items-center gap-2 px-4 py-2 rounded-lg text-[12px] font-sans font-medium transition-all duration-150 flex-1 justify-center', isActive ? 'bg-card text-foreground shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1),0_1px_0_rgba(255,255,255,1)_inset] border border-border' : 'text-muted-foreground hover:text-foreground/80 hover:bg-muted/50')}>
+                  <Icon className={cn('w-3.5 h-3.5 flex-shrink-0', isActive ? 'text-foreground' : 'text-muted-foreground/70')} />
+                  <span className="hidden sm:block">{tab.label}</span>
+                  {isActive && <motion.div layoutId="tabUnderline" className="absolute bottom-[5px] left-1/2 -translate-x-1/2 w-4 h-[2px] bg-foreground rounded-full" />}
+                </button>;
+          })}
+          </div>
+        </div>
+
+        {/* ── Tab Content ── */}
+        <AnimatePresence mode="wait">
+          <motion.div key={activeTab} initial={{
+          opacity: 0,
+          y: 8
+        }} animate={{
+          opacity: 1,
+          y: 0
+        }} exit={{
+          opacity: 0,
+          y: -5
+        }} transition={{
+          duration: 0.2,
+          ease: 'easeOut' as const
+        }}>
+            {activeTab === 'show-notes' && <ShowNotesTab />}
+            {activeTab === 'assets' && <AssetsTab />}
+            {activeTab === 'transcript' && <TranscriptTab />}
+            {activeTab === 'guest' && <GuestPackageTab />}
+            {activeTab === 'intelligence' && <IntelligenceTab />}
+          </motion.div>
+        </AnimatePresence>
+
+        <div className="h-12" />
+      </div>
+    </div>;
+};

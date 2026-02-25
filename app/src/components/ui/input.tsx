@@ -7,14 +7,12 @@ const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputEl
       <input
         type={type}
         className={cn(
-          "flex h-9 w-full rounded-[var(--radius-sm)]",
-          "border border-[var(--color-border)] bg-[var(--color-bg-surface)]",
-          "px-3 py-2 text-[var(--text-body-sm)]",
-          "font-[family-name:var(--font-display)]",
-          "text-[var(--color-text-ink)]",
-          "placeholder:text-[var(--color-text-tertiary)]",
-          "transition-shadow duration-[var(--duration-fast)]",
-          "focus-visible:outline-none focus-visible:shadow-[var(--shadow-focus)]",
+          "flex h-9 w-full rounded-lg",
+          "border border-border bg-card",
+          "px-3 py-2 text-sm font-sans text-foreground",
+          "placeholder:text-muted-foreground",
+          "transition-shadow",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           "disabled:cursor-not-allowed disabled:opacity-50",
           className
         )}
@@ -33,14 +31,12 @@ const Textarea = forwardRef<
   return (
     <textarea
       className={cn(
-        "flex min-h-[80px] w-full rounded-[var(--radius-sm)]",
-        "border border-[var(--color-border)] bg-[var(--color-bg-surface)]",
-        "px-3 py-2 text-[var(--text-body-sm)]",
-        "font-[family-name:var(--font-display)]",
-        "text-[var(--color-text-ink)]",
-        "placeholder:text-[var(--color-text-tertiary)]",
-        "transition-shadow duration-[var(--duration-fast)]",
-        "focus-visible:outline-none focus-visible:shadow-[var(--shadow-focus)]",
+        "flex min-h-[80px] w-full rounded-lg",
+        "border border-border bg-card",
+        "px-3 py-2 text-sm font-sans text-foreground",
+        "placeholder:text-muted-foreground",
+        "transition-shadow",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         "disabled:cursor-not-allowed disabled:opacity-50",
         "resize-y",
         className
