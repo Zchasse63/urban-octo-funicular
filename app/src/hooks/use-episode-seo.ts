@@ -9,6 +9,22 @@ interface SEOData {
   schema_markup: Record<string, unknown> | null;
 }
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function normalizeAnalysis(raw: any): SEOAnalysis | null {
+  if (!raw) return null;
+  // The API may return either the DB format (SEOAnalysis) or the rich API format
+  // with camelCase keys and nested factors. Normalize to the flat SEOAnalysis shape.
+  return {
+    keyword_density: raw.keyword_density ?? raw.keywordDensityMap ?? {},
+    readability_score: raw.readability_score ?? raw.factors?.readability?.score ?? 0,
+    header_structure: raw.header_structure ?? (raw.factors?.headerStructure?.score != null ? raw.factors.headerStructure.score > 0 : false),
+    suggestions: (raw.suggestions ?? []).map((s: any) =>
+      typeof s === 'string' ? s : s?.title ?? s?.text ?? s?.description ?? String(s)
+    ),
+    estimated_position: raw.estimated_position ?? null,
+  };
+}
+
 interface UseEpisodeSeoResult {
   seoData: SEOData | null;
   isLoading: boolean;
@@ -37,7 +53,7 @@ export default function useEpisodeSeo(
       if (result.data) {
         setSeoData({
           seo_score: result.data.episode?.seo_score ?? null,
-          seo_analysis: result.data.analysis ?? null,
+          seo_analysis: normalizeAnalysis(result.data.analysis),
           schema_markup: result.data.schema ?? null,
         });
       } else {

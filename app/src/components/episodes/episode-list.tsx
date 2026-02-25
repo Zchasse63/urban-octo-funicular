@@ -6,6 +6,8 @@ import { Plus, Search, FileAudio, Clock, UploadCloud, BarChart2, Loader2, CheckC
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import useEpisodes from '@/hooks/use-episodes';
+import useShows from '@/hooks/use-shows';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,145 +40,14 @@ interface SavedView {
   sortDir: SortDir;
 }
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
+// ─── Format Duration ─────────────────────────────────────────────────────────
 
-const INITIAL_EPISODES: Episode[] = [{
-  id: 'ep12',
-  number: 12,
-  title: 'The Stoic Entrepreneur — Lessons from Marcus Aurelius',
-  description: 'How ancient philosophy maps onto modern startup culture, mental resilience, and building with intention.',
-  status: 'completed',
-  date: '2024-07-14',
-  duration: '1:12:44',
-  seoScore: 94,
-  tags: ['philosophy', 'stoicism', 'mindset'],
-  integrations: [{
-    platform: 'youtube',
-    status: 'synced'
-  }, {
-    platform: 'spotify',
-    status: 'synced'
-  }, {
-    platform: 'apple',
-    status: 'synced'
-  }]
-}, {
-  id: 'ep11',
-  number: 11,
-  title: 'Deep Work in the Age of Distraction',
-  description: "Cal Newport's framework revisited — building a focus-first operating system for creative professionals.",
-  status: 'completed',
-  date: '2024-07-07',
-  duration: '58:22',
-  seoScore: 88,
-  tags: ['productivity', 'focus', 'cal-newport'],
-  integrations: [{
-    platform: 'youtube',
-    status: 'synced'
-  }, {
-    platform: 'spotify',
-    status: 'pending'
-  }, {
-    platform: 'apple',
-    status: 'error'
-  }]
-}, {
-  id: 'ep10',
-  number: 10,
-  title: 'The Second Brain: Building a Personal Knowledge System',
-  description: 'Tiago Forte on capturing ideas, organising knowledge, and turning notes into creative output.',
-  status: 'completed',
-  date: '2024-06-30',
-  duration: '1:04:11',
-  seoScore: 76,
-  tags: ['knowledge', 'pkm', 'tools'],
-  integrations: [{
-    platform: 'youtube',
-    status: 'synced'
-  }, {
-    platform: 'spotify',
-    status: 'synced'
-  }, {
-    platform: 'apple',
-    status: 'none'
-  }]
-}, {
-  id: 'ep09',
-  number: 9,
-  title: 'Zero to One — Contrarian Thinking for Founders',
-  description: "Peter Thiel's monopoly theory and what it means to build something genuinely new in a saturated market.",
-  status: 'processing',
-  date: '2024-06-23',
-  duration: '47:08',
-  tags: ['startups', 'peter-thiel', 'strategy'],
-  integrations: [{
-    platform: 'youtube',
-    status: 'pending'
-  }, {
-    platform: 'spotify',
-    status: 'pending'
-  }, {
-    platform: 'apple',
-    status: 'pending'
-  }]
-}, {
-  id: 'ep08',
-  number: 8,
-  title: 'Atomic Habits for Solopreneurs',
-  description: "Breaking down James Clear's compounding principles and applying them to solo creator workflows.",
-  status: 'processing',
-  date: '2024-06-16',
-  duration: '52:37',
-  tags: ['habits', 'productivity'],
-  integrations: [{
-    platform: 'youtube',
-    status: 'pending'
-  }, {
-    platform: 'spotify',
-    status: 'none'
-  }, {
-    platform: 'apple',
-    status: 'none'
-  }]
-}, {
-  id: 'ep07',
-  number: 7,
-  title: 'Essentialism — The Disciplined Pursuit of Less',
-  description: "Greg McKeown's system for cutting the noise and investing in what actually matters.",
-  status: 'draft',
-  date: '2024-06-09',
-  duration: '38:55',
-  tags: ['essentialism', 'minimalism'],
-  integrations: [{
-    platform: 'youtube',
-    status: 'none'
-  }, {
-    platform: 'spotify',
-    status: 'none'
-  }, {
-    platform: 'apple',
-    status: 'none'
-  }]
-}, {
-  id: 'ep06',
-  number: 6,
-  title: 'The Art of Slow Productivity',
-  description: 'Why doing fewer things at a higher quality beats the myth of constant busyness.',
-  status: 'draft',
-  date: '2024-06-02',
-  duration: '44:19',
-  tags: ['productivity', 'slow-living'],
-  integrations: [{
-    platform: 'youtube',
-    status: 'none'
-  }, {
-    platform: 'spotify',
-    status: 'none'
-  }, {
-    platform: 'apple',
-    status: 'none'
-  }]
-}];
+function formatDuration(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -250,7 +121,7 @@ const INTEGRATION_CONFIG: Record<IntegrationPlatform, {
       synced: 'text-red-500 bg-red-50 border-red-200/50',
       pending: 'text-amber-500 bg-amber-50 border-amber-200/50',
       error: 'text-red-600 bg-red-100 border-red-300/50',
-      none: 'text-muted-foreground/70 bg-muted/50 border-border/40'
+      none: 'text-muted-foreground bg-muted/50 border-border/40'
     }
   },
   spotify: {
@@ -260,7 +131,7 @@ const INTEGRATION_CONFIG: Record<IntegrationPlatform, {
       synced: 'text-emerald-600 bg-emerald-50 border-emerald-200/50',
       pending: 'text-amber-500 bg-amber-50 border-amber-200/50',
       error: 'text-red-600 bg-red-100 border-red-300/50',
-      none: 'text-muted-foreground/70 bg-muted/50 border-border/40'
+      none: 'text-muted-foreground bg-muted/50 border-border/40'
     }
   },
   apple: {
@@ -270,7 +141,7 @@ const INTEGRATION_CONFIG: Record<IntegrationPlatform, {
       synced: 'text-violet-600 bg-violet-50 border-violet-200/50',
       pending: 'text-amber-500 bg-amber-50 border-amber-200/50',
       error: 'text-red-600 bg-red-100 border-red-300/50',
-      none: 'text-muted-foreground/70 bg-muted/50 border-border/40'
+      none: 'text-muted-foreground bg-muted/50 border-border/40'
     }
   }
 };
@@ -410,10 +281,12 @@ const QUICK_ACTIONS: { icon: React.ElementType; label: string; shortcut: string 
 }];
 const QuickActionsMenu = ({
   episodeId,
-  onClose
+  onClose,
+  onDelete
 }: {
   episodeId: string;
   onClose: () => void;
+  onDelete?: (id: string) => void;
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -449,12 +322,12 @@ const QuickActionsMenu = ({
       <div className="p-1">
         {QUICK_ACTIONS.map((action, i) => <React.Fragment key={i}>
             {i === QUICK_ACTIONS.length - 1 && <div className="my-1 border-t border-border/50" />}
-            <button className={cn('w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-lg text-left transition-colors text-[12.5px] font-sans', action.destructive ? 'text-red-500 hover:bg-red-50 hover:text-red-600' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground')} onClick={onClose}>
+            <button className={cn('w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-lg text-left transition-colors text-[12.5px] font-sans', action.destructive ? 'text-red-500 hover:bg-red-50 hover:text-red-600' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground')} onClick={() => { if (action.destructive && onDelete) { onDelete(episodeId); } onClose(); }}>
               <div className="flex items-center gap-2.5">
                 <action.icon className="w-3.5 h-3.5 flex-shrink-0" />
                 {action.label}
               </div>
-              {action.shortcut && <kbd className="font-mono text-[9px] text-muted-foreground/70 bg-muted border border-border rounded px-1 py-0.5">
+              {action.shortcut && <kbd className="font-mono text-[9px] text-muted-foreground bg-muted border border-border rounded px-1 py-0.5">
                   {action.shortcut}
                 </kbd>}
             </button>
@@ -532,7 +405,7 @@ const UndoToast = ({
   duration: 0.22,
   ease: 'easeOut'
 }} className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 bg-stone-900 text-stone-100 rounded-xl shadow-2xl border border-stone-700">
-    <Trash2 className="w-3.5 h-3.5 text-stone-400" />
+    <Trash2 className="w-3.5 h-3.5 text-muted-foreground/80" />
     <span className="text-[12.5px] font-sans font-medium">
       {count} episode{count > 1 ? 's' : ''} deleted
     </span>
@@ -541,7 +414,7 @@ const UndoToast = ({
       <RotateCcw className="w-3 h-3" />
       Undo
     </button>
-    <button onClick={onDismiss} className="p-0.5 rounded text-stone-500 hover:text-stone-300 transition-colors">
+    <button onClick={onDismiss} className="p-0.5 rounded text-muted-foreground hover:text-muted-foreground/60 transition-colors">
       <X className="w-3.5 h-3.5" />
     </button>
   </motion.div>;
@@ -577,14 +450,14 @@ const BulkActionBar = ({
   duration: 0.2
 }} className="flex items-center gap-3 px-4 py-2.5 bg-stone-900 text-stone-100 rounded-xl mb-4 shadow-lg">
     <button onClick={selectedCount === totalCount ? onClearAll : onSelectAll} className="flex items-center gap-2 text-[12px] font-medium hover:text-white transition-colors">
-      {selectedCount === totalCount ? <CheckSquare className="w-3.5 h-3.5 text-stone-400" /> : <Square className="w-3.5 h-3.5 text-stone-400" />}
-      <span className="font-mono text-[11px] font-bold text-stone-300">{selectedCount} selected</span>
+      {selectedCount === totalCount ? <CheckSquare className="w-3.5 h-3.5 text-muted-foreground/80" /> : <Square className="w-3.5 h-3.5 text-muted-foreground/80" />}
+      <span className="font-mono text-[11px] font-bold text-muted-foreground/60">{selectedCount} selected</span>
     </button>
 
     <div className="w-px h-4 bg-stone-700 mx-1" />
 
     {/* Total duration */}
-    <div className="flex items-center gap-1.5 text-[11px] font-mono text-stone-400">
+    <div className="flex items-center gap-1.5 text-[11px] font-mono text-muted-foreground/80">
       <Clock className="w-3 h-3" />
       {totalDuration}
     </div>
@@ -606,7 +479,7 @@ const BulkActionBar = ({
       </button>
     </div>
 
-    <button onClick={onClearAll} className="p-1.5 rounded-lg hover:bg-stone-700 text-stone-400 hover:text-stone-200 transition-colors">
+    <button onClick={onClearAll} className="p-1.5 rounded-lg hover:bg-stone-700 text-muted-foreground/80 hover:text-stone-200 transition-colors">
       <X className="w-3.5 h-3.5" />
     </button>
   </motion.div>;
@@ -655,7 +528,7 @@ const BatchEditPanel = ({
             Batch edit {selectedCount} episode{selectedCount > 1 ? 's' : ''}
           </span>
         </div>
-        <button onClick={onClose} className="p-1 rounded text-muted-foreground/70 hover:text-foreground/80 hover:bg-accent transition-colors">
+        <button onClick={onClose} className="p-1 rounded text-muted-foreground hover:text-foreground/80 hover:bg-accent transition-colors">
           <X className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -663,7 +536,7 @@ const BatchEditPanel = ({
       <div className="grid grid-cols-2 gap-3">
         {/* Tags */}
         <div>
-          <label className="block text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground/70 mb-1.5">Add Tags</label>
+          <label className="block text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground mb-1.5">Add Tags</label>
           <div className="flex gap-1.5">
             <input type="text" value={newTag} onChange={e => setNewTag(e.target.value)} onKeyDown={e => {
             if (e.key === 'Enter') {
@@ -682,7 +555,7 @@ const BatchEditPanel = ({
 
         {/* Status */}
         <div>
-          <label className="block text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground/70 mb-1.5">Change Status</label>
+          <label className="block text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground mb-1.5">Change Status</label>
           <div className="flex flex-col gap-1">
             {(['', 'completed', 'processing', 'draft'] as const).map(s => <button key={s || 'none'} onClick={() => setStatus(s)} className={cn('flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-[11.5px] font-sans font-medium transition-colors', status === s ? 'bg-stone-900 text-white' : 'text-muted-foreground hover:text-accent-foreground hover:bg-accent')}>
                 {s === '' ? <><span className="w-2 h-2 rounded-full bg-stone-300 flex-shrink-0" />No change</> : <><span className={cn('w-2 h-2 rounded-full flex-shrink-0', STATUS_CONFIG[s].dot)} />{STATUS_CONFIG[s].label}</>}
@@ -755,25 +628,25 @@ const SavedViewsPanel = ({
     ease: 'easeOut'
   }} className="absolute right-0 top-full mt-1.5 z-30 w-64 bg-card border border-border rounded-xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
       <div className="px-3 pt-3 pb-2 border-b border-border/50">
-        <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground/70">Saved Views</p>
+        <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground">Saved Views</p>
       </div>
 
-      {views.length === 0 && <p className="px-4 py-4 text-[12px] font-serif text-muted-foreground/70 text-center">No saved views yet</p>}
+      {views.length === 0 && <p className="px-4 py-4 text-[12px] font-serif text-muted-foreground text-center">No saved views yet</p>}
 
       <div className="p-1.5 space-y-0.5">
         {views.map(view => <div key={view.id} className={cn('flex items-center gap-2 px-2.5 py-2 rounded-lg group transition-colors', activeViewId === view.id ? 'bg-stone-900' : 'hover:bg-accent')}>
-            <BookmarkCheck className={cn('w-3 h-3 flex-shrink-0', activeViewId === view.id ? 'text-stone-400' : 'text-muted-foreground/70')} />
+            <BookmarkCheck className={cn('w-3 h-3 flex-shrink-0', activeViewId === view.id ? 'text-muted-foreground/80' : 'text-muted-foreground')} />
             <button onClick={() => onApply(view)} className={cn('flex-1 text-left text-[12px] font-sans font-medium truncate', activeViewId === view.id ? 'text-white' : 'text-foreground/80')}>
               {view.name}
             </button>
-            <button onClick={() => onDelete(view.id)} className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-muted-foreground/70 hover:text-red-500 transition-all">
+            <button onClick={() => onDelete(view.id)} className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-muted-foreground hover:text-red-500 transition-all">
               <X className="w-3 h-3" />
             </button>
           </div>)}
       </div>
 
       <div className="p-2 border-t border-border/50">
-        <p className="px-1 mb-1.5 text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground/70">
+        <p className="px-1 mb-1.5 text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground">
           Save current view
         </p>
         <div className="flex gap-1.5">
@@ -806,11 +679,11 @@ const GroupHeader = ({
   count: number;
 }) => <div className="flex items-center gap-3 mb-2 mt-5 first:mt-0">
     <div className="flex items-center gap-2">
-      <CalendarDays className="w-3 h-3 text-muted-foreground/70" />
-      <span className="text-[11px] font-mono font-bold uppercase tracking-widest text-muted-foreground/70">{label}</span>
+      <CalendarDays className="w-3 h-3 text-muted-foreground" />
+      <span className="text-[11px] font-mono font-bold uppercase tracking-widest text-muted-foreground">{label}</span>
     </div>
     <div className="flex-1 border-t border-dashed border-border" />
-    <span className="text-[10px] font-mono text-muted-foreground/70">{count}</span>
+    <span className="text-[10px] font-mono text-muted-foreground">{count}</span>
   </div>;
 
 // ─── Episode Card ──────────────────────────────────────────────────────────────
@@ -822,7 +695,8 @@ const EpisodeCard = ({
   searchQuery,
   onToggleSelect,
   onClick,
-  isDraggable
+  isDraggable,
+  onDelete
 }: {
   episode: Episode;
   index: number;
@@ -831,6 +705,7 @@ const EpisodeCard = ({
   onToggleSelect: (id: string) => void;
   onClick: () => void;
   isDraggable: boolean;
+  onDelete?: (id: string) => void;
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const cfg = STATUS_CONFIG[episode.status];
@@ -852,7 +727,7 @@ const EpisodeCard = ({
   }} layout onClick={onClick} className={cn('group relative flex items-start gap-3 px-4 py-4 cursor-pointer', 'border rounded-xl transition-all duration-200 ease-out', 'shadow-[0_1px_4px_rgba(0,0,0,0.04)]', isSelected ? 'bg-stone-900 border-stone-700 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.2)]' : 'bg-card border-border hover:shadow-[0_6px_20px_-4px_rgba(0,0,0,0.12),0_2px_8px_-4px_rgba(0,0,0,0.08)] hover:border-border')}>
       {/* Drag Handle */}
       {isDraggable && <div className={cn('flex-shrink-0 flex items-center pt-1 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity', isSelected && 'opacity-30')} onClick={e => e.stopPropagation()}>
-          <GripVertical className={cn('w-3.5 h-3.5', isSelected ? 'text-stone-500' : 'text-muted-foreground/70')} />
+          <GripVertical className={cn('w-3.5 h-3.5', isSelected ? 'text-muted-foreground' : 'text-muted-foreground')} />
         </div>}
 
       {/* Checkbox */}
@@ -869,7 +744,7 @@ const EpisodeCard = ({
 
       {/* Episode Number */}
       <div className="flex-shrink-0 w-7 pt-0.5 text-right">
-        <span className={cn('font-mono text-[11px] font-bold select-none', isSelected ? 'text-stone-500' : 'text-muted-foreground/70')}>
+        <span className={cn('font-mono text-[11px] font-bold select-none', isSelected ? 'text-muted-foreground' : 'text-muted-foreground')}>
           {String(episode.number).padStart(2, '0')}
         </span>
       </div>
@@ -878,15 +753,15 @@ const EpisodeCard = ({
       <div className="flex-1 min-w-0">
         {/* Status Badge + Meta Row */}
         <div className="flex items-center gap-2 flex-wrap mb-1.5">
-          <div className={cn('flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[10px] font-sans font-bold uppercase tracking-wide', isSelected ? 'bg-stone-800 border-stone-600 text-stone-300' : cfg.badge)}>
+          <div className={cn('flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[10px] font-sans font-bold uppercase tracking-wide', isSelected ? 'bg-stone-800 border-stone-600 text-muted-foreground/60' : cfg.badge)}>
             <div className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', isSelected ? 'bg-stone-500' : cfg.dot)} />
             {cfg.label}
           </div>
-          <div className={cn('flex items-center gap-1', isSelected ? 'text-stone-500' : 'text-muted-foreground/70')}>
+          <div className={cn('flex items-center gap-1', isSelected ? 'text-muted-foreground' : 'text-muted-foreground')}>
             <Clock className="w-3 h-3" />
             <span className="font-mono text-[10px] font-semibold">{episode.duration}</span>
           </div>
-          <span className={cn('font-mono text-[10px]', isSelected ? 'text-stone-600' : 'text-muted-foreground/70')}>{formattedDate}</span>
+          <span className={cn('font-mono text-[10px]', isSelected ? 'text-muted-foreground' : 'text-muted-foreground')}>{formattedDate}</span>
         </div>
 
         {/* Title */}
@@ -895,7 +770,7 @@ const EpisodeCard = ({
         </h3>
 
         {/* Description */}
-        <p className={cn('font-serif text-[11.5px] leading-relaxed line-clamp-2 mb-1.5', isSelected ? 'text-stone-400' : 'text-muted-foreground')}>
+        <p className={cn('font-serif text-[11.5px] leading-relaxed line-clamp-2 mb-1.5', isSelected ? 'text-muted-foreground/80' : 'text-muted-foreground')}>
           <HighlightText text={episode.description} query={searchQuery} />
         </p>
 
@@ -906,7 +781,7 @@ const EpisodeCard = ({
       </div>
 
       {/* Right Actions */}
-      <div className="flex-shrink-0 flex flex-col items-end gap-2 pt-0.5" onClick={e => e.stopPropagation()}>
+      <div className="hidden sm:flex flex-shrink-0 flex-col items-end gap-2 pt-0.5" onClick={e => e.stopPropagation()}>
         {episode.seoScore !== undefined && !isSelected && <SEOBadge score={episode.seoScore} />}
 
         {/* Integration Status */}
@@ -924,16 +799,16 @@ const EpisodeCard = ({
           setMenuOpen(o => !o);
         }} whileTap={{
           scale: 0.92
-        }} className={cn('p-1.5 rounded-lg transition-all duration-150', menuOpen ? 'opacity-100 bg-muted text-foreground/80' : isSelected ? 'opacity-100 text-stone-400 hover:text-stone-200 hover:bg-stone-800' : 'opacity-0 group-hover:opacity-100 text-muted-foreground/70 hover:text-foreground/80 hover:bg-accent')}>
+        }} className={cn('p-1.5 rounded-lg transition-all duration-150', menuOpen ? 'opacity-100 bg-muted text-foreground/80' : isSelected ? 'opacity-100 text-muted-foreground/80 hover:text-stone-200 hover:bg-stone-800' : 'opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground/80 hover:bg-accent')}>
             <MoreHorizontal className="w-3.5 h-3.5" />
           </motion.button>
           <AnimatePresence>
-            {menuOpen && <QuickActionsMenu episodeId={episode.id} onClose={() => setMenuOpen(false)} />}
+            {menuOpen && <QuickActionsMenu episodeId={episode.id} onClose={() => setMenuOpen(false)} onDelete={onDelete} />}
           </AnimatePresence>
         </div>
 
         {!isSelected && <motion.div className="opacity-0 group-hover:opacity-100 transition-opacity mt-auto">
-            <div className="flex items-center gap-1 text-muted-foreground/70 hover:text-foreground/80 transition-colors">
+            <div className="flex items-center gap-1 text-muted-foreground hover:text-foreground/80 transition-colors">
               <span className="font-sans text-[11px] font-medium">Open</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </div>
@@ -962,10 +837,10 @@ const EmptyStateView = ({
   ease: 'easeOut'
 }} className="flex flex-col items-center justify-center py-24 px-8 text-center">
     <div className="w-16 h-16 rounded-2xl bg-card border border-border shadow-[0_4px_16px_-4px_rgba(0,0,0,0.08)] flex items-center justify-center mb-5">
-      <FileAudio className="w-7 h-7 text-muted-foreground/70" />
+      <FileAudio className="w-7 h-7 text-muted-foreground" />
     </div>
     <h3 className="font-sans font-bold text-lg text-foreground tracking-tight mb-2">No episodes yet</h3>
-    <p className="font-serif text-[13.5px] text-muted-foreground/70 leading-relaxed max-w-xs mb-7">
+    <p className="font-serif text-[13.5px] text-muted-foreground leading-relaxed max-w-xs mb-7">
       Upload your first audio file to get started. PodBrain will handle the transcription, show notes, and assets automatically.
     </p>
     <button onClick={onUpload} className={cn('flex items-center gap-2 px-5 py-2.5 rounded-lg', 'bg-stone-900 text-white text-[13px] font-sans font-semibold', 'hover:bg-stone-800 active:scale-[0.98] transition-all duration-150 shadow-sm')}>
@@ -1019,7 +894,27 @@ const FILTERS: {
 
 export function EpisodeList() {
   const router = useRouter();
-  const [episodes, setEpisodes] = useState<Episode[]>(INITIAL_EPISODES);
+  const { shows } = useShows();
+  const activeShowId = shows[0]?.id;
+  const { episodes: apiEpisodes, isLoading: apiLoading, error: apiError, refetch } = useEpisodes({ showId: activeShowId });
+
+  const mappedEpisodes = useMemo(() => {
+    return apiEpisodes.map((ep, i) => ({
+      id: ep.id,
+      number: apiEpisodes.length - i,
+      title: ep.title || 'Untitled Episode',
+      description: ep.description || '',
+      status: (ep.status === 'failed' || ep.status === 'pending' ? 'draft' : ep.status) as Episode['status'],
+      date: ep.created_at ? new Date(ep.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
+      duration: ep.audio_duration_seconds ? formatDuration(ep.audio_duration_seconds) : '0:00',
+      seoScore: ep.seo_score ?? undefined,
+      tags: [] as string[],
+      format: 'audio' as const,
+      integrations: [] as Integration[],
+    }));
+  }, [apiEpisodes]);
+
+  const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -1043,7 +938,7 @@ export function EpisodeList() {
     sortDir: 'desc'
   }]);
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const isLoading = apiLoading;
   const [undoStack, setUndoStack] = useState<{
     episodes: Episode[];
     count: number;
@@ -1052,11 +947,12 @@ export function EpisodeList() {
   const searchRef = useRef<HTMLInputElement>(null);
   const processingCount = episodes.filter(e => e.status === 'processing').length;
 
-  // Simulate loading
+  // Sync mapped API data into local state
   useEffect(() => {
-    const t = setTimeout(() => setIsLoading(false), 900);
-    return () => clearTimeout(t);
-  }, []);
+    if (mappedEpisodes.length > 0) {
+      setEpisodes(mappedEpisodes);
+    }
+  }, [mappedEpisodes]);
 
   // ── Keyboard shortcuts ──
   useEffect(() => {
@@ -1229,17 +1125,18 @@ export function EpisodeList() {
     });
   }, [filteredEpisodes]);
 
+  // ── Delete single episode (local removal) ──
+  const handleDelete = useCallback((episodeId: string) => {
+    setEpisodes(prev => prev.filter(e => e.id !== episodeId));
+  }, []);
+
   // ── Navigate to episode ──
   const handleEpisodeClick = useCallback((episodeId: string) => {
     router.push(`/episodes/${episodeId}`);
   }, [router]);
 
-  return <div className="flex-1 h-full overflow-y-auto" style={{
-    background: '#EDEAE5',
-    backgroundImage: `radial-gradient(circle, rgba(0,0,0,0.065) 1px, transparent 1px)`,
-    backgroundSize: '22px 22px'
-  }}>
-      <div className="max-w-3xl mx-auto px-6 py-8">
+  return <div className="flex-1 h-full overflow-y-auto">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
 
         {/* ── Header ── */}
         <motion.div initial={{
@@ -1251,16 +1148,16 @@ export function EpisodeList() {
       }} transition={{
         duration: 0.3,
         ease: 'easeOut'
-      }} className="flex items-start justify-between mb-7">
+      }} className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-0 mb-5 sm:mb-7">
           <div>
-            <h1 className="font-sans font-bold text-[26px] text-foreground tracking-tighter leading-tight mb-1">
+            <h1 className="font-sans font-bold text-[22px] sm:text-[26px] text-foreground tracking-tighter leading-tight mb-1">
               Episodes
             </h1>
-            <p className="font-serif text-[13.5px] text-muted-foreground leading-relaxed">
+            <p className="font-serif text-[13px] sm:text-[13.5px] text-muted-foreground leading-relaxed">
               {episodes.length} episodes across your show — manage, review, and publish.
             </p>
           </div>
-          <Link href="/upload" className={cn('flex items-center gap-2 px-4 py-2.5 rounded-lg flex-shrink-0', 'bg-stone-900 text-white text-[12px] font-sans font-semibold', 'hover:bg-stone-800 active:scale-[0.98] transition-all duration-150', 'shadow-[0_2px_8px_-2px_rgba(0,0,0,0.2)]')}>
+          <Link href="/upload" className={cn('flex items-center gap-2 px-4 py-2.5 rounded-lg self-start', 'bg-stone-900 text-white text-[12px] font-sans font-semibold', 'hover:bg-stone-800 active:scale-[0.98] transition-all duration-150', 'shadow-[0_2px_8px_-2px_rgba(0,0,0,0.2)]')}>
             <Plus className="w-4 h-4" />
             New Episode
           </Link>
@@ -1282,10 +1179,10 @@ export function EpisodeList() {
         duration: 0.28,
         ease: 'easeOut',
         delay: 0.08
-      }} className="flex items-center gap-2 mb-3">
+      }} className="flex flex-col gap-2 mb-3">
           {/* Search Bar */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/70 pointer-events-none" />
+          <div className="relative w-full max-w-xl">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
             <input ref={searchRef} type="text" placeholder="Search episodes, tags… (⌘F)" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className={cn('w-full pl-10 pr-9 py-2.5 rounded-xl text-[13px] font-sans text-foreground', 'placeholder:text-muted-foreground', 'bg-card border border-border', 'focus:outline-none focus:border-ring', 'focus:shadow-[0_0_0_3px_rgba(120,113,108,0.1)]', 'shadow-[0_1px_3px_rgba(0,0,0,0.05)]', 'transition-all duration-150')} />
             <AnimatePresence>
               {searchQuery && <motion.button initial={{
@@ -1299,20 +1196,21 @@ export function EpisodeList() {
               scale: 0.8
             }} transition={{
               duration: 0.12
-            }} onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-md text-muted-foreground/70 hover:text-accent-foreground hover:bg-accent transition-colors">
+            }} onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-md text-muted-foreground hover:text-accent-foreground hover:bg-accent transition-colors">
                   <X className="w-3.5 h-3.5" />
                 </motion.button>}
             </AnimatePresence>
           </div>
 
-          {/* Filter Pills */}
-          <div className="flex items-center bg-muted/40 rounded-xl p-1 border border-border gap-0.5 flex-shrink-0">
+          {/* Filter Pills + Sort + Views row */}
+          <div className="flex items-center gap-2 w-full overflow-x-auto scrollbar-none">
+          <div className="flex items-center bg-muted/40 rounded-xl p-1 border border-border gap-0.5 overflow-x-auto scrollbar-none">
             {FILTERS.map(filter => <button key={filter.id} onClick={() => {
             setActiveFilter(filter.id);
             setActiveViewId(null);
-          }} className={cn('relative px-3 py-1.5 rounded-lg text-[11px] font-sans font-semibold transition-all duration-150', activeFilter === filter.id ? 'bg-card text-foreground shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,1)] border border-border' : 'text-muted-foreground hover:text-foreground/80 hover:bg-muted/50')}>
+          }} className={cn('relative px-3 py-1.5 rounded-lg text-[11px] font-sans font-semibold transition-all duration-150 whitespace-nowrap flex-shrink-0', activeFilter === filter.id ? 'bg-card text-foreground shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,1)] border border-border' : 'text-muted-foreground hover:text-foreground/80 hover:bg-muted/50')}>
                 {filter.label}
-                {filter.id !== 'all' && counts[filter.id] > 0 && <span className="ml-1.5 font-mono text-[9px] font-bold text-muted-foreground/70">{counts[filter.id]}</span>}
+                {filter.id !== 'all' && counts[filter.id] > 0 && <span className="ml-1.5 font-mono text-[9px] font-bold text-muted-foreground">{counts[filter.id]}</span>}
               </button>)}
           </div>
 
@@ -1339,7 +1237,7 @@ export function EpisodeList() {
               duration: 0.15,
               ease: 'easeOut'
             }} className="absolute right-0 top-full mt-1.5 z-20 bg-card border border-border rounded-xl shadow-xl p-2 min-w-[170px]">
-                  <p className="px-2.5 pt-1 pb-2 text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground/70">Sort by</p>
+                  <p className="px-2.5 pt-1 pb-2 text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground">Sort by</p>
                   {([{
                 field: 'date',
                 label: 'Date'
@@ -1385,6 +1283,7 @@ export function EpisodeList() {
               {showViewsPanel && <SavedViewsPanel views={savedViews} activeViewId={activeViewId} currentFilter={activeFilter} currentSortField={sortField} currentSortDir={sortDir} onApply={handleApplyView} onSave={handleSaveView} onDelete={handleDeleteView} onClose={() => setShowViewsPanel(false)} />}
             </AnimatePresence>
           </div>
+          </div>
         </motion.div>
 
         {/* ── Bulk Selection Bar ── */}
@@ -1406,22 +1305,34 @@ export function EpisodeList() {
         }} exit={{
           opacity: 0
         }} className="flex items-center justify-between mb-3 px-1">
-              <span className="text-[11px] font-mono text-muted-foreground/70">
+              <span className="text-[11px] font-mono text-muted-foreground">
                 {filteredEpisodes.length} result{filteredEpisodes.length !== 1 ? 's' : ''}
-                {sortField === 'manual' && <span className="ml-2 text-muted-foreground/60">· drag to reorder</span>}
+                {sortField === 'manual' && <span className="ml-2 text-muted-foreground/80">· drag to reorder</span>}
               </span>
               <div className="flex items-center gap-3">
-                {selectedIds.size > 0 && <button onClick={() => setShowBatchEdit(v => !v)} className={cn('flex items-center gap-1.5 text-[11px] font-sans font-semibold transition-colors', showBatchEdit ? 'text-foreground/80' : 'text-muted-foreground/70 hover:text-foreground/80')}>
+                {selectedIds.size > 0 && <button onClick={() => setShowBatchEdit(v => !v)} className={cn('flex items-center gap-1.5 text-[11px] font-sans font-semibold transition-colors', showBatchEdit ? 'text-foreground/80' : 'text-muted-foreground hover:text-foreground/80')}>
                     <Pencil className="w-3 h-3" />
                     Batch edit
                   </button>}
-                <button onClick={selectAll} className="flex items-center gap-1.5 text-[11px] font-sans font-semibold text-muted-foreground/70 hover:text-foreground/80 transition-colors">
+                <button onClick={selectAll} className="flex items-center gap-1.5 text-[11px] font-sans font-semibold text-muted-foreground hover:text-foreground/80 transition-colors">
                   <CheckSquare className="w-3.5 h-3.5" />
-                  Select all <kbd className="ml-1 font-mono text-[9px] text-muted-foreground/70 bg-muted border border-border rounded px-1 py-0.5">⌘A</kbd>
+                  Select all <kbd className="ml-1 font-mono text-[9px] text-muted-foreground bg-muted border border-border rounded px-1 py-0.5">⌘A</kbd>
                 </button>
               </div>
             </motion.div>}
         </AnimatePresence>
+
+        {/* ── Error State ── */}
+        {apiError && !isLoading && <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-12 h-12 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center mb-4 shadow-sm">
+              <AlertCircle className="w-5 h-5 text-red-500" />
+            </div>
+            <p className="font-sans text-[14px] font-semibold text-foreground mb-1">Failed to load episodes</p>
+            <p className="font-serif text-[12.5px] text-muted-foreground mb-4">{apiError}</p>
+            <button onClick={() => refetch()} className="text-[11px] font-sans font-semibold text-muted-foreground hover:text-accent-foreground underline underline-offset-2 transition-colors">
+              Try again
+            </button>
+          </div>}
 
         {/* ── Skeleton Loading ── */}
         {isLoading && <div className="space-y-3">
@@ -1429,7 +1340,7 @@ export function EpisodeList() {
           </div>}
 
         {/* ── Episode List ── */}
-        {!isLoading && <div>
+        {!isLoading && !apiError && <div>
             {filteredEpisodes.length === 0 ? <AnimatePresence>
                 <motion.div key="empty" initial={{
             opacity: 0
@@ -1442,10 +1353,10 @@ export function EpisodeList() {
           }}>
                   {searchQuery || activeFilter !== 'all' ? <div className="flex flex-col items-center justify-center py-20 text-center">
                       <div className="w-12 h-12 rounded-xl bg-card border border-border flex items-center justify-center mb-4 shadow-sm">
-                        <AlertCircle className="w-5 h-5 text-muted-foreground/70" />
+                        <AlertCircle className="w-5 h-5 text-muted-foreground" />
                       </div>
                       <p className="font-sans text-[14px] font-semibold text-muted-foreground mb-1">No episodes found</p>
-                      <p className="font-serif text-[12.5px] text-muted-foreground/70">Try adjusting your search or filter.</p>
+                      <p className="font-serif text-[12.5px] text-muted-foreground">Try adjusting your search or filter.</p>
                       <button onClick={() => {
                 setSearchQuery('');
                 setActiveFilter('all');
@@ -1458,7 +1369,7 @@ export function EpisodeList() {
         // ── Drag-to-reorder mode ──
         <Reorder.Group axis="y" values={filteredEpisodes} onReorder={handleReorder} className="space-y-3">
                 {filteredEpisodes.map((episode, index) => <Reorder.Item key={episode.id} value={episode} className="list-none">
-                    <EpisodeCard episode={episode} index={index} isSelected={selectedIds.has(episode.id)} searchQuery={searchQuery} onToggleSelect={toggleSelect} onClick={() => handleEpisodeClick(episode.id)} isDraggable={true} />
+                    <EpisodeCard episode={episode} index={index} isSelected={selectedIds.has(episode.id)} searchQuery={searchQuery} onToggleSelect={toggleSelect} onClick={() => handleEpisodeClick(episode.id)} isDraggable={true} onDelete={handleDelete} />
                   </Reorder.Item>)}
               </Reorder.Group> : groupedEpisodes ?
         // ── Grouped by week ──
@@ -1466,14 +1377,14 @@ export function EpisodeList() {
                 {groupedEpisodes.map(group => <div key={group.label}>
                     <GroupHeader label={group.label} count={group.episodes.length} />
                     <div className="space-y-3 mb-2">
-                      {group.episodes.map((episode, index) => <EpisodeCard key={episode.id} episode={episode} index={index} isSelected={selectedIds.has(episode.id)} searchQuery={searchQuery} onToggleSelect={toggleSelect} onClick={() => handleEpisodeClick(episode.id)} isDraggable={false} />)}
+                      {group.episodes.map((episode, index) => <EpisodeCard key={episode.id} episode={episode} index={index} isSelected={selectedIds.has(episode.id)} searchQuery={searchQuery} onToggleSelect={toggleSelect} onClick={() => handleEpisodeClick(episode.id)} isDraggable={false} onDelete={handleDelete} />)}
                     </div>
                   </div>)}
               </div> :
         // ── Normal list ──
         <AnimatePresence mode="popLayout">
                 <div className="space-y-3">
-                  {filteredEpisodes.map((episode, index) => <EpisodeCard key={episode.id} episode={episode} index={index} isSelected={selectedIds.has(episode.id)} searchQuery={searchQuery} onToggleSelect={toggleSelect} onClick={() => handleEpisodeClick(episode.id)} isDraggable={false} />)}
+                  {filteredEpisodes.map((episode, index) => <EpisodeCard key={episode.id} episode={episode} index={index} isSelected={selectedIds.has(episode.id)} searchQuery={searchQuery} onToggleSelect={toggleSelect} onClick={() => handleEpisodeClick(episode.id)} isDraggable={false} onDelete={handleDelete} />)}
                 </div>
               </AnimatePresence>}
           </div>}

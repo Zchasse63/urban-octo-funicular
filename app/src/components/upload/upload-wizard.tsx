@@ -2,8 +2,11 @@
 
 import React, { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { UploadCloud, Link2, X, FileAudio, Music, Check, Mic2, Youtube, Rss, AlertCircle, ArrowRight, Plus, Trash2, FileText, Twitter, Linkedin, Mail, BookOpen, Volume2, Hash, AlignLeft, Zap, Package, Users, ChevronRight, Sparkles, Brain, Wand2, Target, Globe, ChevronDown } from 'lucide-react';
+import { UploadCloud, Link2, X, FileAudio, Music, Check, Mic2, Youtube, Rss, AlertCircle, ArrowRight, Plus, Trash2, FileText, Twitter, Linkedin, Mail, BookOpen, Volume2, Hash, AlignLeft, Zap, Package, Users, ChevronRight, Sparkles, Brain, Wand2, Target, Globe, ChevronDown, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import useShows from '@/hooks/use-shows';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -17,6 +20,7 @@ interface SelectedFile {
 interface QueueItem {
   localId: string;
   file?: SelectedFile;
+  rawFile?: File;
   url?: string;
   sourceType: 'file' | 'url';
 }
@@ -64,11 +68,11 @@ const StepIndicator = ({
     return <React.Fragment key={step.id}>
           <div className="flex flex-col items-center gap-1.5">
             <div className={cn('w-7 h-7 rounded-full flex items-center justify-center border transition-all duration-300', isDone && 'bg-emerald-500 border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.4)]', isActive && 'bg-stone-900 border-stone-800 shadow-[0_0_12px_rgba(0,0,0,0.25)]', isPending && 'bg-muted border-border')}>
-              {isDone ? <Check className="w-3.5 h-3.5 text-white" /> : <span className={cn('font-mono text-[11px] font-bold', isActive ? 'text-white' : 'text-muted-foreground/70')}>
+              {isDone ? <Check className="w-3.5 h-3.5 text-white" /> : <span className={cn('font-mono text-[11px] font-bold', isActive ? 'text-white' : 'text-muted-foreground')}>
                   {step.id}
                 </span>}
             </div>
-            <span className={cn('font-sans text-[11px] font-medium whitespace-nowrap', isActive ? 'text-foreground' : 'text-muted-foreground/70')}>
+            <span className={cn('font-sans text-[11px] font-medium whitespace-nowrap', isActive ? 'text-foreground' : 'text-muted-foreground')}>
               {step.label}
             </span>
           </div>
@@ -154,7 +158,7 @@ const UrlImportPanel = ({
         <label className="font-sans text-[12px] font-medium text-muted-foreground block">Paste a YouTube video or RSS feed URL</label>
         <div className="relative">
           <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
-            {detected ? <detected.icon className={cn('w-4 h-4', detected.color)} /> : <Link2 className="w-4 h-4 text-muted-foreground/70" />}
+            {detected ? <detected.icon className={cn('w-4 h-4', detected.color)} /> : <Link2 className="w-4 h-4 text-muted-foreground" />}
           </div>
           <input type="url" value={url} onChange={e => {
           setUrl(e.target.value);
@@ -193,7 +197,7 @@ const UrlImportPanel = ({
             <span className="font-sans text-[11px] text-muted-foreground">{label}</span>
           </div>)}
       </div>
-      <button onClick={handleSubmit} disabled={!url.trim()} className={cn('flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-sans font-semibold transition-all', url.trim() ? 'bg-stone-900 text-white hover:bg-stone-800 shadow-sm' : 'bg-muted text-muted-foreground/70 cursor-not-allowed')}>
+      <button onClick={handleSubmit} disabled={!url.trim()} className={cn('flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-sans font-semibold transition-all', url.trim() ? 'bg-stone-900 text-white hover:bg-stone-800 shadow-sm' : 'bg-muted text-muted-foreground cursor-not-allowed')}>
         <Link2 className="w-4 h-4" />
         Add to Queue
       </button>
@@ -243,14 +247,14 @@ const QueueItemRow = ({
             {ext}
           </span>
         </div>
-        {item.file && <span className="font-mono text-[10px] text-muted-foreground/70">{formatBytes(item.file.size)}</span>}
+        {item.file && <span className="font-mono text-[10px] text-muted-foreground">{formatBytes(item.file.size)}</span>}
       </div>
       <div className="flex items-center gap-1.5 flex-shrink-0">
         <div className="flex items-center gap-1">
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
           <span className="font-mono text-[9px] font-bold text-emerald-600">Queued</span>
         </div>
-        <button onClick={onRemove} className="p-1.5 rounded-md text-muted-foreground/50 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100 border border-transparent hover:border-red-200/60">
+        <button onClick={onRemove} className="p-1.5 rounded-md text-muted-foreground/80 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100 border border-transparent hover:border-red-200/60">
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -304,7 +308,7 @@ const DropZone = ({
         <p className="font-sans font-semibold text-foreground text-[14px] tracking-tight">
           {isDragOver ? 'Drop files here' : hasItems ? 'Add more files' : 'Drag & drop audio files'}
         </p>
-        <p className="font-sans text-xs text-muted-foreground/70">
+        <p className="font-sans text-xs text-muted-foreground">
           or <span className="text-foreground/80 font-medium underline underline-offset-2 decoration-border">click to browse</span> · MP3, WAV, M4A
         </p>
       </div>
@@ -352,7 +356,7 @@ const Step1 = ({
       {/* Queue */}
       {queue.length > 0 && <div className="space-y-2">
           <div className="flex items-center justify-between px-0.5">
-            <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+            <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
               Queue · {queue.length} {queue.length === 1 ? 'episode' : 'episodes'}
             </span>
             <div className="flex items-center gap-1.5">
@@ -380,8 +384,8 @@ const Step1 = ({
           id,
           label,
           icon: Icon
-        }) => <button key={id} onClick={() => setActiveTab(id)} className={cn('relative flex items-center gap-2 px-6 py-3.5 text-[12px] font-sans font-medium transition-all duration-150 flex-1 justify-center', activeTab === id ? 'text-foreground bg-card' : 'text-muted-foreground/70 hover:text-foreground/80 hover:bg-accent/50')}>
-              <Icon className={cn('w-3.5 h-3.5', activeTab === id ? 'text-foreground' : 'text-muted-foreground/70')} />
+        }) => <button key={id} onClick={() => setActiveTab(id)} className={cn('relative flex items-center gap-2 px-6 py-3.5 text-[12px] font-sans font-medium transition-all duration-150 flex-1 justify-center', activeTab === id ? 'text-foreground bg-card' : 'text-muted-foreground hover:text-foreground/80 hover:bg-accent/50')}>
+              <Icon className={cn('w-3.5 h-3.5', activeTab === id ? 'text-foreground' : 'text-muted-foreground')} />
               {label}
               {activeTab === id && <motion.div layoutId="uploadTabIndicator" className="absolute bottom-0 left-0 right-0 h-[2px] bg-stone-900 rounded-t-full" />}
             </button>)}
@@ -478,9 +482,9 @@ const Step2 = ({
       {/* Topics */}
       <div className="bg-card border border-border rounded-2xl p-5 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.06)] space-y-3">
         <div className="flex items-center gap-2">
-          <Target className="w-3.5 h-3.5 text-muted-foreground/70" />
+          <Target className="w-3.5 h-3.5 text-muted-foreground" />
           <span className="font-sans text-[12px] font-semibold text-foreground/80">Key Topics</span>
-          <span className="font-mono text-[9px] text-muted-foreground/70 ml-auto">{context.topics.length}/8</span>
+          <span className="font-mono text-[9px] text-muted-foreground ml-auto">{context.topics.length}/8</span>
         </div>
         <div className="flex flex-wrap gap-1.5">
           {context.topics.map(t => <motion.span key={t} layout initial={{
@@ -494,7 +498,7 @@ const Step2 = ({
           scale: 0.85
         }} className="flex items-center gap-1.5 font-sans text-[11px] text-foreground/80 bg-muted border border-border px-2.5 py-1 rounded-full">
               {t}
-              <button onClick={() => removeTopic(t)} className="text-muted-foreground/70 hover:text-red-400 transition-colors">
+              <button onClick={() => removeTopic(t)} className="text-muted-foreground hover:text-red-400 transition-colors">
                 <X className="w-2.5 h-2.5" />
               </button>
             </motion.span>)}
@@ -504,11 +508,11 @@ const Step2 = ({
               e.preventDefault();
               addTopic(topicInput);
             }
-          }} placeholder="Add topic…" className="font-sans text-[11px] text-foreground/80 placeholder:text-muted-foreground/50 bg-transparent border-none outline-none w-24" />
+          }} placeholder="Add topic…" className="font-sans text-[11px] text-foreground/80 placeholder:text-muted-foreground/80 bg-transparent border-none outline-none w-24" />
             </div>}
         </div>
         <div className="flex flex-wrap gap-1.5 pt-1 border-t border-border/50">
-          <span className="font-mono text-[9px] text-muted-foreground/50 uppercase tracking-widest w-full mb-1">Suggestions</span>
+          <span className="font-mono text-[9px] text-muted-foreground/80 uppercase tracking-widest w-full mb-1">Suggestions</span>
           {TOPIC_SUGGESTIONS.filter(s => !context.topics.includes(s)).slice(0, 6).map(s => <button key={s} onClick={() => addTopic(s)} className="font-sans text-[10px] text-muted-foreground bg-muted/50 hover:bg-accent border border-border px-2 py-0.5 rounded-full transition-colors">
               + {s}
             </button>)}
@@ -666,7 +670,7 @@ const Step3 = ({
       {/* Content Style */}
       <div className="bg-card border border-border rounded-2xl p-5 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.06)] space-y-3">
         <div className="flex items-center gap-2 mb-1">
-          <Wand2 className="w-3.5 h-3.5 text-muted-foreground/70" />
+          <Wand2 className="w-3.5 h-3.5 text-muted-foreground" />
           <span className="font-sans text-[12px] font-semibold text-foreground/80">Content Style</span>
         </div>
         <div className="grid grid-cols-5 gap-2">
@@ -677,7 +681,7 @@ const Step3 = ({
               <span className={cn('font-sans text-[11px] font-semibold leading-tight', style.contentStyle === cs.id ? 'text-white' : 'text-foreground')}>
                 {cs.label}
               </span>
-              <span className={cn('font-sans text-[9px] leading-tight', style.contentStyle === cs.id ? 'text-stone-300' : 'text-muted-foreground/70')}>
+              <span className={cn('font-sans text-[9px] leading-tight', style.contentStyle === cs.id ? 'text-stone-300' : 'text-muted-foreground')}>
                 {cs.desc}
               </span>
             </button>)}
@@ -688,7 +692,7 @@ const Step3 = ({
       <div className="bg-card border border-border rounded-2xl p-5 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.06)] space-y-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <Globe className="w-3.5 h-3.5 text-muted-foreground/70" />
+            <Globe className="w-3.5 h-3.5 text-muted-foreground" />
             <span className="font-sans text-[12px] font-semibold text-foreground/80">Tone</span>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -713,11 +717,11 @@ const Step3 = ({
       <div className="bg-card border border-border rounded-2xl p-5 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.06)] space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Package className="w-3.5 h-3.5 text-muted-foreground/70" />
+            <Package className="w-3.5 h-3.5 text-muted-foreground" />
             <span className="font-sans text-[12px] font-semibold text-foreground/80">Assets to Generate</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="font-mono text-[10px] text-muted-foreground/70">{style.assetsToGenerate.length} selected</span>
+            <span className="font-mono text-[10px] text-muted-foreground">{style.assetsToGenerate.length} selected</span>
             <button onClick={() => onChange({
             ...style,
             assetsToGenerate: ALL_ASSETS.map(a => a.id)
@@ -727,7 +731,7 @@ const Step3 = ({
           </div>
         </div>
         {Object.entries(grouped).map(([category, assets]) => <div key={category}>
-            <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70 block mb-1.5">{category}</span>
+            <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground block mb-1.5">{category}</span>
             <div className="grid grid-cols-2 gap-2">
               {assets.map(asset => {
             const Icon = asset.icon;
@@ -788,8 +792,11 @@ export const UploadWizard = ({
 }: {
   onComplete?: (episodeId: string) => void;
 }) => {
+  const router = useRouter();
+  const { shows } = useShows();
   const [currentStep, setCurrentStep] = useState(1);
   const [localQueue, setLocalQueue] = useState<QueueItem[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [expertContext, setExpertContext] = useState<ExpertContext>({
     showName: '',
     episodeTitle: '',
@@ -817,6 +824,7 @@ export const UploadWizard = ({
         type: file.type || `audio/${ext.replace('.', '')}`,
         lastModified: file.lastModified
       },
+      rawFile: file,
       sourceType: 'file'
     }]);
   }, []);
@@ -831,19 +839,78 @@ export const UploadWizard = ({
     setLocalQueue(prev => prev.filter(i => i.localId !== localId));
   }, []);
   const canProceed = localQueue.length > 0;
-  const handleFinish = useCallback(() => {
-    // TODO: Integrate with real processing pipeline
-    // For now this is a demo UI — wire up to API routes when ready
-    console.log('Processing queue:', localQueue, expertContext, styleSelection);
-    if (localQueue.length > 0 && onComplete) {
-      onComplete(localQueue[0].localId);
+  const handleFinish = useCallback(async () => {
+    if (localQueue.length === 0 || isSubmitting) return;
+    setIsSubmitting(true);
+
+    try {
+      const item = localQueue[0];
+      let audioUrl = '';
+
+      // Step 1: Upload file to Supabase Storage (if file source)
+      if (item.sourceType === 'file' && item.rawFile) {
+        const formData = new FormData();
+        formData.append('file', item.rawFile);
+
+        const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+        if (!uploadRes.ok) {
+          const err = await uploadRes.json();
+          throw new Error(err.error || 'Upload failed');
+        }
+        const uploadData = await uploadRes.json();
+        audioUrl = uploadData.publicUrl;
+      } else if (item.sourceType === 'url' && item.url) {
+        audioUrl = item.url;
+      }
+
+      if (!audioUrl) throw new Error('No audio source available');
+
+      // Step 2: Create episode record
+      const showId = shows[0]?.id;
+      if (!showId) throw new Error('No show found. Create a show first.');
+
+      const createRes = await fetch('/api/episodes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          show_id: showId,
+          title: expertContext.episodeTitle || item.file?.name?.replace(/\.[^.]+$/, '') || 'Untitled Episode',
+          description: expertContext.description || null,
+          audio_url: audioUrl,
+          guest_name: expertContext.guestName || null,
+          guest_bio: expertContext.guestBio || null,
+        }),
+      });
+      if (!createRes.ok) {
+        const err = await createRes.json();
+        throw new Error(err.error || 'Failed to create episode');
+      }
+      const { data: episode } = await createRes.json();
+
+      // Step 3: Trigger processing
+      const processRes = await fetch(`/api/episodes/${episode.id}/process`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      if (!processRes.ok) {
+        // Episode created but processing failed — still navigate to it
+        toast.error('Episode created but processing could not start. You can retry from the episode page.');
+      } else {
+        toast.success('Episode uploaded! Processing has started.');
+      }
+
+      // Step 4: Navigate to episode
+      if (onComplete) onComplete(episode.id);
+      router.push(`/episodes/${episode.id}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [localQueue, expertContext, styleSelection, onComplete]);
+  }, [localQueue, expertContext, isSubmitting, shows, onComplete, router]);
   const stepLabels = ['Select Audio', 'Expert Context', 'Style & Assets'];
-  return <div className="flex-1 h-full overflow-y-auto relative bg-background" style={{
-    backgroundImage: `radial-gradient(circle, rgba(0,0,0,0.065) 1px, transparent 1px)`,
-    backgroundSize: '22px 22px'
-  }}>
+  return <div className="flex-1 h-full overflow-y-auto relative">
       <div className="max-w-2xl mx-auto px-6 py-10">
 
         {/* ── Header ── */}
@@ -854,14 +921,14 @@ export const UploadWizard = ({
             </div>
             <div>
               <span className="font-bold text-sm text-foreground leading-none block tracking-tighter">PodBrain</span>
-              <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70 leading-none">Upload Episode</span>
+              <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground leading-none">Upload Episode</span>
             </div>
           </div>
 
           <div className="bg-card border border-border rounded-2xl px-6 py-5 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.06),0_1px_0_rgba(255,255,255,1)_inset]">
             <div className="flex items-center justify-between mb-4">
-              <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Progress</span>
-              <span className="font-mono text-[10px] text-muted-foreground/70">Step {currentStep} of {STEPS.length}</span>
+              <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Progress</span>
+              <span className="font-mono text-[10px] text-muted-foreground">Step {currentStep} of {STEPS.length}</span>
             </div>
             <div className="flex justify-center">
               <StepIndicator currentStep={currentStep} />
@@ -886,15 +953,15 @@ export const UploadWizard = ({
         }} className="mb-6">
             {currentStep === 1 && <>
                 <h1 className="font-sans font-bold text-[22px] text-foreground tracking-tight leading-tight mb-1.5">Select your audio</h1>
-                <p className="font-serif text-sm text-muted-foreground/70 leading-relaxed">Upload one or more audio files, or import from a URL. Batch-process multiple episodes at once.</p>
+                <p className="font-serif text-sm text-muted-foreground leading-relaxed">Upload one or more audio files, or import from a URL. Batch-process multiple episodes at once.</p>
               </>}
             {currentStep === 2 && <>
                 <h1 className="font-sans font-bold text-[22px] text-foreground tracking-tight leading-tight mb-1.5">Expert context</h1>
-                <p className="font-serif text-sm text-muted-foreground/70 leading-relaxed">Tell PodBrain about your episode — this shapes every AI-generated asset.</p>
+                <p className="font-serif text-sm text-muted-foreground leading-relaxed">Tell PodBrain about your episode — this shapes every AI-generated asset.</p>
               </>}
             {currentStep === 3 && <>
                 <h1 className="font-sans font-bold text-[22px] text-foreground tracking-tight leading-tight mb-1.5">Style & asset selection</h1>
-                <p className="font-serif text-sm text-muted-foreground/70 leading-relaxed">Choose your content style, tone, and which assets to generate. Preview what's coming before you commit.</p>
+                <p className="font-serif text-sm text-muted-foreground leading-relaxed">Choose your content style, tone, and which assets to generate. Preview what's coming before you commit.</p>
               </>}
           </motion.div>
         </AnimatePresence>
@@ -922,14 +989,14 @@ export const UploadWizard = ({
 
         {/* ── Info strip (step 1 only) ── */}
         {currentStep === 1 && <div className="mt-4 flex items-center gap-2 px-1">
-            <div className="flex items-center gap-1.5 text-muted-foreground/70">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
               <span className="font-mono text-[10px]">Transcription via Whisper v3</span>
             </div>
-            <span className="text-muted-foreground/50">·</span>
-            <span className="font-mono text-[10px] text-muted-foreground/70">~2–4 min processing</span>
-            <span className="text-muted-foreground/50">·</span>
-            <span className="font-mono text-[10px] text-muted-foreground/70">End-to-end encrypted</span>
+            <span className="text-muted-foreground/80">·</span>
+            <span className="font-mono text-[10px] text-muted-foreground">~2–4 min processing</span>
+            <span className="text-muted-foreground/80">·</span>
+            <span className="font-mono text-[10px] text-muted-foreground">End-to-end encrypted</span>
           </div>}
 
         {/* ── Navigation ── */}
@@ -943,20 +1010,20 @@ export const UploadWizard = ({
           scale: 1.01
         }} whileTap={currentStep === 1 && !canProceed ? {} : {
           scale: 0.99
-        }} className={cn('flex-1 flex items-center justify-center gap-3 py-3.5 rounded-xl text-sm font-sans font-semibold transition-all duration-200', currentStep === 1 && !canProceed ? 'bg-muted text-muted-foreground/70 cursor-not-allowed border border-border' : 'bg-stone-900 text-white hover:bg-stone-800 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.3)]')}>
+        }} className={cn('flex-1 flex items-center justify-center gap-3 py-3.5 rounded-xl text-sm font-sans font-semibold transition-all duration-200', currentStep === 1 && !canProceed ? 'bg-muted text-muted-foreground cursor-not-allowed border border-border' : 'bg-stone-900 text-white hover:bg-stone-800 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.3)]')}>
               <span>Continue to {stepLabels[currentStep]}</span>
               <ArrowRight className="w-4 h-4" />
-            </motion.button> : <motion.button onClick={handleFinish} whileHover={{
-          scale: 1.01
+            </motion.button> : <motion.button onClick={handleFinish} disabled={isSubmitting} whileHover={{
+          scale: isSubmitting ? 1 : 1.01
         }} whileTap={{
-          scale: 0.99
-        }} className="flex-1 flex items-center justify-center gap-3 py-3.5 rounded-xl text-sm font-sans font-semibold bg-emerald-600 text-white hover:bg-emerald-500 shadow-[0_4px_16px_-4px_rgba(16,185,129,0.4)] transition-all duration-200">
-              <Sparkles className="w-4 h-4 text-emerald-200" />
-              <span>Start Processing {localQueue.length > 1 ? `${localQueue.length} Episodes` : 'Episode'}</span>
+          scale: isSubmitting ? 1 : 0.99
+        }} className={cn("flex-1 flex items-center justify-center gap-3 py-3.5 rounded-xl text-sm font-sans font-semibold shadow-[0_4px_16px_-4px_rgba(16,185,129,0.4)] transition-all duration-200", isSubmitting ? "bg-emerald-600/70 text-white/80 cursor-not-allowed" : "bg-emerald-600 text-white hover:bg-emerald-500")}>
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-emerald-200" />}
+              <span>{isSubmitting ? 'Uploading & Processing…' : `Start Processing ${localQueue.length > 1 ? `${localQueue.length} Episodes` : 'Episode'}`}</span>
             </motion.button>}
         </div>
 
-        {currentStep === 1 && !canProceed && <p className="text-center font-sans text-[11px] text-muted-foreground/70 mt-2.5">
+        {currentStep === 1 && !canProceed && <p className="text-center font-sans text-[11px] text-muted-foreground mt-2.5">
             Select a file or import a URL to continue
           </p>}
 

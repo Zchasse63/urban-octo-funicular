@@ -4,6 +4,8 @@ import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react';
 import { BookOpen, Search, Plus, Upload, Sparkles, X, Check, ChevronDown, Mic2, User, Tag, Cpu, ArrowRight, TrendingUp, Target, CheckCircle2, AlertCircle, Loader2, Copy, Trash2, MoreHorizontal, Filter, FileText, Wand2, Download, RefreshCw, Zap, Hash, SortAsc, SortDesc, CheckSquare, Square, RotateCcw, RotateCw, Keyboard, ChevronUp, BarChart2, ShieldCheck, AlertTriangle, ArrowUpDown, Sliders } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import useVocabulary from '@/hooks/use-vocabulary';
+import useShows from '@/hooks/use-shows';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -438,7 +440,7 @@ const DonutChart = ({
           background: color
         }} />
             <span className="font-sans text-[11px] text-muted-foreground flex-1">{cat}</span>
-            <span className="font-mono text-[10px] text-muted-foreground/70 w-4 text-right">{count}</span>
+            <span className="font-mono text-[10px] text-muted-foreground w-4 text-right">{count}</span>
           </div>)}
       </div>
     </div>;
@@ -529,10 +531,10 @@ const ShortcutsModal = ({
           </div>
           <div>
             <h2 className="font-sans font-bold text-sm text-foreground">Keyboard Shortcuts</h2>
-            <p className="font-mono text-[9px] text-muted-foreground/70 uppercase tracking-widest">Quick navigation</p>
+            <p className="font-mono text-[9px] text-muted-foreground uppercase tracking-widest">Quick navigation</p>
           </div>
         </div>
-        <button onClick={onClose} className="p-1.5 rounded-md text-muted-foreground/70 hover:text-accent-foreground hover:bg-accent transition-colors">
+        <button onClick={onClose} className="p-1.5 rounded-md text-muted-foreground hover:text-accent-foreground hover:bg-accent transition-colors">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -601,13 +603,13 @@ const TermRow = ({
   onSelect: (id: string, multi: boolean) => void;
 }) => {
   const statusCfg = STATUS_CONFIG[term.status];
-  return <motion.div variants={itemVariants} className={cn('flex items-center gap-4 px-5 py-3.5 transition-colors group border-b border-border/30 last:border-0 cursor-pointer', selected ? 'bg-sky-50/60' : 'hover:bg-accent/50')} onClick={e => onSelect(term.id, e.metaKey || e.ctrlKey || e.shiftKey)}>
+  return <motion.div variants={itemVariants} className={cn('flex items-center gap-3 sm:gap-4 px-3 sm:px-5 py-3.5 transition-colors group border-b border-border/30 last:border-0 cursor-pointer', selected ? 'bg-sky-50/60' : 'hover:bg-accent/50')} onClick={e => onSelect(term.id, e.metaKey || e.ctrlKey || e.shiftKey)}>
       {/* Checkbox */}
       <div className={cn('flex-shrink-0 transition-opacity', selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100')} onClick={e => {
       e.stopPropagation();
       onSelect(term.id, true);
     }}>
-        {selected ? <CheckSquare className="w-3.5 h-3.5 text-sky-500" /> : <Square className="w-3.5 h-3.5 text-muted-foreground/70" />}
+        {selected ? <CheckSquare className="w-3.5 h-3.5 text-sky-500" /> : <Square className="w-3.5 h-3.5 text-muted-foreground" />}
       </div>
 
       {/* Term + phonetic */}
@@ -621,7 +623,7 @@ const TermRow = ({
               <ShieldCheck className="w-3 h-3 text-emerald-500" />
             </span>}
         </div>
-        {term.phonetic && <span className="font-mono text-[10px] text-muted-foreground/70 italic">{term.phonetic}</span>}
+        {term.phonetic && <span className="font-mono text-[10px] text-muted-foreground italic">{term.phonetic}</span>}
         {term.notes && <p className="font-sans text-[10px] text-amber-600 mt-0.5 flex items-center gap-1">
             <AlertCircle className="w-2.5 h-2.5" />{term.notes}
           </p>}
@@ -633,39 +635,39 @@ const TermRow = ({
       </div>
 
       {/* Category */}
-      <div className="w-28 flex-shrink-0"><CategoryBadge category={term.category} /></div>
+      <div className="w-24 flex-shrink-0 hidden xl:block"><CategoryBadge category={term.category} /></div>
 
       {/* Usage + sparkline */}
-      <div className="w-28 flex-shrink-0 flex items-center gap-2">
+      <div className="w-20 flex-shrink-0 flex items-center gap-2">
         <div>
           <span className="font-mono text-[11px] font-bold text-muted-foreground">{term.usageCount}</span>
-          <p className="font-sans text-[9px] text-muted-foreground/70 uppercase tracking-widest">uses</p>
+          <p className="font-sans text-[9px] text-muted-foreground uppercase tracking-widest">uses</p>
         </div>
-        {term.usageTrend && <Sparkline data={term.usageTrend} />}
+        {term.usageTrend && <span className="hidden xl:inline"><Sparkline data={term.usageTrend} /></span>}
       </div>
 
       {/* Accuracy boost */}
-      <div className="w-32 flex-shrink-0">
+      <div className="w-28 flex-shrink-0 hidden xl:block">
         <AccuracyBar value={term.accuracyBoost} delay={index * 0.04} />
       </div>
 
       {/* Added date */}
-      <div className="w-20 flex-shrink-0 text-right">
-        <span className="font-sans text-[10px] text-muted-foreground/70">{formatDate(term.addedDate)}</span>
+      <div className="w-16 flex-shrink-0 text-right hidden sm:block">
+        <span className="font-sans text-[10px] text-muted-foreground">{formatDate(term.addedDate)}</span>
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity w-16 justify-end">
+      <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity w-16 justify-end">
         <button aria-label="Copy term" onClick={e => {
         e.stopPropagation();
         navigator.clipboard.writeText(term.term);
-      }} className="p-1.5 rounded-md text-muted-foreground/50 hover:text-accent-foreground hover:bg-accent transition-all">
+      }} className="p-1.5 rounded-md text-muted-foreground/80 hover:text-accent-foreground hover:bg-accent transition-all">
           <Copy className="w-3 h-3" />
         </button>
         <button aria-label="Delete term" onClick={e => {
         e.stopPropagation();
         onDelete(term.id);
-      }} className="p-1.5 rounded-md text-muted-foreground/50 hover:text-rose-500 hover:bg-rose-50 transition-all">
+      }} className="p-1.5 rounded-md text-muted-foreground/80 hover:text-rose-500 hover:bg-rose-50 transition-all">
           <Trash2 className="w-3 h-3" />
         </button>
       </div>
@@ -701,9 +703,9 @@ const SuggestionCard = ({
       <div className="flex items-start justify-between gap-2">
         <div>
           <span className="font-mono text-[12px] font-bold text-foreground">{suggestion.term}</span>
-          {suggestion.phonetic && <p className="font-mono text-[9px] text-muted-foreground/70 italic mt-0.5">{suggestion.phonetic}</p>}
+          {suggestion.phonetic && <p className="font-mono text-[9px] text-muted-foreground italic mt-0.5">{suggestion.phonetic}</p>}
         </div>
-        <button aria-label="Dismiss suggestion" onClick={() => onDismiss(suggestion.id)} className="p-0.5 rounded text-muted-foreground/50 hover:text-muted-foreground transition-colors flex-shrink-0">
+        <button aria-label="Dismiss suggestion" onClick={() => onDismiss(suggestion.id)} className="p-0.5 rounded text-muted-foreground/80 hover:text-muted-foreground transition-colors flex-shrink-0">
           <X className="w-3 h-3" />
         </button>
       </div>
@@ -716,10 +718,10 @@ const SuggestionCard = ({
         </span>
       </div>
       <div className="flex items-center gap-1.5">
-        <FileText className="w-2.5 h-2.5 text-muted-foreground/50 flex-shrink-0" />
-        <span className="font-sans text-[9px] text-muted-foreground/70 truncate">{suggestion.sourceEpisode}</span>
+        <FileText className="w-2.5 h-2.5 text-muted-foreground/80 flex-shrink-0" />
+        <span className="font-sans text-[9px] text-muted-foreground truncate">{suggestion.sourceEpisode}</span>
       </div>
-      <p className="font-sans text-[9px] text-muted-foreground/70">
+      <p className="font-sans text-[9px] text-muted-foreground">
         Detected <span className="font-bold text-muted-foreground">{suggestion.detectedCount}×</span> in transcript
       </p>
       <button onClick={handleAccept} disabled={accepting} className={cn('w-full flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[10px] font-sans font-semibold transition-all', accepting ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/60' : 'bg-stone-900 text-white hover:bg-stone-800 shadow-sm')}>
@@ -802,16 +804,16 @@ const AddTermModal = ({
             <div className="w-7 h-7 rounded-lg bg-stone-900 flex items-center justify-center"><Plus className="w-3.5 h-3.5 text-white" /></div>
             <div>
               <h2 className="font-sans font-bold text-sm text-foreground">Add New Term</h2>
-              <p className="font-mono text-[9px] text-muted-foreground/70 uppercase tracking-widest">Vocabulary Manager</p>
+              <p className="font-mono text-[9px] text-muted-foreground uppercase tracking-widest">Vocabulary Manager</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-md text-muted-foreground/70 hover:text-accent-foreground hover:bg-accent transition-colors"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="p-1.5 rounded-md text-muted-foreground hover:text-accent-foreground hover:bg-accent transition-colors"><X className="w-4 h-4" /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           <div>
             <label className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-1.5">Term *</label>
-            <input autoFocus value={term} onChange={e => setTerm(e.target.value)} placeholder="e.g. Marcus Aurelius" className={cn('w-full px-3.5 py-2.5 rounded-lg font-mono text-sm text-foreground placeholder:text-muted-foreground/50 bg-card border focus:outline-none focus:shadow-[0_0_0_3px_rgba(120,113,108,0.1)] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.04)]', duplicate ? 'border-amber-400 focus:border-amber-500' : 'border-border focus:border-stone-400')} />
+            <input autoFocus value={term} onChange={e => setTerm(e.target.value)} placeholder="e.g. Marcus Aurelius" className={cn('w-full px-3.5 py-2.5 rounded-lg font-mono text-sm text-foreground placeholder:text-muted-foreground/80 bg-card border focus:outline-none focus:shadow-[0_0_0_3px_rgba(120,113,108,0.1)] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.04)]', duplicate ? 'border-amber-400 focus:border-amber-500' : 'border-border focus:border-stone-400')} />
             <AnimatePresence>
               {duplicate && <motion.p initial={{
               opacity: 0,
@@ -829,8 +831,8 @@ const AddTermModal = ({
 
           <div>
             <label className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-1.5">Phonetic Hint</label>
-            <input value={phonetic} onChange={e => setPhonetic(e.target.value)} placeholder="e.g. MAR-kus aw-REE-lee-us" className="w-full px-3.5 py-2.5 rounded-lg font-mono text-sm text-foreground placeholder:text-muted-foreground/50 bg-card border border-border focus:outline-none focus:border-stone-400 focus:shadow-[0_0_0_3px_rgba(120,113,108,0.1)] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.04)]" />
-            <p className="font-sans text-[10px] text-muted-foreground/70 mt-1.5">Use syllable-CAPS notation for AI accuracy.</p>
+            <input value={phonetic} onChange={e => setPhonetic(e.target.value)} placeholder="e.g. MAR-kus aw-REE-lee-us" className="w-full px-3.5 py-2.5 rounded-lg font-mono text-sm text-foreground placeholder:text-muted-foreground/80 bg-card border border-border focus:outline-none focus:border-stone-400 focus:shadow-[0_0_0_3px_rgba(120,113,108,0.1)] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.04)]" />
+            <p className="font-sans text-[10px] text-muted-foreground mt-1.5">Use syllable-CAPS notation for AI accuracy.</p>
           </div>
 
           <div>
@@ -848,7 +850,7 @@ const AddTermModal = ({
 
           {/* Tags */}
           <div>
-            <label className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-1.5">Tags <span className="normal-case font-sans text-muted-foreground/70">(optional)</span></label>
+            <label className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-1.5">Tags <span className="normal-case font-sans text-muted-foreground">(optional)</span></label>
             <div className="flex items-center gap-1.5">
               <input value={tagInput} onChange={e => setTagInput(e.target.value)} onKeyDown={e => {
               if (e.key === 'Enter') {
@@ -859,7 +861,7 @@ const AddTermModal = ({
                 e.preventDefault();
                 addTag();
               }
-            }} placeholder="e.g. stoic, philosophy" className="flex-1 px-3 py-2 rounded-lg font-mono text-sm text-foreground placeholder:text-muted-foreground/50 bg-card border border-border focus:outline-none focus:border-stone-400 transition-all text-[11px]" />
+            }} placeholder="e.g. stoic, philosophy" className="flex-1 px-3 py-2 rounded-lg font-mono text-sm text-foreground placeholder:text-muted-foreground/80 bg-card border border-border focus:outline-none focus:border-stone-400 transition-all text-[11px]" />
               <button type="button" onClick={addTag} className="px-2.5 py-2 rounded-lg bg-muted border border-border text-muted-foreground hover:bg-accent transition-colors text-[11px] font-medium">Add</button>
             </div>
             {tags.length > 0 && <div className="flex flex-wrap gap-1 mt-2">
@@ -871,13 +873,13 @@ const AddTermModal = ({
           </div>
 
           <div>
-            <label className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-1.5">Notes <span className="normal-case font-sans text-muted-foreground/70">(optional)</span></label>
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Any pronunciation notes or context…" className="w-full px-3.5 py-2.5 rounded-lg font-sans text-sm text-foreground placeholder:text-muted-foreground/50 bg-card border border-border focus:outline-none focus:border-stone-400 focus:shadow-[0_0_0_3px_rgba(120,113,108,0.1)] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.04)] resize-none" />
+            <label className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-1.5">Notes <span className="normal-case font-sans text-muted-foreground">(optional)</span></label>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Any pronunciation notes or context…" className="w-full px-3.5 py-2.5 rounded-lg font-sans text-sm text-foreground placeholder:text-muted-foreground/80 bg-card border border-border focus:outline-none focus:border-stone-400 focus:shadow-[0_0_0_3px_rgba(120,113,108,0.1)] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.04)] resize-none" />
           </div>
 
           <div className="flex items-center gap-2 pt-1">
             <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-border text-muted-foreground text-[12px] font-sans font-semibold hover:bg-accent/50 hover:border-border transition-all">Cancel</button>
-            <button type="submit" disabled={!term.trim() || submitting || !!duplicate} className={cn('flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-[12px] font-sans font-semibold transition-all shadow-sm', term.trim() && !submitting && !duplicate ? 'bg-stone-900 text-white hover:bg-stone-800' : 'bg-muted text-muted-foreground/70 cursor-not-allowed')}>
+            <button type="submit" disabled={!term.trim() || submitting || !!duplicate} className={cn('flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-[12px] font-sans font-semibold transition-all shadow-sm', term.trim() && !submitting && !duplicate ? 'bg-stone-900 text-white hover:bg-stone-800' : 'bg-muted text-muted-foreground cursor-not-allowed')}>
               {submitting ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Adding…</> : <><Wand2 className="w-3.5 h-3.5" />Add Term</>}
             </button>
           </div>
@@ -936,15 +938,15 @@ const BulkImportModal = ({
             <div className="w-7 h-7 rounded-lg bg-stone-900 flex items-center justify-center"><Upload className="w-3.5 h-3.5 text-white" /></div>
             <div>
               <h2 className="font-sans font-bold text-sm text-foreground">Bulk Import</h2>
-              <p className="font-mono text-[9px] text-muted-foreground/70 uppercase tracking-widest">One term per line</p>
+              <p className="font-mono text-[9px] text-muted-foreground uppercase tracking-widest">One term per line</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-md text-muted-foreground/70 hover:text-accent-foreground hover:bg-accent transition-colors"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="p-1.5 rounded-md text-muted-foreground hover:text-accent-foreground hover:bg-accent transition-colors"><X className="w-4 h-4" /></button>
         </div>
         <div className="px-6 py-5 space-y-4">
           <div>
             <label className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-1.5">Terms List</label>
-            <textarea value={text} onChange={e => setText(e.target.value)} rows={8} placeholder={'Seneca\nEpictetus\nMarcus Aurelius\nZeno of Citium\n…'} className="w-full px-3.5 py-3 rounded-lg font-mono text-sm text-foreground placeholder:text-muted-foreground/50 bg-card border border-border focus:outline-none focus:border-stone-400 focus:shadow-[0_0_0_3px_rgba(120,113,108,0.1)] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.04)] resize-none leading-relaxed" />
+            <textarea value={text} onChange={e => setText(e.target.value)} rows={8} placeholder={'Seneca\nEpictetus\nMarcus Aurelius\nZeno of Citium\n…'} className="w-full px-3.5 py-3 rounded-lg font-mono text-sm text-foreground placeholder:text-muted-foreground/80 bg-card border border-border focus:outline-none focus:border-stone-400 focus:shadow-[0_0_0_3px_rgba(120,113,108,0.1)] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.04)] resize-none leading-relaxed" />
           </div>
           {lineCount > 0 && <motion.div initial={{
           opacity: 0,
@@ -960,7 +962,7 @@ const BulkImportModal = ({
             </motion.div>}
           <div className="flex items-center gap-2">
             <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-border text-muted-foreground text-[12px] font-sans font-semibold hover:bg-accent/50 hover:border-border transition-all">Cancel</button>
-            <button onClick={handleImport} disabled={!lineCount || importing || done} className={cn('flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-[12px] font-sans font-semibold transition-all shadow-sm', lineCount && !importing && !done ? 'bg-stone-900 text-white hover:bg-stone-800' : 'bg-muted text-muted-foreground/70 cursor-not-allowed')}>
+            <button onClick={handleImport} disabled={!lineCount || importing || done} className={cn('flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-[12px] font-sans font-semibold transition-all shadow-sm', lineCount && !importing && !done ? 'bg-stone-900 text-white hover:bg-stone-800' : 'bg-muted text-muted-foreground cursor-not-allowed')}>
               {done ? <><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />Imported!</> : importing ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Importing…</> : <><Upload className="w-3.5 h-3.5" />Import {lineCount > 0 ? `${lineCount} Terms` : 'Terms'}</>}
             </button>
           </div>
@@ -979,7 +981,7 @@ const StatsBar = ({
   totalTerms: number;
   avgBoost: number;
   pendingCount: number;
-}) => <div className="flex items-center gap-3 flex-wrap">
+}) => <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
     {[{
     icon: BookOpen,
     label: 'Total Terms',
@@ -1006,11 +1008,11 @@ const StatsBar = ({
     bg: 'bg-amber-50 border-amber-200/60'
   }].map(stat => {
     const Icon = stat.icon;
-    return <div key={stat.label} className={cn('flex items-center gap-2 px-3 py-2 rounded-lg border', stat.bg)}>
+    return <div key={stat.label} className={cn('flex items-center gap-2 px-3 py-2 rounded-lg border flex-shrink-0', stat.bg)}>
           <Icon className={cn('w-3.5 h-3.5 flex-shrink-0', stat.accent)} />
           <div>
             <span className={cn('font-mono text-sm font-bold', stat.accent)}>{stat.value}</span>
-            <p className="font-sans text-[9px] text-muted-foreground/70 uppercase tracking-widest leading-none mt-0.5">{stat.label}</p>
+            <p className="font-sans text-[9px] text-muted-foreground uppercase tracking-widest leading-none mt-0.5">{stat.label}</p>
           </div>
         </div>;
   })}
@@ -1081,7 +1083,7 @@ const SortButton = ({
   onSort: (f: SortField) => void;
 }) => {
   const active = sortField === field;
-  return <button onClick={() => onSort(field)} className={cn('flex items-center gap-1 font-mono text-[9px] font-bold uppercase tracking-widest transition-colors', active ? 'text-foreground/80' : 'text-muted-foreground/70 hover:text-accent-foreground')}>
+  return <button onClick={() => onSort(field)} className={cn('flex items-center gap-1 font-mono text-[9px] font-bold uppercase tracking-widest transition-colors', active ? 'text-foreground/80' : 'text-muted-foreground hover:text-accent-foreground')}>
       {label}
       {active ? sortDir === 'asc' ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" /> : <ArrowUpDown className="w-2.5 h-2.5 opacity-40" />}
     </button>;
@@ -1090,7 +1092,36 @@ const SortButton = ({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export const VocabularyPage = () => {
-  const [terms, setTerms] = useState<VocabTerm[]>(VOCAB_TERMS);
+  // ── API hooks ──────────────────────────────────────────────────────────────
+  const { shows } = useShows();
+  const activeShowId = shows?.[0]?.id;
+  const {
+    terms: apiTerms,
+    isLoading: apiLoading,
+    error: apiError,
+    addTerm: apiAddTerm,
+    deleteTerm: apiDeleteTerm,
+    refetch,
+  } = useVocabulary({ showId: activeShowId });
+
+  // Map API terms to the component's VocabTerm format
+  const mappedTerms = useMemo(() => {
+    return apiTerms.map((t): VocabTerm => ({
+      id: t.id,
+      term: t.term,
+      phonetic: undefined,
+      category: 'Custom' as TermCategory,
+      usageCount: t.occurrence_count,
+      accuracyBoost: 0,
+      status: 'active' as TermStatus,
+      notes: t.alternatives.length > 0 ? `Alternatives: ${t.alternatives.join(', ')}` : undefined,
+      addedDate: t.created_at,
+      tags: t.alternatives,
+      pronunciationValidated: false,
+    }));
+  }, [apiTerms]);
+
+  const [terms, setTerms] = useState<VocabTerm[]>([]);
   const [suggestions, setSuggestions] = useState<AISuggestion[]>(AI_SUGGESTIONS);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -1108,6 +1139,13 @@ export const VocabularyPage = () => {
   const [confidenceMin, setConfidenceMin] = useState(0);
   const [validationPending, setValidationPending] = useState<Set<string>>(new Set());
   const searchRef = useRef<HTMLInputElement>(null);
+
+  // ── Sync API terms to local state ──────────────────────────────────────────
+  useEffect(() => {
+    if (mappedTerms.length > 0 || (!apiLoading && apiTerms.length === 0)) {
+      setTerms(mappedTerms);
+    }
+  }, [mappedTerms, apiLoading, apiTerms.length]);
 
   // ── Debounced search ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -1214,8 +1252,19 @@ export const VocabularyPage = () => {
   }, [filteredTerms, addToast]);
 
   // ── Delete ────────────────────────────────────────────────────────────────
-  const handleDelete = useCallback((id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     const target = terms.find(t => t.id === id)!;
+
+    // Call API to delete if we have an active show
+    if (activeShowId) {
+      try {
+        await apiDeleteTerm(id);
+      } catch {
+        addToast(`Failed to delete "${target.term}" from server`, 'error');
+        return;
+      }
+    }
+
     pushHistory({
       type: 'delete',
       terms: [target],
@@ -1230,10 +1279,21 @@ export const VocabularyPage = () => {
     addToast(`Deleted "${target.term}"`, 'undo', () => {
       setTerms(prev => [target, ...prev]);
     });
-  }, [terms, pushHistory, addToast]);
-  const handleBulkDelete = useCallback(() => {
+  }, [terms, pushHistory, addToast, activeShowId, apiDeleteTerm]);
+  const handleBulkDelete = useCallback(async () => {
     const targets = terms.filter(t => selectedIds.has(t.id));
     if (!targets.length) return;
+
+    // Call API to delete each term if we have an active show
+    if (activeShowId) {
+      try {
+        await Promise.all(targets.map(t => apiDeleteTerm(t.id)));
+      } catch {
+        addToast('Failed to delete some terms from server', 'error');
+        return;
+      }
+    }
+
     pushHistory({
       type: 'bulk_delete',
       terms: targets,
@@ -1244,10 +1304,39 @@ export const VocabularyPage = () => {
     addToast(`Deleted ${targets.length} term${targets.length !== 1 ? 's' : ''}`, 'undo', () => {
       setTerms(prev => [...targets, ...prev]);
     });
-  }, [terms, selectedIds, pushHistory, addToast]);
+  }, [terms, selectedIds, pushHistory, addToast, activeShowId, apiDeleteTerm]);
 
   // ── Add term ──────────────────────────────────────────────────────────────
-  const handleAddTerm = useCallback((newTerm: Omit<VocabTerm, 'id' | 'usageCount' | 'accuracyBoost' | 'addedDate'>) => {
+  const handleAddTerm = useCallback(async (newTerm: Omit<VocabTerm, 'id' | 'usageCount' | 'accuracyBoost' | 'addedDate'>) => {
+    // Build alternatives from tags if present
+    const alternatives = newTerm.tags || [];
+
+    // Try the API first if we have an active show
+    if (activeShowId) {
+      try {
+        const apiResult = await apiAddTerm(newTerm.term, alternatives);
+        if (apiResult) {
+          // Map the API result back to VocabTerm for local state
+          const term: VocabTerm = {
+            ...newTerm,
+            id: apiResult.id,
+            usageCount: apiResult.occurrence_count,
+            accuracyBoost: 0,
+            addedDate: apiResult.created_at,
+            usageTrend: [0, 0, 0, 0, 0, 0, 0],
+          };
+          pushHistory({ type: 'add', terms: [term], label: term.term });
+          setTerms(prev => [term, ...prev]);
+          addToast(`Added "${term.term}" to vocabulary`, 'success');
+          return;
+        }
+      } catch {
+        addToast('Failed to save term to server', 'error');
+        return;
+      }
+    }
+
+    // Fallback to local-only if no show is active
     const term: VocabTerm = {
       ...newTerm,
       id: `v${Date.now()}`,
@@ -1263,7 +1352,7 @@ export const VocabularyPage = () => {
     });
     setTerms(prev => [term, ...prev]);
     addToast(`Added "${term.term}" to vocabulary`, 'success');
-  }, [pushHistory, addToast]);
+  }, [pushHistory, addToast, activeShowId, apiAddTerm]);
 
   // ── Suggestions ───────────────────────────────────────────────────────────
   const handleAcceptSuggestion = useCallback((id: string) => {
@@ -1367,54 +1456,51 @@ export const VocabularyPage = () => {
   const hasSelection = selectedIds.size > 0;
   return <>
       {/* ── Main Layout ── */}
-      <div className="flex-1 h-full overflow-y-auto bg-background" style={{
-      backgroundImage: `radial-gradient(circle, rgba(0,0,0,0.065) 1px, transparent 1px)`,
-      backgroundSize: '22px 22px'
-    }}>
-        <div className="max-w-6xl mx-auto px-6 py-7">
+      <div className="flex-1 h-full overflow-y-auto">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-7">
 
           {/* ── Page Header ── */}
-          <div className="mb-6">
-            <div className="flex items-start justify-between gap-6">
+          <div className="mb-5 sm:mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-stone-900 flex items-center justify-center shadow-md">
+                <div className="flex items-center gap-3 mb-2.5 flex-wrap">
+                  <div className="w-8 h-8 rounded-lg bg-stone-900 flex items-center justify-center shadow-md flex-shrink-0">
                     <BookOpen className="w-4 h-4 text-stone-100" />
                   </div>
                   <div>
                     <h1 className="font-sans font-bold text-[22px] text-foreground tracking-tight leading-none">Vocabulary</h1>
-                    <p className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70 leading-none mt-0.5">Custom Transcription Dictionary</p>
+                    <p className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground leading-none mt-0.5">Custom Transcription Dictionary</p>
                   </div>
                   <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200/60">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
                     <span className="font-sans text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Active</span>
                   </div>
                 </div>
-                <p className="font-serif text-sm text-muted-foreground/70 leading-relaxed mb-4">
+                <p className="font-serif text-sm text-muted-foreground leading-relaxed mb-4">
                   Teach PodBrain how to spell and transcribe domain-specific terms, proper nouns, and brand names accurately.
                 </p>
                 <StatsBar totalTerms={terms.length} avgBoost={avgBoost} pendingCount={pendingCount} />
               </div>
 
-              <div className="flex-shrink-0 flex items-center gap-2">
-                <button onClick={() => setShowShortcuts(true)} title="Keyboard shortcuts (⌘?)" className="p-2 rounded-lg border border-border bg-card text-muted-foreground/70 hover:text-accent-foreground hover:bg-card text-[12px] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button onClick={() => setShowShortcuts(true)} title="Keyboard shortcuts (⌘?)" className="p-2 rounded-lg border border-border bg-card text-muted-foreground hover:text-accent-foreground hover:bg-card text-[12px] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
                   <Keyboard className="w-3.5 h-3.5" />
                 </button>
-                <button onClick={handleValidateAll} title="Batch validate pronunciations" className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-border bg-card text-muted-foreground hover:text-accent-foreground hover:border-border hover:bg-card text-[12px] font-sans font-semibold transition-all shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
-                  <ShieldCheck className="w-3.5 h-3.5" />Validate All
+                <button onClick={handleValidateAll} title="Batch validate pronunciations" className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-border bg-card text-muted-foreground hover:text-accent-foreground hover:border-border hover:bg-card text-[12px] font-sans font-semibold transition-all shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+                  <ShieldCheck className="w-3.5 h-3.5" /><span>Validate All</span>
                 </button>
-                <button onClick={() => setShowBulkImport(true)} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-border bg-card text-muted-foreground hover:text-accent-foreground hover:border-border hover:bg-card text-[12px] font-sans font-semibold transition-all shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
-                  <Upload className="w-3.5 h-3.5" />Bulk Import
+                <button onClick={() => setShowBulkImport(true)} className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-border bg-card text-muted-foreground hover:text-accent-foreground hover:border-border hover:bg-card text-[12px] font-sans font-semibold transition-all shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+                  <Upload className="w-3.5 h-3.5" /><span>Bulk Import</span>
                 </button>
                 <button onClick={() => setShowAddModal(true)} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-stone-900 text-white text-[12px] font-sans font-semibold hover:bg-stone-800 transition-colors shadow-sm">
-                  <Plus className="w-3.5 h-3.5" />Add Term
+                  <Plus className="w-3.5 h-3.5" /><span className="sm:inline">Add Term</span>
                 </button>
               </div>
             </div>
           </div>
 
           {/* ── Main Content Grid ── */}
-          <div className="flex gap-5">
+          <div className="flex flex-col lg:flex-row gap-5">
 
             {/* ── Left: Term List ── */}
             <div className="flex-1 min-w-0 space-y-3">
@@ -1425,9 +1511,9 @@ export const VocabularyPage = () => {
               </AnimatePresence>
 
               {/* Search + Filter Bar */}
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/70 pointer-events-none" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
                   <input ref={searchRef} type="text" placeholder="Search terms, phonetics, or tags… (⌘K)" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full pl-9 pr-4 py-2 rounded-lg text-sm font-sans text-foreground placeholder:text-muted-foreground bg-card border border-border focus:outline-none focus:border-stone-400 focus:shadow-[0_0_0_3px_rgba(120,113,108,0.1)] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.04)]" />
                   <AnimatePresence>
                     {searchQuery && <motion.button initial={{
@@ -1439,14 +1525,14 @@ export const VocabularyPage = () => {
                   }} exit={{
                     opacity: 0,
                     scale: 0.8
-                  }} onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded text-muted-foreground/70 hover:text-accent-foreground transition-colors">
+                  }} onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded text-muted-foreground hover:text-accent-foreground transition-colors">
                         <X className="w-3 h-3" />
                       </motion.button>}
                   </AnimatePresence>
                 </div>
 
-                <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-1 border border-border">
-                  {categories.map(cat => <button key={cat} onClick={() => setSelectedCategory(cat)} className={cn('px-3 py-1.5 rounded-md text-[11px] font-sans font-medium transition-all', selectedCategory === cat ? 'bg-card text-foreground shadow-[0_1px_4px_rgba(0,0,0,0.08)] border border-border' : 'text-muted-foreground hover:text-accent-foreground hover:bg-accent/50')}>
+                <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-1 border border-border overflow-x-auto scrollbar-none">
+                  {categories.map(cat => <button key={cat} onClick={() => setSelectedCategory(cat)} className={cn('px-3 py-1.5 rounded-md text-[11px] font-sans font-medium transition-all whitespace-nowrap flex-shrink-0', selectedCategory === cat ? 'bg-card text-foreground shadow-[0_1px_4px_rgba(0,0,0,0.08)] border border-border' : 'text-muted-foreground hover:text-accent-foreground hover:bg-accent/50')}>
                       {cat}
                     </button>)}
                 </div>
@@ -1455,25 +1541,25 @@ export const VocabularyPage = () => {
               {/* Terms Table */}
               <div className="bg-card border border-border rounded-xl overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
                 {/* Table Header */}
-                <div className="flex items-center gap-4 px-5 py-3 border-b border-border bg-muted/30">
+                <div className="flex items-center gap-4 px-3 sm:px-5 py-3 border-b border-border bg-muted/30">
                   {/* Checkbox placeholder */}
                   <div className="w-3.5 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <SortButton field="term" label="Term / Phonetic" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                   </div>
-                  <div className="w-28 flex-shrink-0">
-                    <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70">Category</span>
+                  <div className="w-24 flex-shrink-0 hidden xl:block">
+                    <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Category</span>
                   </div>
-                  <div className="w-28 flex-shrink-0">
+                  <div className="w-20 flex-shrink-0">
                     <SortButton field="usageCount" label="Usage" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                   </div>
-                  <div className="w-32 flex-shrink-0">
+                  <div className="w-28 flex-shrink-0 hidden xl:block">
                     <SortButton field="accuracyBoost" label="Accuracy Boost" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                   </div>
-                  <div className="w-20 flex-shrink-0 text-right">
+                  <div className="w-16 flex-shrink-0 text-right hidden sm:block">
                     <SortButton field="addedDate" label="Added" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                   </div>
-                  <div className="w-16 flex-shrink-0" />
+                  <div className="w-16 flex-shrink-0 hidden sm:block" />
                 </div>
 
                 {/* Validation banner */}
@@ -1505,9 +1591,9 @@ export const VocabularyPage = () => {
                   opacity: 0
                 }} className="flex flex-col items-center justify-center py-14 gap-3">
                       <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                        <BookOpen className="w-5 h-5 text-muted-foreground/50" />
+                        <BookOpen className="w-5 h-5 text-muted-foreground/80" />
                       </div>
-                      <p className="font-sans text-sm text-muted-foreground/70">
+                      <p className="font-sans text-sm text-muted-foreground">
                         No terms match{' '}
                         {debouncedQuery ? <><span className="font-semibold text-muted-foreground">"{debouncedQuery}"</span></> : <span className="font-semibold text-muted-foreground">{selectedCategory}</span>}
                       </p>
@@ -1525,19 +1611,19 @@ export const VocabularyPage = () => {
                 {/* Footer */}
                 {filteredTerms.length > 0 && <div className="flex items-center justify-between px-5 py-3 border-t border-border/50bg-muted/30">
                     <div className="flex items-center gap-3">
-                      <span className="font-mono text-[10px] text-muted-foreground/70">
+                      <span className="font-mono text-[10px] text-muted-foreground">
                         {filteredTerms.length} of {terms.length} terms
                       </span>
                       {historyIdx >= 0 && <div className="flex items-center gap-1">
-                          <button onClick={handleUndo} disabled={historyIdx < 0} title="Undo (⌘Z)" className="p-1 rounded-md text-muted-foreground/70 hover:text-accent-foreground hover:bg-accent disabled:opacity-30 transition-all">
+                          <button onClick={handleUndo} disabled={historyIdx < 0} title="Undo (⌘Z)" className="p-1 rounded-md text-muted-foreground hover:text-accent-foreground hover:bg-accent disabled:opacity-30 transition-all">
                             <RotateCcw className="w-3 h-3" />
                           </button>
-                          <button onClick={handleRedo} disabled={historyIdx >= history.length - 1} title="Redo (⌘⇧Z)" className="p-1 rounded-md text-muted-foreground/70 hover:text-accent-foreground hover:bg-accent disabled:opacity-30 transition-all">
+                          <button onClick={handleRedo} disabled={historyIdx >= history.length - 1} title="Redo (⌘⇧Z)" className="p-1 rounded-md text-muted-foreground hover:text-accent-foreground hover:bg-accent disabled:opacity-30 transition-all">
                             <RotateCw className="w-3 h-3" />
                           </button>
                         </div>}
                     </div>
-                    <button onClick={() => handleExport(hasSelection ? selectedIds : undefined)} className="flex items-center gap-1.5 font-sans text-[11px] text-muted-foreground/70 hover:text-accent-foreground transition-colors">
+                    <button onClick={() => handleExport(hasSelection ? selectedIds : undefined)} className="flex items-center gap-1.5 font-sans text-[11px] text-muted-foreground hover:text-accent-foreground transition-colors">
                       <Download className="w-3 h-3" />
                       {hasSelection ? `Export ${selectedIds.size} selected` : 'Export filtered CSV'}
                     </button>
@@ -1546,7 +1632,7 @@ export const VocabularyPage = () => {
             </div>
 
             {/* ── Right: AI Suggestions + Charts ── */}
-            <div className="w-[260px] flex-shrink-0 space-y-3">
+            <div className="w-full lg:w-[260px] lg:flex-shrink-0 space-y-3">
 
               {/* Suggestions panel */}
               <div className="bg-card border border-border rounded-xl overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
@@ -1561,7 +1647,7 @@ export const VocabularyPage = () => {
                     {suggestions.length > 0 && <span className="font-mono text-[9px] font-bold text-amber-700 bg-amber-100 border border-amber-200/60 px-1.5 py-0.5 rounded-full">
                         {filteredSuggestions.length}
                       </span>}
-                    <button onClick={handleRefreshSuggestions} aria-label="Refresh AI suggestions" className="p-1 rounded-md text-muted-foreground/70 hover:text-accent-foreground hover:bg-accent transition-colors">
+                    <button onClick={handleRefreshSuggestions} aria-label="Refresh AI suggestions" className="p-1 rounded-md text-muted-foreground hover:text-accent-foreground hover:bg-accent transition-colors">
                       <RefreshCw className={cn('w-3 h-3', refreshing && 'animate-spin')} />
                     </button>
                   </div>
@@ -1570,7 +1656,7 @@ export const VocabularyPage = () => {
                 {/* Confidence filter */}
                 <div className="px-4 py-2.5 border-b border-border/50bg-muted/30">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70 flex items-center gap-1">
+                    <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1">
                       <Sliders className="w-2.5 h-2.5" />Min. Confidence
                     </span>
                     <span className="font-mono text-[10px] font-bold text-muted-foreground">{confidenceMin}%</span>
@@ -1585,9 +1671,9 @@ export const VocabularyPage = () => {
                   opacity: 1
                 }} className="flex flex-col items-center py-8 gap-2">
                       <CheckCircle2 className="w-7 h-7 text-emerald-400" />
-                      <p className="font-sans text-[11px] text-muted-foreground/70 text-center leading-relaxed">
+                      <p className="font-sans text-[11px] text-muted-foreground text-center leading-relaxed">
                         {suggestions.length > 0 ? `${suggestions.length - filteredSuggestions.length} hidden by confidence filter.` : 'All suggestions reviewed!'}
-                        <br /><span className="text-muted-foreground/50">New terms appear after next transcription.</span>
+                        <br /><span className="text-muted-foreground/80">New terms appear after next transcription.</span>
                       </p>
                     </motion.div> : <motion.div className="space-y-2" variants={listVariants} initial="hidden" animate="visible">
                       <AnimatePresence>
@@ -1597,7 +1683,7 @@ export const VocabularyPage = () => {
                 </div>
 
                 <div className="px-3 pb-3">
-                  <p className="font-sans text-[9px] text-muted-foreground/70 text-center leading-relaxed">
+                  <p className="font-sans text-[9px] text-muted-foreground text-center leading-relaxed">
                     Identified from recent transcripts using NLP entity detection.
                   </p>
                 </div>
@@ -1606,8 +1692,8 @@ export const VocabularyPage = () => {
               {/* Category distribution donut */}
               <div className="bg-card border border-border rounded-xl p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
                 <div className="flex items-center gap-2 mb-3">
-                  <BarChart2 className="w-3.5 h-3.5 text-muted-foreground/70" />
-                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Distribution</span>
+                  <BarChart2 className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Distribution</span>
                 </div>
                 <DonutChart terms={filteredTerms} />
               </div>

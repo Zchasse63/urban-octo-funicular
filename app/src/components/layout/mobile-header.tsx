@@ -37,7 +37,7 @@ function MobileHeader({ sidebarOpen, onToggleSidebar }: MobileHeaderProps) {
     >
       <button
         onClick={onToggleSidebar}
-        className="flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground/70 transition-colors hover:bg-accent hover:text-accent-foreground"
+        className="flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         aria-label={sidebarOpen ? "Close menu" : "Open menu"}
       >
         {sidebarOpen ? (
@@ -53,7 +53,7 @@ function MobileHeader({ sidebarOpen, onToggleSidebar }: MobileHeaderProps) {
 
       <button
         onClick={toggleDark}
-        className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground/70 transition-colors hover:bg-accent hover:text-accent-foreground"
+        className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       >
         {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}

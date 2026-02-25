@@ -4,6 +4,8 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CreditCard, Zap, Download, Check, Copy, RefreshCw, Key, Clock, Eye, EyeOff, Plus, Trash2, ExternalLink, CheckCircle2, XCircle, AlertCircle, ChevronRight, Wifi, Radio, Youtube, Rss, Slack, Music, TrendingUp, Shield, ArrowUpRight, Package, ChevronDown, Webhook, Bell, AlertTriangle, X, Link2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import useSubscription from '@/hooks/use-subscription';
+import { PRICING_TIERS, type PricingTier } from '@/lib/stripe/products';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -246,7 +248,7 @@ const CopyButton = ({
     onCopied?.();
     setTimeout(() => setCopied(false), 1800);
   };
-  return <button onClick={handleCopy} className={cn('flex items-center gap-1.5 p-1.5 rounded-md transition-all', copied ? 'text-emerald-600 bg-emerald-50' : 'text-muted-foreground/70 hover:text-foreground/80 hover:bg-accent', className)} title={label || 'Copy to clipboard'}>
+  return <button onClick={handleCopy} className={cn('flex items-center gap-1.5 p-1.5 rounded-md transition-all', copied ? 'text-emerald-600 bg-emerald-50' : 'text-muted-foreground hover:text-foreground/80 hover:bg-accent', className)} title={label || 'Copy to clipboard'}>
       {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
     </button>;
 };
@@ -299,8 +301,8 @@ const UsageMeter = ({
       }} />
       </div>
       <div className="flex items-center justify-between">
-        <span className="font-mono text-[10px] text-muted-foreground/70">{pct}% used</span>
-        <span className="font-mono text-[10px] text-muted-foreground/70">
+        <span className="font-mono text-[10px] text-muted-foreground">{pct}% used</span>
+        <span className="font-mono text-[10px] text-muted-foreground">
           {(total - used).toLocaleString()} {unit} remaining
         </span>
       </div>
@@ -310,52 +312,103 @@ const UsageMeter = ({
 // ─── Subscription Tab ─────────────────────────────────────────────────────────
 
 const SubscriptionTab = ({
-  addToast
+  addToast,
+  subscription,
+  subLoading,
+  onManageStripe,
+  onCheckout,
 }: {
   addToast: (msg: string, type?: Toast['type'], icon?: React.ElementType) => void;
+  subscription: { id?: string; status: string | null; tier: PricingTier; stripe_subscription_id?: string; current_period_end?: string } | null;
+  subLoading: boolean;
+  onManageStripe: () => void;
+  onCheckout: (tier: string) => Promise<void>;
 }) => {
   const [showAllBilling, setShowAllBilling] = useState(false);
+
+  // Derive plan details from subscription data, falling back to Free defaults
+  const tier: PricingTier = subscription?.tier ?? 'free';
+  const tierInfo = PRICING_TIERS[tier];
+  const planName = `${tierInfo.name} Plan`;
+  const price = tierInfo.price;
+  const isActive = subscription?.status === 'active' || subscription?.status === 'trialing';
+  const statusLabel = subscription?.status
+    ? subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)
+    : 'Active';
+
+  // Format renewal date from current_period_end
+  const renewalDate = subscription?.current_period_end
+    ? new Date(subscription.current_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
+
+  // TODO: Wire billing history to real API (e.g., /api/stripe/invoices)
   const visibleRecords = showAllBilling ? BILLING_HISTORY : BILLING_HISTORY.slice(0, 3);
   return <div className="space-y-5">
       {/* Plan card */}
       <div className="bg-card border border-border rounded-xl overflow-hidden shadow-[0_2px_12px_-2px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.04)]">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border/50 bg-muted/30">
-          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Current Plan</span>
-          <span className="flex items-center gap-1.5 font-mono text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2.5 py-1 rounded-full uppercase tracking-wider">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
-            Active
-          </span>
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border/50 bg-muted/30">
+          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Current Plan</span>
+          {subLoading ? (
+            <span className="font-mono text-[10px] font-bold text-muted-foreground bg-muted border border-border px-2.5 py-1 rounded-full uppercase tracking-wider">Loading…</span>
+          ) : (
+            <span className={cn(
+              'flex items-center gap-1.5 font-mono text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider border',
+              isActive
+                ? 'text-emerald-700 bg-emerald-50 border-emerald-200/60'
+                : 'text-amber-700 bg-amber-50 border-amber-200/60'
+            )}>
+              <div className={cn(
+                'w-1.5 h-1.5 rounded-full',
+                isActive
+                  ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]'
+                  : 'bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.5)]'
+              )} />
+              {statusLabel}
+            </span>
+          )}
         </div>
 
-        <div className="px-6 py-5">
-          <div className="flex items-start justify-between gap-6">
+        <div className="px-4 sm:px-6 py-5">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-stone-800 to-black flex items-center justify-center shadow-md flex-shrink-0">
-                <Zap className="w-5 h-5 text-amber-300" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-stone-800 to-black flex items-center justify-center shadow-md flex-shrink-0">
+                <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300" />
               </div>
               <div>
-                <h3 className="font-sans font-bold text-lg text-foreground tracking-tight leading-none mb-1">Pro Plan</h3>
-                <p className="font-mono text-[11px] text-muted-foreground/70 mb-2.5">Billed monthly · Renews Jun 1, 2024</p>
+                <h3 className="font-sans font-bold text-base sm:text-lg text-foreground tracking-tight leading-none mb-1">{planName}</h3>
+                <p className="font-mono text-[11px] text-muted-foreground mb-2.5">
+                  {price > 0
+                    ? `Billed monthly${renewalDate ? ` · Renews ${renewalDate}` : ''}`
+                    : 'Free tier — no billing'}
+                </p>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-2xl font-bold text-foreground">$49</span>
-                  <span className="font-sans text-sm text-muted-foreground/70">/ month</span>
+                  <span className="font-mono text-2xl font-bold text-foreground">${price}</span>
+                  <span className="font-sans text-sm text-muted-foreground">/ month</span>
                 </div>
               </div>
             </div>
-            <div className="flex flex-col items-end gap-2 flex-shrink-0">
-              <button className="flex items-center gap-2 px-4 py-2 bg-stone-900 text-white rounded-lg text-[12px] font-sans font-semibold hover:bg-stone-800 transition-colors shadow-sm">
+            <div className="flex sm:flex-col items-center sm:items-end gap-3 sm:gap-2 sm:flex-shrink-0">
+              <button
+                onClick={() => onCheckout(tier === 'free' ? 'pro' : 'agency')}
+                className="flex items-center gap-2 px-4 py-2 bg-stone-900 text-white rounded-lg text-[12px] font-sans font-semibold hover:bg-stone-800 transition-colors shadow-sm"
+              >
                 <TrendingUp className="w-3.5 h-3.5 text-amber-300" />
-                Change Plan
+                {tier === 'agency' ? 'Manage Plan' : 'Upgrade Plan'}
               </button>
-              <button className="flex items-center gap-1.5 text-[11px] font-sans text-muted-foreground/70 hover:text-foreground/80 transition-colors">
-                <ExternalLink className="w-3 h-3" />
-                Manage in Stripe
-              </button>
+              {price > 0 && (
+                <button
+                  onClick={onManageStripe}
+                  className="flex items-center gap-1.5 text-[11px] font-sans text-muted-foreground hover:text-foreground/80 transition-colors"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  Manage in Stripe
+                </button>
+              )}
             </div>
           </div>
 
           <div className="flex flex-wrap gap-2 mt-5 pt-5 border-t border-border/50">
-            {['500 audio minutes / mo', '10 GB storage', 'All asset types', 'Priority processing', 'API access'].map(f => <span key={f} className="flex items-center gap-1.5 font-sans text-[11px] text-muted-foreground bg-muted/80 border border-border px-2.5 py-1 rounded-full">
+            {tierInfo.features.map(f => <span key={f} className="flex items-center gap-1.5 font-sans text-[11px] text-muted-foreground bg-muted/80 border border-border px-2.5 py-1 rounded-full">
                 <Check className="w-3 h-3 text-emerald-500 flex-shrink-0" />
                 {f}
               </span>)}
@@ -364,26 +417,32 @@ const SubscriptionTab = ({
       </div>
 
       {/* Usage */}
-      <div className="bg-card border border-border rounded-xl p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-        <div className="flex items-center justify-between mb-5">
-          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Usage — May 2024</span>
+      {/* TODO: Wire to real usage API (e.g., /api/usage) for actual consumed minutes, storage, and API calls */}
+      <div className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0 mb-5">
+          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Usage — {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+          </span>
           <div className="flex items-center gap-1.5">
-            <RefreshCw className="w-3 h-3 text-muted-foreground/50" />
-            <span className="font-mono text-[10px] text-muted-foreground/70">Resets Jun 1</span>
+            <RefreshCw className="w-3 h-3 text-muted-foreground/80" />
+            <span className="font-mono text-[10px] text-muted-foreground">
+              {renewalDate ? `Resets ${renewalDate}` : 'Monthly reset'}
+            </span>
           </div>
         </div>
         <div className="space-y-5">
-          <UsageMeter label="Audio Minutes" used={412} total={500} unit="min" color="bg-gradient-to-r from-amber-400 to-amber-500" />
-          <UsageMeter label="Storage" used={6.8} total={10} unit="GB" color="bg-gradient-to-r from-sky-400 to-sky-500" />
-          <UsageMeter label="API Calls" used={3240} total={10000} unit="calls" color="bg-gradient-to-r from-emerald-400 to-emerald-500" />
+          <UsageMeter label="Episodes" used={0} total={tierInfo.episodesPerMonth} unit="ep" color="bg-gradient-to-r from-amber-400 to-amber-500" />
+          <UsageMeter label="Shows" used={0} total={tierInfo.shows} unit="shows" color="bg-gradient-to-r from-sky-400 to-sky-500" />
+          <UsageMeter label="API Calls" used={0} total={tier === 'free' ? 100 : tier === 'pro' ? 5000 : 10000} unit="calls" color="bg-gradient-to-r from-emerald-400 to-emerald-500" />
         </div>
       </div>
 
       {/* Billing history — expandable */}
+      {/* TODO: Wire to real API (e.g., /api/stripe/invoices) to fetch actual billing records */}
       <div className="bg-card border border-border rounded-xl overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border/50 bg-muted/30">
-          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Billing History</span>
-          <button onClick={() => setShowAllBilling(v => !v)} className="flex items-center gap-1.5 text-[11px] font-sans text-muted-foreground/70 hover:text-foreground/80 transition-colors">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border/50 bg-muted/30">
+          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Billing History</span>
+          <button onClick={() => setShowAllBilling(v => !v)} className="flex items-center gap-1.5 text-[11px] font-sans text-muted-foreground hover:text-foreground/80 transition-colors">
             {showAllBilling ? 'Show less' : `View all ${BILLING_HISTORY.length}`}
             <motion.div animate={{
             rotate: showAllBilling ? 180 : 0
@@ -408,19 +467,19 @@ const SubscriptionTab = ({
           }} transition={{
             duration: 0.18
           }} className="overflow-hidden">
-                <div className="flex items-center gap-4 px-6 py-3.5 hover:bg-muted/30 transition-colors group">
-                  <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                    <CreditCard className="w-3.5 h-3.5 text-muted-foreground/70" />
+                <div className="flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3.5 hover:bg-muted/30 transition-colors group">
+                  <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 hidden sm:flex">
+                    <CreditCard className="w-3.5 h-3.5 text-muted-foreground" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-sans text-[13px] font-medium text-foreground">{record.description}</p>
-                    <p className="font-mono text-[10px] text-muted-foreground/70">{record.date}</p>
+                    <p className="font-sans text-[13px] font-medium text-foreground truncate">{record.description}</p>
+                    <p className="font-mono text-[10px] text-muted-foreground">{record.date}</p>
                   </div>
-                  <span className="font-mono text-[13px] font-bold text-foreground">{record.amount}</span>
-                  <span className={cn('font-mono text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border', record.status === 'paid' ? 'text-emerald-700 bg-emerald-50 border-emerald-200/60' : 'text-amber-700 bg-amber-50 border-amber-200/60')}>
+                  <span className="font-mono text-[13px] font-bold text-foreground flex-shrink-0">{record.amount}</span>
+                  <span className={cn('font-mono text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border hidden sm:inline-flex', record.status === 'paid' ? 'text-emerald-700 bg-emerald-50 border-emerald-200/60' : 'text-amber-700 bg-amber-50 border-amber-200/60')}>
                     {record.status}
                   </span>
-                  <button onClick={() => addToast(`Downloading invoice for ${record.date}…`, 'info', Download)} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-muted-foreground/70 hover:text-foreground/80 hover:bg-accent border border-transparent hover:border-border transition-all text-[11px] font-sans font-medium opacity-0 group-hover:opacity-100">
+                  <button onClick={() => addToast(`Downloading invoice for ${record.date}…`, 'info', Download)} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-muted-foreground hover:text-foreground/80 hover:bg-accent border border-transparent hover:border-border transition-all text-[11px] font-sans font-medium opacity-0 group-hover:opacity-100 hidden sm:flex">
                     <Download className="w-3 h-3" />
                     PDF
                   </button>
@@ -436,14 +495,14 @@ const SubscriptionTab = ({
           <AlertCircle className="w-3.5 h-3.5 text-red-400" />
           <span className="font-sans text-[11px] font-semibold text-red-600">Danger Zone</span>
         </div>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <p className="font-sans text-[13px] font-medium text-foreground/80">Cancel subscription</p>
-            <p className="font-sans text-[11px] text-muted-foreground/70 mt-0.5">
+            <p className="font-sans text-[11px] text-muted-foreground mt-0.5">
               Your data will be retained for 30 days after cancellation.
             </p>
           </div>
-          <button onClick={() => addToast('Please contact support to cancel your plan.', 'info', Bell)} className="px-4 py-2 rounded-lg text-[12px] font-sans font-semibold text-red-600 border border-red-200 hover:bg-red-50 transition-colors">
+          <button onClick={() => addToast('Please contact support to cancel your plan.', 'info', Bell)} className="px-4 py-2 rounded-lg text-[12px] font-sans font-semibold text-red-600 border border-red-200 hover:bg-red-50 transition-colors self-start sm:self-auto flex-shrink-0">
             Cancel Plan
           </button>
         </div>
@@ -453,6 +512,7 @@ const SubscriptionTab = ({
 
 // ─── Integration Card ─────────────────────────────────────────────────────────
 
+// TODO: Wire to real API for integration connect/disconnect state
 const IntegrationCard = ({
   integration,
   addToast
@@ -463,6 +523,7 @@ const IntegrationCard = ({
   const [connected, setConnected] = useState(integration.connected);
   const [toggling, setToggling] = useState(false);
   const Icon = integration.icon;
+  // TODO: Wire to real API for toggling integration connection
   const handleToggle = () => {
     if (toggling) return;
     setToggling(true);
@@ -486,7 +547,7 @@ const IntegrationCard = ({
                   {integration.badge}
                 </span>}
             </div>
-            {connected && integration.connectedSince && <p className="font-mono text-[10px] text-muted-foreground/70 mt-0.5">Since {integration.connectedSince}</p>}
+            {connected && integration.connectedSince && <p className="font-mono text-[10px] text-muted-foreground mt-0.5">Since {integration.connectedSince}</p>}
           </div>
         </div>
 
@@ -496,7 +557,7 @@ const IntegrationCard = ({
         height: 20
       }}>
           {toggling ? <div className="absolute inset-0 flex items-center justify-center">
-              <RefreshCw className="w-3 h-3 text-muted-foreground/70 animate-spin" />
+              <RefreshCw className="w-3 h-3 text-muted-foreground animate-spin" />
             </div> : <motion.div animate={{
           x: connected ? 16 : 0
         }} transition={{
@@ -515,11 +576,11 @@ const IntegrationCard = ({
               <CheckCircle2 className="w-3 h-3 text-emerald-500" />
               <span className="font-mono text-[10px] font-bold text-emerald-600">Connected</span>
             </> : <>
-              <XCircle className="w-3 h-3 text-muted-foreground/50" />
-              <span className="font-mono text-[10px] font-bold text-muted-foreground/70">Not connected</span>
+              <XCircle className="w-3 h-3 text-muted-foreground/80" />
+              <span className="font-mono text-[10px] font-bold text-muted-foreground">Not connected</span>
             </>}
         </div>
-        {connected && <button className="flex items-center gap-1 font-sans text-[10px] text-muted-foreground/70 hover:text-foreground/80 transition-colors">
+        {connected && <button className="flex items-center gap-1 font-sans text-[10px] text-muted-foreground hover:text-foreground/80 transition-colors">
             <ExternalLink className="w-3 h-3" />
             Configure
           </button>}
@@ -555,22 +616,26 @@ const IntegrationsTab = ({
                 Active
               </span>
             </div>
-            <p className="font-sans text-[11px] text-stone-400 mb-3 leading-relaxed">
+            <p className="font-sans text-[11px] text-muted-foreground/80 mb-3 leading-relaxed">
               Receive real-time events when episodes are processed, assets are generated, or errors occur.
             </p>
-            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5">
-              <Link2 className="w-3.5 h-3.5 text-stone-500 flex-shrink-0" />
-              <code className="font-mono text-[11px] text-stone-300 flex-1 truncate select-all">{webhookUrl}</code>
-              <button onClick={() => {
-              navigator.clipboard.writeText(webhookUrl);
-              addToast('Webhook URL copied', 'success', Copy);
-            }} className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/10 hover:bg-white/20 transition-colors text-[11px] font-sans font-medium text-stone-200 flex-shrink-0">
-                <Copy className="w-3 h-3" />
-                Copy
-              </button>
-              <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/10 hover:bg-white/20 transition-colors text-[11px] font-sans font-medium text-stone-200 flex-shrink-0">
-                Edit
-              </button>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <Link2 className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                <code className="font-mono text-[11px] text-muted-foreground/60 flex-1 truncate select-all">{webhookUrl}</code>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button onClick={() => {
+                navigator.clipboard.writeText(webhookUrl);
+                addToast('Webhook URL copied', 'success', Copy);
+              }} className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/10 hover:bg-white/20 transition-colors text-[11px] font-sans font-medium text-stone-200 flex-shrink-0">
+                  <Copy className="w-3 h-3" />
+                  Copy
+                </button>
+                <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/10 hover:bg-white/20 transition-colors text-[11px] font-sans font-medium text-stone-200 flex-shrink-0">
+                  Edit
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -622,42 +687,42 @@ const ApiKeyRow = ({
     onDelete(apiKey.id);
     addToast(`Key "${apiKey.name}" revoked`, 'info', Trash2);
   };
-  return <div className={cn('flex items-center gap-4 px-5 py-4 transition-colors', isExpired ? 'bg-muted/30 opacity-70' : 'hover:bg-muted/30')}>
+  return <div className={cn('flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4 transition-colors', isExpired ? 'bg-muted/30 opacity-70' : 'hover:bg-muted/30')}>
       <div className={cn('w-2 h-2 rounded-full flex-shrink-0', isExpired ? 'bg-muted-foreground/50' : 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]')} />
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <span className={cn('font-sans text-[13px] font-semibold', isExpired ? 'text-muted-foreground' : 'text-foreground')}>
+          <span className={cn('font-sans text-[13px] font-semibold truncate', isExpired ? 'text-muted-foreground' : 'text-foreground')}>
             {apiKey.name}
           </span>
-          {isExpired && <span className="font-mono text-[9px] font-bold text-red-600 bg-red-50 border border-red-200/60 px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+          {isExpired && <span className="font-mono text-[9px] font-bold text-red-600 bg-red-50 border border-red-200/60 px-1.5 py-0.5 rounded-full uppercase tracking-wider flex-shrink-0">
               Expired
             </span>}
         </div>
         <div className="flex items-center gap-2">
-          <code className={cn('font-mono text-[11px] px-2 py-0.5 rounded border tracking-tight select-all', isExpired ? 'text-muted-foreground/70 bg-muted/60 border-border' : 'text-muted-foreground bg-muted border-border')}>
+          <code className={cn('font-mono text-[11px] px-2 py-0.5 rounded border tracking-tight select-all truncate', isExpired ? 'text-muted-foreground bg-muted/60 border-border' : 'text-muted-foreground bg-muted border-border')}>
             {displayKey}
           </code>
         </div>
       </div>
 
-      <div className="flex flex-col items-end gap-0.5 flex-shrink-0 text-right">
-        <div className="flex items-center gap-1 text-muted-foreground/70">
+      <div className="hidden sm:flex flex-col items-end gap-0.5 flex-shrink-0 text-right">
+        <div className="flex items-center gap-1 text-muted-foreground">
           <Clock className="w-3 h-3" />
           <span className="font-mono text-[10px]">{apiKey.lastUsed}</span>
         </div>
-        <span className="font-mono text-[10px] text-muted-foreground/50">Created {apiKey.created}</span>
+        <span className="font-mono text-[10px] text-muted-foreground/80">Created {apiKey.created}</span>
       </div>
 
       {/* Action buttons — always visible (not only on hover) */}
       <div className="flex items-center gap-1 flex-shrink-0">
-        {!isExpired && <button onClick={() => setVisible(v => !v)} className="p-1.5 rounded-md text-muted-foreground/70 hover:text-foreground/80 hover:bg-accent transition-all" title={visible ? 'Hide key' : 'Reveal full key'}>
+        {!isExpired && <button onClick={() => setVisible(v => !v)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground/80 hover:bg-accent transition-all" title={visible ? 'Hide key' : 'Reveal full key'}>
             {visible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
           </button>}
-        {!isExpired && <button onClick={handleCopy} className="p-1.5 rounded-md text-muted-foreground/70 hover:text-foreground/80 hover:bg-accent transition-all" title="Copy key">
+        {!isExpired && <button onClick={handleCopy} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground/80 hover:bg-accent transition-all" title="Copy key">
             <Copy className="w-3.5 h-3.5" />
           </button>}
-        <button onClick={handleDelete} className={cn('p-1.5 rounded-md transition-all', isExpired ? 'text-muted-foreground/50 hover:text-red-500 hover:bg-red-50' : 'text-muted-foreground/70 hover:text-red-600 hover:bg-red-50')} title={isExpired ? 'Remove expired key' : 'Revoke key'}>
+        <button onClick={handleDelete} className={cn('p-1.5 rounded-md transition-all', isExpired ? 'text-muted-foreground/80 hover:text-red-500 hover:bg-red-50' : 'text-muted-foreground hover:text-red-600 hover:bg-red-50')} title={isExpired ? 'Remove expired key' : 'Revoke key'}>
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -718,17 +783,17 @@ const ApiTab = ({
           </div>
           <div className="flex-1">
             <h4 className="font-sans font-bold text-[13px] tracking-tight mb-1">Studio API — v2</h4>
-            <p className="font-sans text-[12px] text-stone-400 leading-relaxed">
+            <p className="font-sans text-[12px] text-muted-foreground/80 leading-relaxed">
               Use API keys to authenticate requests from your apps, automation tools, or integrations. Keys are shown
               partially masked — reveal and copy them securely.
             </p>
             <div className="flex items-center gap-3 mt-3">
-              <a href="#" className="flex items-center gap-1.5 font-sans text-[11px] text-stone-300 hover:text-white transition-colors">
+              <a href="#" className="flex items-center gap-1.5 font-sans text-[11px] text-muted-foreground/60 hover:text-white transition-colors">
                 <ExternalLink className="w-3 h-3" />
                 API Reference Docs
               </a>
               <span className="w-1 h-1 rounded-full bg-stone-700" />
-              <a href="#" className="flex items-center gap-1.5 font-sans text-[11px] text-stone-300 hover:text-white transition-colors">
+              <a href="#" className="flex items-center gap-1.5 font-sans text-[11px] text-muted-foreground/60 hover:text-white transition-colors">
                 <ChevronRight className="w-3 h-3" />
                 Rate limits & quotas
               </a>
@@ -741,10 +806,10 @@ const ApiTab = ({
       <div className="bg-card border border-border rounded-xl overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/50 bg-muted/30">
           <div className="flex items-center gap-2">
-            <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+            <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
               API Keys
             </span>
-            <span className="font-mono text-[10px] font-bold text-muted-foreground/70 bg-muted border border-border px-1.5 py-0.5 rounded-full">
+            <span className="font-mono text-[10px] font-bold text-muted-foreground bg-muted border border-border px-1.5 py-0.5 rounded-full">
               {activeKeys.length} active
             </span>
           </div>
@@ -808,7 +873,7 @@ const ApiTab = ({
           {/* Expired keys section */}
           {expiredKeys.length > 0 && <>
               <div className="px-5 py-2 bg-muted/30">
-                <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">
+                <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground/80">
                   Expired — read only
                 </span>
               </div>
@@ -834,10 +899,10 @@ const ApiTab = ({
           {/* Empty state */}
           {keys.length === 0 && <div className="px-5 py-12 text-center">
               <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center mx-auto mb-3">
-                <Key className="w-5 h-5 text-muted-foreground/50" />
+                <Key className="w-5 h-5 text-muted-foreground/80" />
               </div>
               <p className="font-sans text-[13px] font-medium text-muted-foreground mb-1">No API keys yet</p>
-              <p className="font-sans text-[11px] text-muted-foreground/70 mb-4">
+              <p className="font-sans text-[11px] text-muted-foreground mb-4">
                 Create a key to start making authenticated requests to the PodBrain API.
               </p>
               <button onClick={() => setCreatingKey(true)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-sans font-semibold bg-stone-900 text-white hover:bg-stone-800 transition-colors">
@@ -850,7 +915,7 @@ const ApiTab = ({
 
       {/* Base URL */}
       <div className="bg-card border border-border rounded-xl p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 block mb-3">Base URL</span>
+        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-3">Base URL</span>
         <div className="flex items-center gap-3 bg-muted/60 border border-border rounded-lg px-4 py-3">
           <code className="font-mono text-[12px] text-foreground/80 flex-1 select-all">https://api.podbrain.io/v2</code>
           <button onClick={handleCopyBaseUrl} className={cn('flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-sans font-medium transition-all border', baseUrlCopied ? 'text-emerald-700 bg-emerald-50 border-emerald-200/60' : 'text-muted-foreground hover:text-foreground/80 bg-muted/60 hover:bg-muted border-border')}>
@@ -863,10 +928,11 @@ const ApiTab = ({
       {/* Rate limits — linked to usage */}
       <div className="bg-card border border-border rounded-xl p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
         <div className="flex items-center justify-between mb-4">
-          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
-            Rate Limits — Pro Plan
+          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            {/* TODO: Wire rate limits to real API and display tier-specific limits */}
+            Rate Limits
           </span>
-          <button className="flex items-center gap-1 font-sans text-[10px] text-muted-foreground/70 hover:text-foreground/80 transition-colors">
+          <button className="flex items-center gap-1 font-sans text-[10px] text-muted-foreground hover:text-foreground/80 transition-colors">
             <ArrowUpRight className="w-3 h-3" />
             View current usage
           </button>
@@ -894,16 +960,16 @@ const ApiTab = ({
           const StatIcon = stat.icon;
           const pct = Math.round(stat.current / stat.max * 100);
           return <div key={stat.label} className="bg-muted/30 border border-border/50 rounded-lg p-3.5 text-center">
-                <StatIcon className="w-4 h-4 text-muted-foreground/50 mx-auto mb-2" />
+                <StatIcon className="w-4 h-4 text-muted-foreground/80 mx-auto mb-2" />
                 <span className="font-mono text-lg font-bold text-foreground block leading-none mb-1">{stat.value}</span>
-                <span className="font-sans text-[10px] text-muted-foreground/70 block mb-2">{stat.label}</span>
+                <span className="font-sans text-[10px] text-muted-foreground block mb-2">{stat.label}</span>
                 {/* Mini usage bar */}
                 <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
                   <div className="h-full bg-muted-foreground rounded-full transition-all" style={{
                 width: `${pct}%`
               }} />
                 </div>
-                <span className="font-mono text-[9px] text-muted-foreground/70 mt-1 block">{pct}% in use</span>
+                <span className="font-mono text-[9px] text-muted-foreground mt-1 block">{pct}% in use</span>
               </div>;
         })}
         </div>
@@ -920,28 +986,35 @@ export const SettingsPage = () => {
     addToast,
     dismissToast
   } = useToast();
-  return <div className="flex-1 h-full overflow-y-auto relative bg-background" style={{
-    backgroundImage: `radial-gradient(circle, rgba(0,0,0,0.065) 1px, transparent 1px)`,
-    backgroundSize: '22px 22px'
-  }}>
-      <div className="max-w-4xl mx-auto px-6 py-7">
+  const { subscription, isLoading: subLoading, openPortal, checkout } = useSubscription();
+
+  const handleManageStripe = async () => {
+    try {
+      await openPortal();
+    } catch (err) {
+      console.error('Failed to open Stripe portal:', err);
+      addToast('Failed to open Stripe portal', 'error', AlertCircle);
+    }
+  };
+  return <div className="flex-1 h-full overflow-y-auto relative">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-5 sm:py-7">
 
         {/* ── Header ── */}
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-5">
-            <span className="font-mono text-[11px] font-bold text-muted-foreground/50 uppercase tracking-widest">Settings</span>
+            <span className="font-mono text-[11px] font-bold text-muted-foreground/80 uppercase tracking-widest">Settings</span>
           </div>
-          <div className="flex items-start justify-between gap-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
             <div>
-              <h1 className="font-sans font-bold text-[22px] text-foreground tracking-tight leading-tight mb-1.5">
+              <h1 className="font-sans font-bold text-xl sm:text-[22px] text-foreground tracking-tight leading-tight mb-1.5">
                 Account & Preferences
               </h1>
-              <p className="font-serif text-sm text-muted-foreground/70 leading-relaxed">
+              <p className="font-serif text-sm text-muted-foreground leading-relaxed">
                 Manage your subscription, connected platforms, and developer access.
               </p>
             </div>
-            <div className="flex-shrink-0 bg-card border border-border rounded-xl px-5 py-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.07)] flex flex-col items-center gap-1.5">
-              <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">Account Health</span>
+            <div className="sm:flex-shrink-0 bg-card border border-border rounded-xl px-5 py-3 sm:py-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.07)] flex sm:flex-col items-center sm:items-center gap-2 sm:gap-1.5">
+              <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground/80">Account Health</span>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                 <span className="font-mono text-[12px] font-bold text-emerald-700">All Systems Nominal</span>
@@ -952,13 +1025,14 @@ export const SettingsPage = () => {
 
         {/* ── Tab Bar ── */}
         <div className="relative mb-5">
-          <div className="flex items-stretch bg-muted/40 rounded-xl p-1 border border-border gap-1">
+          <div className="flex items-stretch bg-muted/40 rounded-xl p-1 border border-border gap-1 overflow-x-auto scrollbar-none">
             {TAB_CONFIG.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
-            return <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn('relative flex items-center gap-2 px-4 py-2 rounded-lg text-[12px] font-sans font-medium transition-all duration-150 flex-1 justify-center', isActive ? 'bg-card text-foreground shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1),0_1px_0_rgba(255,255,255,1)_inset] border border-border' : 'text-muted-foreground hover:text-foreground/80 hover:bg-accent/50')}>
-                  <Icon className={cn('w-3.5 h-3.5 flex-shrink-0', isActive ? 'text-foreground' : 'text-muted-foreground/70')} />
-                  <span>{tab.label}</span>
+            return <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn('relative flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-[12px] font-sans font-medium transition-all duration-150 flex-1 justify-center whitespace-nowrap flex-shrink-0 sm:flex-shrink', isActive ? 'bg-card text-foreground shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1),0_1px_0_rgba(255,255,255,1)_inset] border border-border' : 'text-muted-foreground hover:text-foreground/80 hover:bg-accent/50')}>
+                  <Icon className={cn('w-3.5 h-3.5 flex-shrink-0', isActive ? 'text-foreground' : 'text-muted-foreground')} />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                  <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
                   {isActive && <motion.div layoutId="settingsViewTabIndicator" className="absolute bottom-[5px] left-1/2 -translate-x-1/2 w-4 h-[2px] bg-stone-800 rounded-full" />}
                 </button>;
           })}
@@ -980,7 +1054,7 @@ export const SettingsPage = () => {
           duration: 0.18,
           ease: 'easeOut'
         }}>
-            {activeTab === 'subscription' && <SubscriptionTab addToast={addToast} />}
+            {activeTab === 'subscription' && <SubscriptionTab addToast={addToast} subscription={subscription} subLoading={subLoading} onManageStripe={handleManageStripe} onCheckout={checkout} />}
             {activeTab === 'integrations' && <IntegrationsTab addToast={addToast} />}
             {activeTab === 'api' && <ApiTab addToast={addToast} />}
           </motion.div>

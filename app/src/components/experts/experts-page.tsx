@@ -4,6 +4,9 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react';
 import { Users, Search, Sparkles, X, Plus, Bookmark, BookmarkCheck, MapPin, Globe, Linkedin, Twitter, Filter, ChevronRight, Star, Zap, CheckCircle2, Loader2, SlidersHorizontal, TrendingUp, Award, Mic2, ArrowRight, Building2, Clock, BarChart2, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import useExperts from '@/hooks/use-experts';
+import useShows from '@/hooks/use-shows';
+import type { Expert as ApiExpert } from '@/lib/experts/types';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -180,6 +183,50 @@ const getScoreStyle = (score: number) => {
   };
 };
 
+// ─── API → UI Mapping ────────────────────────────────────────────────────────────
+
+const AVATAR_COLORS = [
+  'from-violet-500 to-purple-600',
+  'from-sky-500 to-blue-600',
+  'from-emerald-500 to-teal-600',
+  'from-amber-500 to-orange-500',
+  'from-rose-500 to-pink-600',
+  'from-lime-500 to-green-600',
+  'from-cyan-500 to-teal-500',
+  'from-fuchsia-500 to-purple-600',
+];
+
+function mapApiExpert(apiExpert: ApiExpert, index: number): Expert {
+  const nameParts = apiExpert.name.split(' ');
+  const initials = nameParts.length >= 2
+    ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`
+    : apiExpert.name.substring(0, 2).toUpperCase();
+
+  const availability: Expert['availability'] =
+    apiExpert.category === 'fresh' ? 'available' :
+    apiExpert.category === 'established' ? 'limited' : 'busy';
+
+  return {
+    id: apiExpert.id,
+    name: apiExpert.name,
+    title: apiExpert.metadata?.bio?.split('.')[0] || 'Expert',
+    organization: apiExpert.metadata?.affiliation || '',
+    location: '',
+    matchScore: Math.round(apiExpert.freshnessScore * 100),
+    aiInsight: apiExpert.metadata?.bio || '',
+    expertise: apiExpert.expertise,
+    availability,
+    pastAppearances: apiExpert.appearanceCount,
+    followers: '',
+    linkedIn: apiExpert.contactHints?.linkedin,
+    twitter: apiExpert.contactHints?.twitter,
+    website: apiExpert.contactHints?.website,
+    initials,
+    avatarColor: AVATAR_COLORS[index % AVATAR_COLORS.length],
+    featured: index === 0 && apiExpert.freshnessScore > 0.9,
+  };
+}
+
 // ─── Debounce hook ──────────────────────────────────────────────────────────────
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -301,7 +348,7 @@ const ExpertCard = ({
             </h3>
             <p className="font-sans text-[12px] text-muted-foreground leading-tight truncate">{expert.title}</p>
             <div className="flex items-center gap-1.5 mt-1">
-              <Building2 aria-hidden="true" className="w-3 h-3 text-muted-foreground/50 flex-shrink-0" />
+              <Building2 aria-hidden="true" className="w-3 h-3 text-muted-foreground/80 flex-shrink-0" />
               <span className="font-sans text-[11px] text-muted-foreground font-medium truncate">{expert.organization}</span>
             </div>
           </div>
@@ -315,8 +362,8 @@ const ExpertCard = ({
             <span>{avail.label}</span>
           </div>
           <div className="flex items-center gap-1 ml-auto">
-            <MapPin aria-hidden="true" className="w-3 h-3 text-muted-foreground/50" />
-            <span className="font-sans text-[10px] text-muted-foreground/70">{expert.location}</span>
+            <MapPin aria-hidden="true" className="w-3 h-3 text-muted-foreground/80" />
+            <span className="font-sans text-[10px] text-muted-foreground">{expert.location}</span>
           </div>
         </div>
 
@@ -326,7 +373,7 @@ const ExpertCard = ({
             <div aria-hidden="true" className="w-4 h-4 rounded bg-amber-100 border border-amber-200/60 flex items-center justify-center flex-shrink-0">
               <Sparkles className="w-2.5 h-2.5 text-amber-600" />
             </div>
-            <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70">
+            <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
               Why This Match?
             </span>
           </div>
@@ -344,16 +391,16 @@ const ExpertCard = ({
         <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/50">
           {/* Social links */}
           <div className="flex items-center gap-1" role="list" aria-label="Social links">
-            {expert.linkedIn && <a href={expert.linkedIn} aria-label={`${expert.name} on LinkedIn`} role="listitem" target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-md text-muted-foreground/50 hover:text-[#0A66C2] hover:bg-blue-50 transition-all focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:outline-none">
+            {expert.linkedIn && expert.linkedIn !== '#' && <a href={expert.linkedIn} aria-label={`${expert.name} on LinkedIn`} role="listitem" target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-md text-muted-foreground/80 hover:text-[#0A66C2] hover:bg-blue-50 transition-all focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:outline-none">
                 <Linkedin className="w-3.5 h-3.5" />
               </a>}
-            {expert.twitter && <a href={expert.twitter} aria-label={`${expert.name} on X / Twitter`} role="listitem" target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-accent transition-all focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:outline-none">
+            {expert.twitter && expert.twitter !== '#' && <a href={expert.twitter} aria-label={`${expert.name} on X / Twitter`} role="listitem" target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-md text-muted-foreground/80 hover:text-foreground hover:bg-accent transition-all focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:outline-none">
                 <Twitter className="w-3.5 h-3.5" />
               </a>}
-            {expert.website && <a href={expert.website} aria-label={`${expert.name}'s website`} role="listitem" target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-md text-muted-foreground/50 hover:text-muted-foreground hover:bg-accent transition-all focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:outline-none">
+            {expert.website && expert.website !== '#' && <a href={expert.website} aria-label={`${expert.name}'s website`} role="listitem" target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-md text-muted-foreground/80 hover:text-muted-foreground hover:bg-accent transition-all focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:outline-none">
                 <Globe className="w-3.5 h-3.5" />
               </a>}
-            {expert.pastAppearances > 0 && <span className="ml-1 flex items-center gap-1 font-mono text-[9px] text-muted-foreground/70" aria-label={`${expert.pastAppearances} past appearances`}>
+            {expert.pastAppearances > 0 && <span className="ml-1 flex items-center gap-1 font-mono text-[9px] text-muted-foreground" aria-label={`${expert.pastAppearances} past appearances`}>
                 <Mic2 aria-hidden="true" className="w-3 h-3" />
                 {expert.pastAppearances}x on show
               </span>}
@@ -405,12 +452,12 @@ const ShortlistPanel = ({
       <div className="p-3">
         {shortlisted.length === 0 ? <div className="flex flex-col items-center py-7 gap-2">
             <div aria-hidden="true" className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
-              <Bookmark className="w-4 h-4 text-muted-foreground/50" />
+              <Bookmark className="w-4 h-4 text-muted-foreground/80" />
             </div>
-            <p className="font-sans text-[11px] text-muted-foreground/70 text-center leading-relaxed">
+            <p className="font-sans text-[11px] text-muted-foreground text-center leading-relaxed">
               No experts saved yet.
               <br />
-              <span className="text-muted-foreground/50">Add from the grid below.</span>
+              <span className="text-muted-foreground/80">Add from the grid below.</span>
             </p>
           </div> : <ul aria-label="Shortlisted experts" className="space-y-2 list-none p-0 m-0">
             <AnimatePresence>
@@ -432,9 +479,9 @@ const ShortlistPanel = ({
                     <p className="font-sans text-[11px] font-semibold text-foreground truncate leading-tight">
                       {expert.name}
                     </p>
-                    <p className="font-sans text-[10px] text-muted-foreground/70 truncate leading-tight">{expert.organization}</p>
+                    <p className="font-sans text-[10px] text-muted-foreground truncate leading-tight">{expert.organization}</p>
                   </div>
-                  <button onClick={() => onRemove(expert.id)} aria-label={`Remove ${expert.name} from shortlist`} className="p-1 rounded text-muted-foreground/40 hover:text-rose-400 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-rose-300 focus-visible:outline-none">
+                  <button onClick={() => onRemove(expert.id)} aria-label={`Remove ${expert.name} from shortlist`} className="p-1 rounded text-muted-foreground/80 hover:text-rose-400 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-rose-300 focus-visible:outline-none">
                     <X className="w-3 h-3" />
                   </button>
                 </motion.li>)}
@@ -472,9 +519,9 @@ const FilterBar = ({
 }) => {
   const expertiseFilters: FilterOption[] = ['All', 'AI & Tech', 'Finance', 'Health', 'Leadership', 'Science'];
   const availabilityOptions: AvailabilityFilter[] = ['All', 'Available', 'Limited', 'Busy'];
-  return <div className="flex flex-col gap-2.5">
+  return <div className="flex flex-col gap-2">
       {/* Expertise pills */}
-      <div role="group" aria-label="Filter by expertise" className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5">
+      <div role="group" aria-label="Filter by expertise" className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5 -mx-1 px-1">
         <div className="flex items-center gap-1.5 flex-shrink-0 bg-muted/40 rounded-lg p-1 border border-border">
           {expertiseFilters.map(f => <button key={f} onClick={() => onFilterChange(f)} aria-pressed={activeFilter === f} className={cn('px-3 py-1.5 rounded-md text-[11px] font-sans font-medium transition-all whitespace-nowrap flex-shrink-0 focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:outline-none', activeFilter === f ? 'bg-card text-foreground shadow-[0_1px_4px_rgba(0,0,0,0.08)] border border-border' : 'text-muted-foreground hover:text-foreground/80 hover:bg-accent/50')}>
               {f}
@@ -483,22 +530,22 @@ const FilterBar = ({
       </div>
 
       {/* Second row: availability + sort + result count */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap overflow-x-auto scrollbar-none">
         <div role="group" aria-label="Filter by availability" className="flex items-center gap-1 bg-card border border-border rounded-lg p-1">
-          <Clock aria-hidden="true" className="w-3.5 h-3.5 text-muted-foreground/70 ml-1.5" />
-          {availabilityOptions.map(a => <button key={a} onClick={() => onAvailabilityChange(a)} aria-pressed={availabilityFilter === a} className={cn('px-2.5 py-1 rounded-md text-[10px] font-sans font-medium transition-all focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:outline-none', availabilityFilter === a ? 'bg-muted text-foreground border border-border' : 'text-muted-foreground/70 hover:text-muted-foreground')}>
+          <Clock aria-hidden="true" className="w-3.5 h-3.5 text-muted-foreground ml-1.5" />
+          {availabilityOptions.map(a => <button key={a} onClick={() => onAvailabilityChange(a)} aria-pressed={availabilityFilter === a} className={cn('px-2.5 py-1 rounded-md text-[10px] font-sans font-medium transition-all focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:outline-none', availabilityFilter === a ? 'bg-muted text-foreground border border-border' : 'text-muted-foreground hover:text-muted-foreground')}>
               {a}
             </button>)}
         </div>
 
         <div role="group" aria-label="Sort experts" className="flex items-center gap-1 bg-card border border-border rounded-lg p-1">
-          <BarChart2 aria-hidden="true" className="w-3.5 h-3.5 text-muted-foreground/70 ml-1.5" />
-          {([['match', 'Best Match'], ['popular', 'Popular'], ['recent', 'Recent']] as [SortOption, string][]).map(([val, label]) => <button key={val} onClick={() => onSortChange(val)} aria-pressed={sortOption === val} className={cn('px-2.5 py-1 rounded-md text-[10px] font-sans font-medium transition-all focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:outline-none', sortOption === val ? 'bg-muted text-foreground border border-border' : 'text-muted-foreground/70 hover:text-muted-foreground')}>
+          <BarChart2 aria-hidden="true" className="w-3.5 h-3.5 text-muted-foreground ml-1.5" />
+          {([['match', 'Best Match'], ['popular', 'Popular'], ['recent', 'Recent']] as [SortOption, string][]).map(([val, label]) => <button key={val} onClick={() => onSortChange(val)} aria-pressed={sortOption === val} className={cn('px-2.5 py-1 rounded-md text-[10px] font-sans font-medium transition-all focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:outline-none', sortOption === val ? 'bg-muted text-foreground border border-border' : 'text-muted-foreground hover:text-muted-foreground')}>
               {label}
             </button>)}
         </div>
 
-        <span className="ml-auto font-mono text-[10px] text-muted-foreground/70" aria-live="polite" aria-atomic="true">
+        <span className="ml-auto font-mono text-[10px] text-muted-foreground" aria-live="polite" aria-atomic="true">
           {resultCount} expert{resultCount !== 1 ? 's' : ''} found
         </span>
       </div>
@@ -507,7 +554,7 @@ const FilterBar = ({
 
 // ─── Stats Bar ──────────────────────────────────────────────────────────────────
 
-const StatsBar = () => <dl className="flex items-center gap-3 flex-wrap">
+const StatsBar = () => <dl className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-3 sm:flex-wrap">
     {[{
     icon: Users,
     label: 'Indexed Experts',
@@ -537,7 +584,7 @@ const StatsBar = () => <dl className="flex items-center gap-3 flex-wrap">
     return <div key={stat.label} className={cn('flex items-center gap-2 px-3 py-2 rounded-lg border', stat.bg)}>
           <Icon aria-hidden="true" className={cn('w-3.5 h-3.5 flex-shrink-0', stat.accent)} />
           <div>
-            <dt className="font-sans text-[9px] text-muted-foreground/70 uppercase tracking-widest leading-none">{stat.label}</dt>
+            <dt className="font-sans text-[9px] text-muted-foreground uppercase tracking-widest leading-none">{stat.label}</dt>
             <dd className={cn('font-mono text-sm font-bold', stat.accent)}>{stat.value}</dd>
           </div>
         </div>;
@@ -570,21 +617,21 @@ const RightPanel = ({
       <div className="bg-gradient-to-br from-stone-900 to-stone-800 rounded-xl p-4 border border-stone-700/50 shadow-md">
         <div className="flex items-center gap-2 mb-3">
           <Zap aria-hidden="true" className="w-3.5 h-3.5 text-amber-400" />
-          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Discovery Tips</span>
+          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Discovery Tips</span>
         </div>
         <ul className="space-y-2.5">
           {['Be specific — mention niche topics, industries, or recent events.', 'Add audience context like "for a B2B SaaS audience" for better matches.', 'Combine roles: "ex-operator turned VC who writes publicly."'].map((tip, i) => <li key={i} className="flex items-start gap-2">
               <span aria-hidden="true" className="font-mono text-[10px] text-muted-foreground mt-0.5 flex-shrink-0">
                 {String(i + 1).padStart(2, '0')}
               </span>
-              <span className="font-sans text-[11px] text-muted-foreground/70 leading-relaxed">{tip}</span>
+              <span className="font-sans text-[11px] text-muted-foreground leading-relaxed">{tip}</span>
             </li>)}
         </ul>
       </div>
 
       {/* Browse by Domain */}
       <div className="bg-card border border-border rounded-xl p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 block mb-3">
+        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-3">
           Browse by Domain
         </span>
         <ul className="space-y-1.5 list-none p-0 m-0">
@@ -614,8 +661,8 @@ const RightPanel = ({
                 <span className="font-sans text-[11px] text-muted-foreground flex-1 group-hover:text-foreground transition-colors">
                   {cat.label}
                 </span>
-                <span className="font-mono text-[9px] text-muted-foreground/70">{cat.count.toLocaleString()}</span>
-                <ChevronRight aria-hidden="true" className="w-3 h-3 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
+                <span className="font-mono text-[9px] text-muted-foreground">{cat.count.toLocaleString()}</span>
+                <ChevronRight aria-hidden="true" className="w-3 h-3 text-muted-foreground/80 group-hover:text-muted-foreground transition-colors" />
               </button>
             </li>)}
         </ul>
@@ -624,19 +671,19 @@ const RightPanel = ({
       {/* Recent Searches */}
       <div className="bg-card border border-border rounded-xl p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
         <div className="flex items-center justify-between mb-3">
-          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Recent Searches</span>
-          <button aria-label="Clear recent searches" className="font-sans text-[10px] text-muted-foreground/70 hover:text-muted-foreground transition-colors focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:outline-none rounded">
+          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Recent Searches</span>
+          <button aria-label="Clear recent searches" className="font-sans text-[10px] text-muted-foreground hover:text-muted-foreground transition-colors focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:outline-none rounded">
             Clear
           </button>
         </div>
         <ul className="space-y-1.5 list-none p-0 m-0">
           {['Neurotech startup CEO', 'Ex-NASA deep tech', 'Behavioral economist'].map(s => <li key={s}>
               <button onClick={() => onPillClick(s)} aria-label={`Search for: ${s}`} className="w-full flex items-center gap-2 text-left px-2 py-1.5 rounded-lg hover:bg-accent/50 group transition-colors focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:outline-none">
-                <Search aria-hidden="true" className="w-3 h-3 text-muted-foreground/50 flex-shrink-0" />
+                <Search aria-hidden="true" className="w-3 h-3 text-muted-foreground/80 flex-shrink-0" />
                 <span className="font-mono text-[10px] text-muted-foreground group-hover:text-foreground/80 truncate transition-colors">
                   {s}
                 </span>
-                <ArrowRight aria-hidden="true" className="w-3 h-3 text-muted-foreground/40 group-hover:text-muted-foreground/70 ml-auto transition-colors" />
+                <ArrowRight aria-hidden="true" className="w-3 h-3 text-muted-foreground/80 group-hover:text-muted-foreground ml-auto transition-colors" />
               </button>
             </li>)}
         </ul>
@@ -668,7 +715,7 @@ const RightPanel = ({
         }} className="fixed top-0 right-0 z-50 h-full w-[300px] bg-background border-l border-border shadow-xl overflow-y-auto p-4 lg:hidden">
               <div className="flex items-center justify-between mb-4">
                 <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Panel</span>
-                <button onClick={onClose} aria-label="Close panel" className="p-1.5 rounded-md text-muted-foreground/70 hover:text-foreground/80 hover:bg-muted transition-colors">
+                <button onClick={onClose} aria-label="Close panel" className="p-1.5 rounded-md text-muted-foreground hover:text-foreground/80 hover:bg-muted transition-colors">
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -682,6 +729,10 @@ const RightPanel = ({
 // ─── Main Component ─────────────────────────────────────────────────────────────
 
 export function ExpertsPage() {
+  const { shows } = useShows();
+  const activeShowId = shows?.[0]?.id;
+  const { experts: apiExperts, isLoading: apiLoading, error: apiError, search: apiSearch } = useExperts({ showId: activeShowId });
+
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -693,17 +744,39 @@ export function ExpertsPage() {
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchInputRef = useRef<HTMLTextAreaElement>(null);
   const debouncedQuery = useDebounce(query, 300);
-  const handleSearch = useCallback((q?: string) => {
+
+  const mappedExperts = useMemo(() => {
+    if (apiExperts.length > 0) {
+      return apiExperts.map((e, i) => mapApiExpert(e, i));
+    }
+    return EXPERTS; // fallback to mock data
+  }, [apiExperts]);
+
+  const handleSearch = useCallback(async (q?: string) => {
     const searchQuery = q ?? query;
     if (!searchQuery.trim()) return;
     if (q !== undefined) setQuery(q);
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    setSearching(true);
-    searchTimerRef.current = setTimeout(() => {
-      setSearching(false);
-      setHasSearched(true);
-    }, 1100);
-  }, [query]);
+
+    if (activeShowId) {
+      setSearching(true);
+      try {
+        await apiSearch(searchQuery);
+        setHasSearched(true);
+      } catch (err) {
+        // error handled by hook
+      } finally {
+        setSearching(false);
+      }
+    } else {
+      // Fallback: original fake search for when no show is selected
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+      setSearching(true);
+      searchTimerRef.current = setTimeout(() => {
+        setSearching(false);
+        setHasSearched(true);
+      }, 1100);
+    }
+  }, [query, activeShowId, apiSearch]);
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -719,21 +792,21 @@ export function ExpertsPage() {
     setShortlistedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   }, []);
   const filteredExperts = useMemo(() => {
-    let result = [...EXPERTS];
+    let result = [...mappedExperts];
     if (availabilityFilter !== 'All') {
       result = result.filter(e => e.availability === availabilityFilter.toLowerCase());
     }
     if (sortOption === 'match') result.sort((a, b) => b.matchScore - a.matchScore);
     if (sortOption === 'popular') result.sort((a, b) => parseInt(b.followers) - parseInt(a.followers));
     return result;
-  }, [availabilityFilter, sortOption]);
+  }, [mappedExperts, availabilityFilter, sortOption]);
   return <>
-      <main id="main-content" className="flex-1 h-full overflow-y-auto dot-bg">
+      <main id="main-content" className="flex-1 h-full overflow-y-auto">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-7">
 
           {/* ── Page Header ── */}
-          <header className="mb-6">
-            <div className="flex items-start justify-between gap-4 sm:gap-6">
+          <header className="mb-5 sm:mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-2.5 flex-wrap">
                   <div aria-hidden="true" className="w-8 h-8 rounded-lg bg-stone-900 flex items-center justify-center shadow-md flex-shrink-0">
@@ -743,7 +816,7 @@ export function ExpertsPage() {
                     <h1 className="font-sans font-bold text-[22px] text-foreground tracking-tight leading-none">
                       Experts
                     </h1>
-                    <p className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70 leading-none mt-0.5">
+                    <p className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground leading-none mt-0.5">
                       AI-Powered Guest Discovery
                     </p>
                   </div>
@@ -754,7 +827,7 @@ export function ExpertsPage() {
                     </span>
                   </div>
                 </div>
-                <p className="font-serif text-sm text-muted-foreground/70 leading-relaxed mb-4">
+                <p className="font-serif text-sm text-muted-foreground leading-relaxed mb-4">
                   Describe the ideal guest for your next episode and let PodBrain surface the most relevant experts —
                   ranked by topic relevance, audience fit, and availability.
                 </p>
@@ -800,7 +873,7 @@ export function ExpertsPage() {
                   handleSearch();
                 }
               }} placeholder='Describe your ideal guest... e.g. "A biotech founder working on longevity who can speak to both science and business strategy."' rows={2} aria-describedby="search-hint" className="flex-1 font-serif text-[14px] text-foreground placeholder:text-muted-foreground bg-transparent border-none outline-none resize-none leading-relaxed" />
-                <button onClick={() => handleSearch()} disabled={!query.trim() || searching} aria-label={searching ? 'Searching for experts...' : 'Discover experts'} className={cn('flex items-center gap-2 px-4 py-2.5 rounded-xl text-[12px] font-sans font-bold transition-all shadow-sm flex-shrink-0 self-end focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:outline-none', query.trim() && !searching ? 'bg-stone-900 text-white hover:bg-stone-800' : 'bg-muted text-muted-foreground/70 cursor-not-allowed')}>
+                <button onClick={() => handleSearch()} disabled={!query.trim() || searching} aria-label={searching ? 'Searching for experts...' : 'Discover experts'} className={cn('flex items-center gap-2 px-4 py-2.5 rounded-xl text-[12px] font-sans font-bold transition-all shadow-sm flex-shrink-0 self-end focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:outline-none', query.trim() && !searching ? 'bg-stone-900 text-white hover:bg-stone-800' : 'bg-muted text-muted-foreground cursor-not-allowed')}>
                   {searching ? <>
                       <Loader2 aria-hidden="true" className="w-3.5 h-3.5 animate-spin" />
                       Searching...
@@ -813,7 +886,7 @@ export function ExpertsPage() {
 
               {/* Example query pills */}
               <div id="search-hint" className="flex items-center gap-2 px-5 pb-4 flex-wrap" aria-label="Example search queries">
-                <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70 flex-shrink-0" aria-hidden="true">
+                <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground flex-shrink-0" aria-hidden="true">
                   Try:
                 </span>
                 {EXAMPLE_QUERIES.map(pill => <button key={pill} onClick={() => handlePillClick(pill)} aria-label={`Search for: ${pill}`} className="font-mono text-[10px] text-muted-foreground px-2.5 py-1 rounded-full bg-muted border border-border hover:bg-border/60 hover:text-foreground/80 hover:border-border transition-all focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:outline-none">
@@ -824,7 +897,7 @@ export function ExpertsPage() {
           </section>
 
           {/* ── Main Content Grid ── */}
-          <div className="flex gap-5">
+          <div className="flex flex-col lg:flex-row gap-5">
 
             {/* ── Left: Results ── */}
             <div className="flex-1 min-w-0 space-y-3">
@@ -833,7 +906,7 @@ export function ExpertsPage() {
 
               {/* Loading state */}
               <AnimatePresence>
-                {searching && <motion.div key="loading" role="status" aria-live="polite" aria-label="Searching for experts" initial={{
+                {(searching || apiLoading) && <motion.div key="loading" role="status" aria-live="polite" aria-label="Searching for experts" initial={{
                 opacity: 0
               }} animate={{
                 opacity: 1
@@ -845,7 +918,7 @@ export function ExpertsPage() {
                     </div>
                     <div className="text-center">
                       <p className="font-sans font-semibold text-muted-foreground text-sm">Searching 12,400+ experts...</p>
-                      <p className="font-serif text-[12px] text-muted-foreground/70 mt-0.5">
+                      <p className="font-serif text-[12px] text-muted-foreground mt-0.5">
                         Ranking by topic relevance and audience fit
                       </p>
                     </div>
@@ -862,23 +935,23 @@ export function ExpertsPage() {
               </AnimatePresence>
 
               {/* Expert grid */}
-              {!searching && <motion.div variants={listVariants} initial="hidden" animate="visible" role="feed" aria-label="Expert results" aria-busy={searching} className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+              {!searching && !apiLoading && <motion.div variants={listVariants} initial="hidden" animate="visible" role="feed" aria-label="Expert results" aria-busy={searching || apiLoading} className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                   {filteredExperts.map((expert, i) => <ExpertCard key={expert.id} expert={expert} index={i} shortlisted={shortlistedIds.includes(expert.id)} onToggleShortlist={handleToggleShortlist} />)}
                 </motion.div>}
 
               {/* Empty state (pre-search) */}
-              {!searching && !hasSearched && filteredExperts.length === 0 && <div className="flex flex-col items-center justify-center py-20 gap-3">
+              {!searching && !apiLoading && !hasSearched && filteredExperts.length === 0 && <div className="flex flex-col items-center justify-center py-20 gap-3">
                   <div aria-hidden="true" className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                    <Search className="w-5 h-5 text-muted-foreground/50" />
+                    <Search className="w-5 h-5 text-muted-foreground/80" />
                   </div>
-                  <p className="font-sans text-sm text-muted-foreground/70">Use the search above to discover experts</p>
+                  <p className="font-sans text-sm text-muted-foreground">Use the search above to discover experts</p>
                 </div>}
 
               <div className="h-12" />
             </div>
 
             {/* ── Right Sidebar ── */}
-            <RightPanel experts={EXPERTS} shortlistedIds={shortlistedIds} onRemove={handleToggleShortlist} onPillClick={handlePillClick} isOpen={panelOpen} onClose={() => setPanelOpen(false)} />
+            <RightPanel experts={mappedExperts} shortlistedIds={shortlistedIds} onRemove={handleToggleShortlist} onPillClick={handlePillClick} isOpen={panelOpen} onClose={() => setPanelOpen(false)} />
           </div>
         </div>
       </main>

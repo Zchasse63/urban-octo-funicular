@@ -1,10 +1,14 @@
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, CheckCircle2, Loader2, Circle, ChevronRight, BarChart2, Zap, FileText, Package, AlignLeft, User, Brain, RefreshCw, Download, Copy, Check, Sparkles, Link2, Hash, Target, TrendingUp, AlertCircle, Globe, Clock, Mic2, MessageSquare, Twitter, Linkedin, Youtube, Mail, Image, BookOpen, Users, Wand2, Play, Volume2, ExternalLink, ChevronDown, ArrowUpRight, Radio, Activity, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
+import useEpisode from '@/hooks/use-episode';
+import useEpisodeAssets from '@/hooks/use-episode-assets';
+import useEpisodeSeo from '@/hooks/use-episode-seo';
+import type { Episode, GeneratedAsset, SEOAnalysis } from '@/types/database';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -77,8 +81,8 @@ const stepStatusConfig: Record<StepStatus, {
     connector: 'bg-muted'
   },
   pending: {
-    dot: 'bg-stone-200 border-stone-300',
-    text: 'text-muted-foreground/70',
+    dot: 'bg-accent border-border',
+    text: 'text-muted-foreground',
     connector: 'bg-muted'
   }
 };
@@ -159,7 +163,7 @@ const SEOGauge = ({
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="font-mono text-2xl font-bold text-foreground leading-none">{score}</span>
-          <span className="font-sans text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70 leading-none mt-0.5">SEO</span>
+          <span className="font-sans text-[9px] font-bold uppercase tracking-widest text-muted-foreground leading-none mt-0.5">SEO</span>
         </div>
       </div>
       <span className="font-sans text-xs font-semibold" style={{
@@ -216,7 +220,7 @@ const SEOMetricRow = ({
   const color = metric.score >= 90 ? 'bg-emerald-400' : metric.score >= 75 ? 'bg-sky-400' : 'bg-amber-400';
   return <div className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
       <div className="w-6 h-6 rounded bg-muted flex items-center justify-center flex-shrink-0">
-        <Icon className="w-3 h-3 text-muted-foreground/70" />
+        <Icon className="w-3 h-3 text-muted-foreground" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1">
@@ -251,7 +255,7 @@ const CopyButton = ({
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
   };
-  return <button onClick={handleCopy} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-muted-foreground/70 hover:text-foreground/80 hover:bg-accent border border-transparent hover:border-border transition-all text-[11px] font-sans font-medium">
+  return <button onClick={handleCopy} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-muted-foreground hover:text-foreground/80 hover:bg-accent border border-transparent hover:border-border transition-all text-[11px] font-sans font-medium">
       {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
       {copied ? 'Copied' : 'Copy'}
     </button>;
@@ -278,137 +282,207 @@ const listItemVariants = {
     }
   }
 };
-const ShowNotesTab = () => <div className="flex gap-6 h-full">
+interface ShowNotesTabProps {
+  episode: Episode | null;
+  seoScore: number | null;
+  seoAnalysis: SEOAnalysis | null;
+}
+
+// ─── Mock fallback data for show notes ──────────────────────────────────────
+// TODO: Replace with real data when API returns structured show notes fields
+const MOCK_SHOW_NOTES_TITLE = 'The Stoic Entrepreneur — Lessons from Marcus Aurelius';
+const MOCK_SHOW_NOTES_DESCRIPTION = 'What happens when you apply 2,000-year-old Stoic philosophy to the chaos of modern startup culture? In this episode, we dive deep into <em>Meditations</em> by Marcus Aurelius and extract surprisingly actionable frameworks for founders navigating uncertainty, pressure, and rapid change.';
+const MOCK_SHOW_NOTES_LEARNINGS = [
+  'The "obstacle is the way" reframe for startup setbacks and pivots',
+  'Marcus Aurelius\'s daily journaling practice and how to adapt it for founder reflection',
+  'Why Stoic indifference to outcomes can paradoxically improve decision-making',
+  'How to apply the Dichotomy of Control to team management and investor relationships',
+  'The role of <em>memento mori</em> thinking in long-term product vision',
+];
+const MOCK_RESOURCES = [
+  { title: 'Meditations — Marcus Aurelius', url: '#', type: 'Book' },
+  { title: 'The Obstacle Is The Way — Ryan Holiday', url: '#', type: 'Book' },
+  { title: 'Daily Stoic Newsletter', url: '#', type: 'Newsletter' },
+];
+const MOCK_KEYWORDS = ['stoic philosophy', 'entrepreneur mindset', 'Marcus Aurelius', 'startup resilience', 'mental models', 'meditations', 'decision making'];
+const MOCK_SEO_SUGGESTIONS = ['Add 2 more internal links to related episodes', 'Consider a FAQ section for featured snippet targeting'];
+
+const ShowNotesTab = ({ episode, seoScore, seoAnalysis }: ShowNotesTabProps) => {
+  // Derive SEO keywords from analysis if available
+  const keywords = useMemo(() => {
+    if (seoAnalysis?.keyword_density) {
+      const entries = Object.entries(seoAnalysis.keyword_density);
+      if (entries.length > 0) {
+        return entries
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 10)
+          .map(([keyword]) => keyword);
+      }
+    }
+    return MOCK_KEYWORDS; // TODO: Replace with real data when API returns this field
+  }, [seoAnalysis]);
+
+  // Derive SEO suggestions from analysis if available
+  const suggestions = useMemo(() => {
+    if (seoAnalysis?.suggestions && seoAnalysis.suggestions.length > 0) {
+      return seoAnalysis.suggestions.map(s =>
+        typeof s === 'string' ? s : (s as { text?: string })?.text ?? String(s)
+      );
+    }
+    return MOCK_SEO_SUGGESTIONS; // TODO: Replace with real data when API returns this field
+  }, [seoAnalysis]);
+
+  // Derive SEO metrics from analysis if available
+  const seoMetrics: SEOMetric[] = useMemo(() => {
+    if (seoAnalysis) {
+      const realMetrics: SEOMetric[] = [
+        { label: 'Readability', score: seoAnalysis.readability_score ?? 0, icon: BookOpen, note: seoAnalysis.readability_score ? `Score: ${seoAnalysis.readability_score}` : 'No data' },
+        { label: 'Header Structure', score: seoAnalysis.header_structure ? 100 : 0, icon: Hash, note: seoAnalysis.header_structure ? 'Headers well structured' : 'Needs improvement' },
+      ];
+      const realLabels = new Set(realMetrics.map(m => m.label));
+      // TODO: Replace remaining mock metrics with real data when API returns detailed breakdowns
+      return [
+        ...realMetrics,
+        ...SEO_METRICS.filter(m => !realLabels.has(m.label)),
+      ];
+    }
+    return SEO_METRICS;
+  }, [seoAnalysis]);
+
+  const resolvedScore = seoScore ?? 0;
+  const showNotesContent = episode?.show_notes || episode?.show_notes_html || null;
+
+  return <div className="flex flex-col lg:flex-row gap-5 lg:gap-6 h-full">
     {/* ── Left: Rich show notes ── */}
     <div className="flex-1 min-w-0">
       <div className="bg-card border border-border rounded-lg overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
         {/* Toolbar */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-muted/50">
-          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Show Notes</span>
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-border bg-muted/50">
+          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Show Notes</span>
           <div className="flex items-center gap-1">
-            <CopyButton text="Show notes content" />
-            <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-muted-foreground/70 hover:text-foreground/80 hover:bg-accent border border-transparent hover:border-border transition-all text-[11px] font-sans font-medium">
+            <CopyButton text={showNotesContent || 'Show notes content'} />
+            <button className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-md text-muted-foreground hover:text-foreground/80 hover:bg-accent border border-transparent hover:border-border transition-all text-[11px] font-sans font-medium">
               <Download className="w-3 h-3" />
-              Export
+              <span className="hidden sm:inline">Export</span>
             </button>
-            <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-stone-900 text-white hover:bg-stone-800 transition-colors text-[11px] font-sans font-semibold ml-1 shadow-sm">
+            <button className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-md bg-stone-900 text-white hover:bg-stone-800 transition-colors text-[11px] font-sans font-semibold ml-1 shadow-sm">
               <RefreshCw className="w-3 h-3" />
-              Regenerate
+              <span className="hidden sm:inline">Regenerate</span>
             </button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="px-8 py-7 space-y-5 font-serif text-foreground/80 leading-relaxed max-h-[calc(100vh-320px)] overflow-y-auto">
-          <h2 className="font-sans font-bold text-xl text-foreground tracking-tight leading-tight">
-            The Stoic Entrepreneur — Lessons from Marcus Aurelius
-          </h2>
+        <div className="px-5 sm:px-8 py-5 sm:py-7 space-y-5 font-serif text-foreground/80 leading-relaxed max-h-[calc(100vh-320px)] overflow-y-auto">
+          {showNotesContent ? (
+            /* Render real show notes (HTML or plain text) */
+            episode?.show_notes_html ? (
+              <div dangerouslySetInnerHTML={{ __html: episode.show_notes_html }} className="prose prose-stone max-w-none" />
+            ) : (
+              <div className="whitespace-pre-wrap text-[14.5px] leading-[1.8] text-muted-foreground">
+                {showNotesContent}
+              </div>
+            )
+          ) : (
+            /* Fallback: mock show notes structure */
+            <>
+              <h2 className="font-sans font-bold text-xl text-foreground tracking-tight leading-tight">
+                {episode?.title || MOCK_SHOW_NOTES_TITLE}
+              </h2>
 
-          <p className="text-[14.5px] leading-[1.8] text-muted-foreground">
-            What happens when you apply 2,000-year-old Stoic philosophy to the chaos of modern startup culture? In this episode, we dive deep into{' '}
-            <em>Meditations</em> by Marcus Aurelius and extract surprisingly actionable frameworks for founders navigating uncertainty, pressure, and rapid change.
-          </p>
+              <p className="text-[14.5px] leading-[1.8] text-muted-foreground" dangerouslySetInnerHTML={{ __html: MOCK_SHOW_NOTES_DESCRIPTION }} />
 
-          <div>
-            <h3 className="font-sans font-semibold text-sm text-foreground uppercase tracking-widest mb-3 flex items-center gap-2">
-              <span className="w-4 h-[2px] bg-border rounded-full inline-block" />
-              What You'll Learn
-            </h3>
-            <ul className="space-y-2.5 text-[14px] text-muted-foreground">
-              {['The "obstacle is the way" reframe for startup setbacks and pivots', 'Marcus Aurelius\'s daily journaling practice and how to adapt it for founder reflection', 'Why Stoic indifference to outcomes can paradoxically improve decision-making', 'How to apply the Dichotomy of Control to team management and investor relationships', 'The role of <em>memento mori</em> thinking in long-term product vision'].map((item, i) => <li key={i} className="flex items-start gap-3">
-                  <span className="font-mono text-[10px] text-muted-foreground/70 mt-1 select-none">{String(i + 1).padStart(2, '0')}</span>
-                  <span dangerouslySetInnerHTML={{
-                __html: item
-              }} />
-                </li>)}
-            </ul>
-          </div>
+              <div>
+                <h3 className="font-sans font-semibold text-sm text-foreground uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <span className="w-4 h-[2px] bg-border rounded-full inline-block" />
+                  What You&apos;ll Learn
+                </h3>
+                <ul className="space-y-2.5 text-[14px] text-muted-foreground">
+                  {MOCK_SHOW_NOTES_LEARNINGS.map((item, i) => <li key={i} className="flex items-start gap-3">
+                      <span className="font-mono text-[10px] text-muted-foreground mt-1 select-none">{String(i + 1).padStart(2, '0')}</span>
+                      <span dangerouslySetInnerHTML={{ __html: item }} />
+                    </li>)}
+                </ul>
+              </div>
 
-          <div>
-            <h3 className="font-sans font-semibold text-sm text-foreground uppercase tracking-widest mb-3 flex items-center gap-2">
-              <span className="w-4 h-[2px] bg-border rounded-full inline-block" />
-              Key Quotes
-            </h3>
-            <blockquote className="border-l-[3px] border-border pl-4 py-1 my-4">
-              <p className="text-[14px] italic text-muted-foreground leading-relaxed">
-                "You have power over your mind — not outside events. Realise this and you will find strength."
-              </p>
-              <cite className="font-mono text-[10px] text-muted-foreground/70 not-italic mt-1 block">— Marcus Aurelius, Meditations</cite>
-            </blockquote>
-          </div>
+              <div>
+                <h3 className="font-sans font-semibold text-sm text-foreground uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <span className="w-4 h-[2px] bg-border rounded-full inline-block" />
+                  Key Quotes
+                </h3>
+                <blockquote className="border-l-[3px] border-border pl-4 py-1 my-4">
+                  <p className="text-[14px] italic text-muted-foreground leading-relaxed">
+                    &quot;You have power over your mind — not outside events. Realise this and you will find strength.&quot;
+                  </p>
+                  <cite className="font-mono text-[10px] text-muted-foreground not-italic mt-1 block">— Marcus Aurelius, Meditations</cite>
+                </blockquote>
+              </div>
 
-          <div>
-            <h3 className="font-sans font-semibold text-sm text-foreground uppercase tracking-widest mb-3 flex items-center gap-2">
-              <span className="w-4 h-[2px] bg-border rounded-full inline-block" />
-              Resources Mentioned
-            </h3>
-            <div className="space-y-2">
-              {[{
-              title: 'Meditations — Marcus Aurelius',
-              url: '#',
-              type: 'Book'
-            }, {
-              title: 'The Obstacle Is The Way — Ryan Holiday',
-              url: '#',
-              type: 'Book'
-            }, {
-              title: 'Daily Stoic Newsletter',
-              url: '#',
-              type: 'Newsletter'
-            }].map((res, i) => <div key={i} className="flex items-center gap-2.5 py-1.5 group cursor-pointer">
-                  <ExternalLink className="w-3 h-3 text-muted-foreground/70 group-hover:text-accent-foreground transition-colors flex-shrink-0" />
-                  <span className="text-[13px] text-muted-foreground group-hover:text-foreground transition-colors">{res.title}</span>
-                  <span className="font-mono text-[9px] text-muted-foreground/70 bg-muted px-1.5 py-0.5 rounded-full border border-border">{res.type}</span>
-                </div>)}
-            </div>
-          </div>
+              <div>
+                <h3 className="font-sans font-semibold text-sm text-foreground uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <span className="w-4 h-[2px] bg-border rounded-full inline-block" />
+                  Resources Mentioned
+                </h3>
+                <div className="space-y-2">
+                  {MOCK_RESOURCES.map((res, i) => <div key={i} className="flex items-center gap-2.5 py-1.5 group cursor-pointer">
+                      <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-accent-foreground transition-colors flex-shrink-0" />
+                      <span className="text-[13px] text-muted-foreground group-hover:text-foreground transition-colors">{res.title}</span>
+                      <span className="font-mono text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full border border-border">{res.type}</span>
+                    </div>)}
+                </div>
+              </div>
 
-          <div className="h-4" />
+              <div className="h-4" />
+            </>
+          )}
         </div>
       </div>
     </div>
 
     {/* ── Right: SEO Panel ── */}
-    <div className="w-[248px] flex-shrink-0 space-y-3">
+    <div className="w-full lg:w-[248px] lg:flex-shrink-0 space-y-3">
       {/* Score card */}
       <div className="bg-card border border-border rounded-lg p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
         <div className="flex items-center justify-between mb-4">
-          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">SEO Score</span>
-          <BarChart2 aria-label="SEO score breakdown" className="w-3.5 h-3.5 text-muted-foreground/70" />
+          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">SEO Score</span>
+          <BarChart2 aria-label="SEO score breakdown" className="w-3.5 h-3.5 text-muted-foreground" />
         </div>
         <div className="flex justify-center mb-4">
-          <SEOGauge score={94} />
+          <SEOGauge score={resolvedScore} />
         </div>
         <div className="space-y-0">
-          {SEO_METRICS.map(m => <SEOMetricRow key={m.label} metric={m} />)}
+          {seoMetrics.map(m => <SEOMetricRow key={m.label} metric={m} />)}
         </div>
       </div>
 
       {/* Keywords card */}
       <div className="bg-card border border-border rounded-lg p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 block mb-3">Top Keywords</span>
+        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-3">Top Keywords</span>
         <div className="flex flex-wrap gap-1.5">
-          {['stoic philosophy', 'entrepreneur mindset', 'Marcus Aurelius', 'startup resilience', 'mental models', 'meditations', 'decision making'].map(kw => <span key={kw} className="font-sans text-[10px] text-muted-foreground bg-muted/80 border border-border px-2 py-0.5 rounded-full">
+          {keywords.map(kw => <span key={kw} className="font-sans text-[10px] text-muted-foreground bg-muted/80 border border-border px-2 py-0.5 rounded-full">
               {kw}
             </span>)}
         </div>
       </div>
 
       {/* Suggestions card */}
-      <div className="bg-amber-50 border border-amber-200/60 rounded-lg p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
-          <span className="font-sans text-[11px] font-semibold text-amber-700">2 Suggestions</span>
+      {suggestions.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200/60 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+            <span className="font-sans text-[11px] font-semibold text-amber-700">{suggestions.length} Suggestion{suggestions.length !== 1 ? 's' : ''}</span>
+          </div>
+          <ul className="space-y-2">
+            {suggestions.map((s, i) => <li key={i} className="flex items-start gap-2 text-[11px] text-amber-700 leading-relaxed">
+                <span className="font-mono text-amber-400 mt-0.5">&rarr;</span>
+                {s}
+              </li>)}
+          </ul>
         </div>
-        <ul className="space-y-2">
-          {['Add 2 more internal links to related episodes', 'Consider a FAQ section for featured snippet targeting'].map((s, i) => <li key={i} className="flex items-start gap-2 text-[11px] text-amber-700 leading-relaxed">
-              <span className="font-mono text-amber-400 mt-0.5">→</span>
-              {s}
-            </li>)}
-        </ul>
-      </div>
+      )}
     </div>
   </div>;
+};
 
 // ─── Assets Tab ───────────────────────────────────────────────────────────────
 
@@ -619,7 +693,7 @@ const GenerateAllOverlay = ({
             {done ? 'All assets generated!' : 'Generating remaining assets\u2026'}
           </span>
         </div>
-        <button onClick={onDismiss} aria-label="Dismiss" className="p-1 rounded-md text-stone-500 hover:text-stone-300 hover:bg-stone-800 transition-colors">
+        <button onClick={onDismiss} aria-label="Dismiss" className="p-1 rounded-md text-muted-foreground hover:text-muted-foreground/60 hover:bg-stone-800 transition-colors">
           <X className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -627,10 +701,10 @@ const GenerateAllOverlay = ({
       {/* Progress bar */}
       <div className="px-5 pt-4 pb-2">
         <div className="flex items-center gap-1 mb-2">
-          <span className="font-mono text-[10px] text-stone-500 font-bold uppercase tracking-widest">
+          <span className="font-mono text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
             Progress
           </span>
-          <span className="font-mono text-[11px] text-stone-300 font-bold">
+          <span className="font-mono text-[11px] text-muted-foreground/60 font-bold">
             {completedAssets}/{total} assets
           </span>
         </div>
@@ -673,7 +747,7 @@ const GenerateAllOverlay = ({
                   </motion.div> : isRunning ? <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin" /> : <div className="w-3.5 h-3.5 rounded-full border border-stone-600" />}
               </div>
               <div className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', cat.dot)} />
-              <span className={cn('font-sans text-[12px] font-medium flex-1', isCompleted ? 'text-stone-400 line-through decoration-stone-600' : isRunning ? 'text-stone-100' : 'text-stone-500')}>
+              <span className={cn('font-sans text-[12px] font-medium flex-1', isCompleted ? 'text-muted-foreground/80 line-through decoration-stone-600' : isRunning ? 'text-stone-100' : 'text-muted-foreground')}>
                 {cat.label}
               </span>
               <span className="font-mono text-[10px] text-muted-foreground">
@@ -725,14 +799,14 @@ const AssetRow = ({
               Ready
             </span>}
         </div>
-        <p className="font-sans text-[11px] text-muted-foreground/70">{asset.description}</p>
+        <p className="font-sans text-[11px] text-muted-foreground">{asset.description}</p>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
         {status === 'generated' && <>
-            <button aria-label={`Copy ${asset.label}`} className="p-1.5 rounded-md text-muted-foreground/70 hover:text-accent-foreground hover:bg-accent transition-all opacity-0 group-hover:opacity-100">
+            <button aria-label={`Copy ${asset.label}`} className="p-1.5 rounded-md text-muted-foreground hover:text-accent-foreground hover:bg-accent transition-all opacity-0 group-hover:opacity-100">
               <Copy className="w-3.5 h-3.5" />
             </button>
-            <button aria-label={`Download ${asset.label}`} className="p-1.5 rounded-md text-muted-foreground/70 hover:text-accent-foreground hover:bg-accent transition-all opacity-0 group-hover:opacity-100">
+            <button aria-label={`Download ${asset.label}`} className="p-1.5 rounded-md text-muted-foreground hover:text-accent-foreground hover:bg-accent transition-all opacity-0 group-hover:opacity-100">
               <Download className="w-3.5 h-3.5" />
             </button>
           </>}
@@ -793,7 +867,7 @@ const AssetsTab = () => {
             <span className="font-semibold text-foreground">7 of 14</span> assets generated
           </p>
         </div>
-        <button onClick={handleGenerateAll} disabled={showOverlay} className={cn('flex items-center gap-2 px-4 py-2 rounded-lg text-[12px] font-sans font-semibold transition-all shadow-sm', showOverlay ? 'bg-stone-700 text-stone-400 cursor-not-allowed' : 'bg-stone-900 text-white hover:bg-stone-800')}>
+        <button onClick={handleGenerateAll} disabled={showOverlay} className={cn('flex items-center gap-2 px-4 py-2 rounded-lg text-[12px] font-sans font-semibold transition-all shadow-sm', showOverlay ? 'bg-stone-700 text-muted-foreground/80 cursor-not-allowed' : 'bg-stone-900 text-white hover:bg-stone-800')}>
           <Sparkles className="w-3.5 h-3.5 text-amber-300" />
           Generate All Remaining
         </button>
@@ -816,7 +890,8 @@ const AssetsTab = () => {
 
 // ─── Transcript Tab ───────────────────────────────────────────────────────────
 
-const TRANSCRIPT: TranscriptSegment[] = [{
+// TODO: Replace with real data when API returns this field
+const MOCK_TRANSCRIPT: TranscriptSegment[] = [{
   id: 't1',
   speaker: 'Host',
   speakerInitial: 'H',
@@ -892,9 +967,57 @@ const HighlightedText = ({
           </mark> : <React.Fragment key={i}>{part}</React.Fragment>)}
     </>;
 };
-const TranscriptTab = () => {
+interface TranscriptTabProps {
+  episode: Episode | null;
+}
+
+// Helper to format seconds to MM:SS
+const formatTimestamp = (seconds: number): string => {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+};
+
+// Map API transcript segments to the UI format
+const mapApiSegments = (apiSegments: import('@/types/database').TranscriptSegment[]): TranscriptSegment[] => {
+  const speakerColors: Record<string, string> = {};
+  const colorPalette = [
+    'bg-stone-800 text-stone-100',
+    'bg-amber-600 text-white',
+    'bg-sky-700 text-white',
+    'bg-violet-700 text-white',
+    'bg-emerald-700 text-white',
+    'bg-rose-700 text-white',
+  ];
+  let colorIdx = 0;
+
+  return apiSegments.map((seg, i) => {
+    const speaker = seg.speaker || 'Speaker';
+    if (!speakerColors[speaker]) {
+      speakerColors[speaker] = colorPalette[colorIdx % colorPalette.length];
+      colorIdx++;
+    }
+    return {
+      id: `t${i}`,
+      speaker,
+      speakerInitial: speaker.charAt(0).toUpperCase(),
+      speakerColor: speakerColors[speaker],
+      timestamp: formatTimestamp(seg.start),
+      text: seg.text,
+    };
+  });
+};
+
+const TranscriptTab = ({ episode }: TranscriptTabProps) => {
+  const segments = useMemo(() => {
+    if (episode?.transcript_segments && episode.transcript_segments.length > 0) {
+      return mapApiSegments(episode.transcript_segments);
+    }
+    return MOCK_TRANSCRIPT; // fallback to mock data
+  }, [episode]);
+
   const [searchQ, setSearchQ] = useState('');
-  const filtered = TRANSCRIPT.filter(s => !searchQ || s.text.toLowerCase().includes(searchQ.toLowerCase()) || s.speaker.toLowerCase().includes(searchQ.toLowerCase()));
+  const filtered = segments.filter(s => !searchQ || s.text.toLowerCase().includes(searchQ.toLowerCase()) || s.speaker.toLowerCase().includes(searchQ.toLowerCase()));
   const matchCount = searchQ.trim() ? filtered.reduce((acc, seg) => {
     const re = new RegExp(searchQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
     return acc + (seg.text.match(re)?.length ?? 0);
@@ -902,7 +1025,7 @@ const TranscriptTab = () => {
   return <div className="space-y-4">
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
-          <Activity className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/70 pointer-events-none" />
+          <Activity className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
           <input type="text" placeholder="Search transcript…" value={searchQ} onChange={e => setSearchQ(e.target.value)} className="w-full pl-9 pr-4 py-2 rounded-lg text-sm font-sans text-foreground placeholder:text-muted-foreground bg-card border border-border focus:outline-none focus:border-ring focus:shadow-[0_0_0_3px_rgba(120,113,108,0.1)] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.04)]" />
           {/* Match count badge */}
           <AnimatePresence>
@@ -924,7 +1047,7 @@ const TranscriptTab = () => {
         </div>
         <div className="flex items-center gap-1.5 px-3 py-2 bg-card border border-border rounded-lg">
           <Radio className="w-3 h-3 text-emerald-500" />
-          <span className="font-mono text-[10px] font-bold text-muted-foreground">{TRANSCRIPT.length} segments</span>
+          <span className="font-mono text-[10px] font-bold text-muted-foreground">{segments.length} segments</span>
         </div>
         <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-muted-foreground hover:text-accent-foreground bg-card border border-border hover:border-border transition-all text-[11px] font-sans font-medium">
           <Download className="w-3.5 h-3.5" />
@@ -937,13 +1060,13 @@ const TranscriptTab = () => {
           <motion.div key={searchQ} variants={listVariants} initial="hidden" animate="visible" className="divide-y divide-border/50">
             {filtered.length === 0 ? <motion.div variants={listItemVariants} className="flex flex-col items-center justify-center py-14 gap-3">
                 <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                  <Activity className="w-5 h-5 text-muted-foreground/70" />
+                  <Activity className="w-5 h-5 text-muted-foreground" />
                 </div>
-                <p className="font-sans text-sm text-muted-foreground/70">No results for <span className="font-semibold text-muted-foreground">&quot;{searchQ}&quot;</span></p>
+                <p className="font-sans text-sm text-muted-foreground">No results for <span className="font-semibold text-muted-foreground">&quot;{searchQ}&quot;</span></p>
               </motion.div> : filtered.map((seg, i) => <motion.div key={seg.id} variants={listItemVariants} className="flex gap-4 px-5 py-4 hover:bg-accent/50 transition-colors group">
                   {/* Timestamp */}
                   <div className="flex-shrink-0 w-12 text-right pt-0.5">
-                    <span className="font-mono text-[10px] font-bold text-muted-foreground/70 group-hover:text-muted-foreground transition-colors">
+                    <span className="font-mono text-[10px] font-bold text-muted-foreground group-hover:text-muted-foreground transition-colors">
                       {seg.timestamp}
                     </span>
                   </div>
@@ -968,10 +1091,10 @@ const TranscriptTab = () => {
 
                   {/* Actions */}
                   <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-start gap-1 pt-0.5">
-                    <button className="p-1 rounded text-muted-foreground/70 hover:text-accent-foreground hover:bg-accent transition-all">
+                    <button className="p-1 rounded text-muted-foreground hover:text-accent-foreground hover:bg-accent transition-all">
                       <Copy className="w-3 h-3" />
                     </button>
-                    <button className="p-1 rounded text-muted-foreground/70 hover:text-accent-foreground hover:bg-accent transition-all">
+                    <button className="p-1 rounded text-muted-foreground hover:text-accent-foreground hover:bg-accent transition-all">
                       <Play className="w-3 h-3" />
                     </button>
                   </div>
@@ -984,25 +1107,50 @@ const TranscriptTab = () => {
 
 // ─── Guest Package Tab ────────────────────────────────────────────────────────
 
-const GuestPackageTab = () => <div className="space-y-4">
+interface GuestPackageTabProps {
+  episode: Episode | null;
+}
+
+const GuestPackageTab = ({ episode }: GuestPackageTabProps) => {
+  const guestName = episode?.guest_name || 'Marcus Aurelius';
+  const guestBio = episode?.guest_bio || null;
+  const guestInitials = guestName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const isSoloEpisode = !episode?.guest_name;
+
+  return <div className="space-y-4">
     <div className="grid grid-cols-2 gap-4">
       {/* Guest Card */}
       <div className="bg-card border border-border rounded-lg p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)] col-span-2">
         <div className="flex items-start gap-5">
           <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-stone-700 to-stone-900 flex items-center justify-center text-white font-mono font-bold text-lg shadow-lg flex-shrink-0">
-            MA
+            {guestInitials}
           </div>
           <div className="flex-1">
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="font-sans font-bold text-base text-foreground tracking-tight">Marcus Aurelius</h3>
-                <p className="font-sans text-sm text-muted-foreground">Roman Emperor · Stoic Philosopher · Author</p>
+                <h3 className="font-sans font-bold text-base text-foreground tracking-tight">{guestName}</h3>
+                {guestBio ? (
+                  <p className="font-sans text-sm text-muted-foreground">{guestBio}</p>
+                ) : !isSoloEpisode ? (
+                  <p className="font-sans text-sm text-muted-foreground">Guest</p>
+                ) : (
+                  <p className="font-sans text-sm text-muted-foreground">Roman Emperor &middot; Stoic Philosopher &middot; Author</p>
+                )}
               </div>
-              <span className="font-mono text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200/60 px-2 py-1 rounded-full">Solo Episode</span>
+              {isSoloEpisode && (
+                <span className="font-mono text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200/60 px-2 py-1 rounded-full">Solo Episode</span>
+              )}
             </div>
-            <p className="font-serif text-[13px] text-muted-foreground leading-relaxed mt-3">
-              This was a solo episode exploring Marcus Aurelius&apos;s <em>Meditations</em>. No live guest — AI voice synthesis used for direct quotes.
-            </p>
+            {isSoloEpisode && (
+              <p className="font-serif text-[13px] text-muted-foreground leading-relaxed mt-3">
+                This was a solo episode exploring Marcus Aurelius&apos;s <em>Meditations</em>. No live guest — AI voice synthesis used for direct quotes.
+              </p>
+            )}
+            {!isSoloEpisode && guestBio && (
+              <p className="font-serif text-[13px] text-muted-foreground leading-relaxed mt-3">
+                {guestBio}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -1036,7 +1184,7 @@ const GuestPackageTab = () => <div className="space-y-4">
           </div>
           <div className="flex-1">
             <span className="font-sans text-sm font-medium text-foreground block">{item.label}</span>
-            <span className="font-sans text-[11px] text-muted-foreground/70">{item.description}</span>
+            <span className="font-sans text-[11px] text-muted-foreground">{item.description}</span>
           </div>
           <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-stone-900 text-white text-[10px] font-sans font-semibold hover:bg-stone-800 transition-colors shadow-sm">
             <Wand2 className="w-3 h-3" />
@@ -1045,11 +1193,13 @@ const GuestPackageTab = () => <div className="space-y-4">
         </div>;
   })}
   </div>;
+};
 
 // ─── Intelligence Tab ─────────────────────────────────────────────────────────
 
+// TODO: Replace with real data when API returns intelligence/analysis fields
 const IntelligenceTab = () => <div className="space-y-4">
-    <div className="grid grid-cols-3 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
       {[{
       label: 'Topics Detected',
       value: '14',
@@ -1085,8 +1235,8 @@ const IntelligenceTab = () => <div className="space-y-4">
     {/* Topics */}
     <div className="bg-card border border-border rounded-lg p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
       <div className="flex items-center justify-between mb-4">
-        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Topic Clusters</span>
-        <span className="font-mono text-[10px] text-muted-foreground/70">by prominence</span>
+        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Topic Clusters</span>
+        <span className="font-mono text-[10px] text-muted-foreground">by prominence</span>
       </div>
       <div className="space-y-2.5">
         {[{
@@ -1126,7 +1276,7 @@ const IntelligenceTab = () => <div className="space-y-4">
             delay: 0.3
           }} className={cn('h-full rounded-full', t.color)} />
             </div>
-            <span className="font-mono text-[10px] text-muted-foreground/70 w-6 text-right">{t.weight}</span>
+            <span className="font-mono text-[10px] text-muted-foreground w-6 text-right">{t.weight}</span>
           </div>)}
       </div>
     </div>
@@ -1134,7 +1284,7 @@ const IntelligenceTab = () => <div className="space-y-4">
     {/* Sentiment + Engagement */}
     <div className="grid grid-cols-2 gap-3">
       <div className="bg-card border border-border rounded-lg p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 block mb-3">Sentiment Arc</span>
+        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-3">Sentiment Arc</span>
         <div className="flex items-end gap-1 h-12">
           {[0.6, 0.72, 0.65, 0.85, 0.9, 0.82, 0.88, 0.95, 0.78, 0.92, 0.85, 0.8].map((v, i) => <motion.div key={i} initial={{
           height: 0
@@ -1147,13 +1297,13 @@ const IntelligenceTab = () => <div className="space-y-4">
         }} className="flex-1 bg-emerald-400 rounded-t-sm opacity-80" />)}
         </div>
         <div className="flex justify-between mt-1.5">
-          <span className="font-mono text-[9px] text-muted-foreground/70">00:00</span>
-          <span className="font-mono text-[9px] text-muted-foreground/70">1:12:44</span>
+          <span className="font-mono text-[9px] text-muted-foreground">00:00</span>
+          <span className="font-mono text-[9px] text-muted-foreground">1:12:44</span>
         </div>
       </div>
 
       <div className="bg-card border border-border rounded-lg p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 block mb-3">Predicted Engagement</span>
+        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-3">Predicted Engagement</span>
         <div className="space-y-2">
           {[{
           label: 'Hook Strength',
@@ -1191,61 +1341,156 @@ const IntelligenceTab = () => <div className="space-y-4">
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
+// ─── Status → Signal Chain mapping ──────────────────────────────────────────
+
+const statusToSignalSteps = (status: Episode['status'] | undefined): SignalStep[] => {
+  switch (status) {
+    case 'completed':
+      return [
+        { id: 'upload', label: 'Upload', status: 'done' },
+        { id: 'transcribe', label: 'Transcribe', status: 'done' },
+        { id: 'generate', label: 'Generate', status: 'done' },
+        { id: 'ready', label: 'Ready', status: 'done' },
+      ];
+    case 'processing':
+      return [
+        { id: 'upload', label: 'Upload', status: 'done' },
+        { id: 'transcribe', label: 'Transcribe', status: 'active' },
+        { id: 'generate', label: 'Generate', status: 'pending' },
+        { id: 'ready', label: 'Ready', status: 'pending' },
+      ];
+    case 'failed':
+      return [
+        { id: 'upload', label: 'Upload', status: 'done' },
+        { id: 'transcribe', label: 'Transcribe', status: 'done' },
+        { id: 'generate', label: 'Generate', status: 'pending' },
+        { id: 'ready', label: 'Ready', status: 'pending' },
+      ];
+    case 'pending':
+      return [
+        { id: 'upload', label: 'Upload', status: 'active' },
+        { id: 'transcribe', label: 'Transcribe', status: 'pending' },
+        { id: 'generate', label: 'Generate', status: 'pending' },
+        { id: 'ready', label: 'Ready', status: 'pending' },
+      ];
+    default:
+      return SIGNAL_STEPS;
+  }
+};
+
+// ─── Status badge config ────────────────────────────────────────────────────
+
+const STATUS_CONFIG: Record<Episode['status'], { dot: string; text: string; bg: string; border: string; label: string }> = {
+  completed: { dot: 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]', text: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200/60', label: 'Completed' },
+  processing: { dot: 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.5)] animate-pulse', text: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200/60', label: 'Processing' },
+  pending: { dot: 'bg-stone-400', text: 'text-stone-600', bg: 'bg-stone-50', border: 'border-stone-200/60', label: 'Pending' },
+  failed: { dot: 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]', text: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200/60', label: 'Failed' },
+};
+
+// ─── Duration formatting ────────────────────────────────────────────────────
+
+const formatDuration = (seconds: number | null | undefined): string => {
+  if (!seconds) return '--:--';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${m}:${String(s).padStart(2, '0')}`;
+};
+
 export const EpisodeDetail = () => {
   const router = useRouter();
+  const params = useParams();
+  const episodeId = params?.id as string;
+
+  // ── Data hooks ──
+  const { episode, isLoading: episodeLoading, error: episodeError } = useEpisode(episodeId);
+  // TODO: Wire apiAssets into AssetsTab when asset mapping is implemented
+  const { assets: apiAssets, isLoading: assetsLoading } = useEpisodeAssets(episodeId); // eslint-disable-line @typescript-eslint/no-unused-vars
+  const { seoData, isLoading: _seoLoading } = useEpisodeSeo(episodeId);
+  void apiAssets; void assetsLoading; void _seoLoading; // referenced below via seoData; assets tab TODO
+
   const [activeTab, setActiveTab] = useState<Tab>('show-notes');
-  return <div className="flex-1 h-full overflow-y-auto relative" style={{
-    background: '#EDEAE5',
-    backgroundImage: `radial-gradient(circle, rgba(0,0,0,0.065) 1px, transparent 1px)`,
-    backgroundSize: '22px 22px'
-  }}>
-      <div className="max-w-5xl mx-auto px-6 py-7">
+
+  // ── Derived data ──
+  const signalSteps = useMemo(() => statusToSignalSteps(episode?.status), [episode?.status]);
+  const statusCfg = episode?.status ? STATUS_CONFIG[episode.status] : STATUS_CONFIG.completed;
+  const seoScore = seoData?.seo_score ?? episode?.seo_score ?? null;
+  const seoAnalysis = seoData?.seo_analysis ?? episode?.seo_analysis ?? null;
+
+  // ── Loading state ──
+  if (episodeLoading) {
+    return <div className="flex-1 h-full flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
+        <span className="font-sans text-sm text-muted-foreground">Loading episode&hellip;</span>
+      </div>
+    </div>;
+  }
+
+  // ── Error state ──
+  if (episodeError) {
+    return <div className="flex-1 h-full flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3 max-w-sm text-center">
+        <AlertCircle className="w-6 h-6 text-red-500" />
+        <span className="font-sans text-sm text-red-600">Failed to load episode</span>
+        <p className="font-sans text-xs text-muted-foreground">{episodeError}</p>
+        <button onClick={() => router.push('/episodes')} className="mt-2 font-sans text-xs text-muted-foreground hover:text-foreground underline">
+          Back to episodes
+        </button>
+      </div>
+    </div>;
+  }
+
+  return <div className="flex-1 h-full overflow-y-auto relative">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5 sm:py-7">
         {/* ── Header ── */}
-        <div className="mb-6">
+        <div className="mb-5 sm:mb-6">
           {/* Back link */}
-          <button onClick={() => router.push('/episodes')} aria-label="Back to all episodes" className="flex items-center gap-1.5 text-muted-foreground/70 hover:text-foreground/80 transition-colors mb-5 group">
+          <button onClick={() => router.push('/episodes')} aria-label="Back to all episodes" className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground/80 transition-colors mb-4 sm:mb-5 group">
             <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
             <span className="font-sans text-[12px] font-medium">All Episodes</span>
           </button>
 
-          <div className="flex items-start justify-between gap-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
             {/* Left: title + meta */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 mb-2.5">
-                <span className="font-mono text-[11px] font-bold text-muted-foreground/70 uppercase tracking-widest">EP 12</span>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200/60">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
-                  <span className="font-sans text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Completed</span>
+              <div className="flex items-center gap-3 mb-2.5 flex-wrap">
+                {/* TODO: Replace with real episode number when API returns this field */}
+                <span className="font-mono text-[11px] font-bold text-muted-foreground uppercase tracking-widest">EP</span>
+                <div className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded-md', statusCfg.bg, statusCfg.border, 'border')}>
+                  <div className={cn('w-1.5 h-1.5 rounded-full', statusCfg.dot)} />
+                  <span className={cn('font-sans text-[10px] font-bold uppercase tracking-wider', statusCfg.text)}>{statusCfg.label}</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-muted-foreground/70">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
                   <Clock className="w-3 h-3" />
-                  <span className="font-mono text-[10px]">1:12:44</span>
+                  <span className="font-mono text-[10px]">{formatDuration(episode?.audio_duration_seconds)}</span>
                 </div>
               </div>
-              <h1 className="font-sans font-bold text-[22px] text-foreground tracking-tight leading-tight mb-1.5">
-                The Stoic Entrepreneur — Lessons from Marcus Aurelius
+              <h1 className="font-sans font-bold text-xl sm:text-[22px] text-foreground tracking-tight leading-tight mb-1.5">
+                {episode?.title || 'Untitled Episode'}
               </h1>
-              <p className="font-serif text-sm text-muted-foreground/70 leading-relaxed">
-                How ancient philosophy maps onto modern startup culture, mental resilience, and building with intention.
+              <p className="font-serif text-sm text-muted-foreground leading-relaxed">
+                {episode?.description || 'No description available.'}
               </p>
             </div>
 
             {/* Right: Signal chain */}
-            <div className="flex-shrink-0 bg-card border border-border rounded-xl px-5 py-4 shadow-[0_2px_4px_rgba(0,0,0,0.05)] flex flex-col items-center gap-2">
-              <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70 mb-1">Signal Chain</span>
-              <SignalChain steps={SIGNAL_STEPS} />
+            <div className="bg-card border border-border rounded-xl px-4 sm:px-5 py-3 sm:py-4 shadow-[0_2px_4px_rgba(0,0,0,0.05)] flex flex-col items-center gap-2 sm:flex-shrink-0 overflow-x-auto">
+              <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Signal Chain</span>
+              <SignalChain steps={signalSteps} />
             </div>
           </div>
         </div>
 
         {/* ── Tab Bar ── */}
         <div className="relative mb-5">
-          <div className="flex items-stretch bg-muted/40 rounded-xl p-1 border border-border gap-1">
+          <div className="flex items-stretch bg-muted/40 rounded-xl p-1 border border-border gap-1 overflow-x-auto scrollbar-none">
             {TAB_CONFIG.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
-            return <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn('relative flex items-center gap-2 px-4 py-2 rounded-lg text-[12px] font-sans font-medium transition-all duration-150 flex-1 justify-center', isActive ? 'bg-card text-foreground shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1),0_1px_0_rgba(255,255,255,1)_inset] border border-border' : 'text-muted-foreground hover:text-foreground/80 hover:bg-muted/50')}>
-                  <Icon className={cn('w-3.5 h-3.5 flex-shrink-0', isActive ? 'text-foreground' : 'text-muted-foreground/70')} />
+            return <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn('relative flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-[12px] font-sans font-medium transition-all duration-150 flex-1 justify-center whitespace-nowrap flex-shrink-0 sm:flex-shrink', isActive ? 'bg-card text-foreground shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1),0_1px_0_rgba(255,255,255,1)_inset] border border-border' : 'text-muted-foreground hover:text-foreground/80 hover:bg-muted/50')}>
+                  <Icon className={cn('w-3.5 h-3.5 flex-shrink-0', isActive ? 'text-foreground' : 'text-muted-foreground')} />
                   <span className="hidden sm:block">{tab.label}</span>
                   {isActive && <motion.div layoutId="tabUnderline" className="absolute bottom-[5px] left-1/2 -translate-x-1/2 w-4 h-[2px] bg-foreground rounded-full" />}
                 </button>;
@@ -1268,10 +1513,10 @@ export const EpisodeDetail = () => {
           duration: 0.2,
           ease: 'easeOut' as const
         }}>
-            {activeTab === 'show-notes' && <ShowNotesTab />}
+            {activeTab === 'show-notes' && <ShowNotesTab episode={episode} seoScore={seoScore} seoAnalysis={seoAnalysis} />}
             {activeTab === 'assets' && <AssetsTab />}
-            {activeTab === 'transcript' && <TranscriptTab />}
-            {activeTab === 'guest' && <GuestPackageTab />}
+            {activeTab === 'transcript' && <TranscriptTab episode={episode} />}
+            {activeTab === 'guest' && <GuestPackageTab episode={episode} />}
             {activeTab === 'intelligence' && <IntelligenceTab />}
           </motion.div>
         </AnimatePresence>

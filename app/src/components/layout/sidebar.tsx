@@ -78,19 +78,19 @@ const NavItem = ({ icon: Icon, label, isActive, count, status, isCollapsed, shor
         )}
       >
         <div className={cn('flex items-center', isCollapsed ? '' : 'gap-3')}>
-          <Icon className={cn('w-[18px] h-[18px] flex-shrink-0 transition-colors', isActive ? 'text-foreground' : 'text-muted-foreground/70 group-hover:text-muted-foreground')} />
+          <Icon className={cn('w-[18px] h-[18px] flex-shrink-0 transition-colors', isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-muted-foreground')} />
           {!isCollapsed && <span className="text-[13px] font-medium font-sans tracking-tight">{label}</span>}
         </div>
 
         {!isCollapsed && (
           <div className="flex items-center gap-2">
             {count !== undefined && (
-              <span className="font-mono text-[10px] font-semibold text-muted-foreground/70 px-1.5 py-0.5 rounded bg-muted group-hover:bg-accent/50 transition-colors">
+              <span className="font-mono text-[10px] font-semibold text-muted-foreground px-1.5 py-0.5 rounded bg-muted group-hover:bg-accent/50 transition-colors">
                 {count}
               </span>
             )}
             {shortcut && !isActive && (
-              <span className="font-mono text-[9px] text-stone-300 opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="font-mono text-[9px] text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity">
                 {shortcut}
               </span>
             )}
@@ -150,10 +150,10 @@ const KeyboardShortcutsModal = ({ onClose }: { onClose: () => void }) => {
       >
         <div className="px-5 pt-5 pb-3 border-b border-border/50">
           <div className="flex items-center gap-2.5 mb-0.5">
-            <Keyboard className="w-4 h-4 text-stone-700" />
+            <Keyboard className="w-4 h-4 text-foreground" />
             <h2 className="font-sans font-bold text-[15px] text-foreground tracking-tight">Keyboard Shortcuts</h2>
           </div>
-          <p className="text-[11.5px] font-serif text-muted-foreground/70 ml-[26px]">Power-user controls at your fingertips</p>
+          <p className="text-[11.5px] font-serif text-muted-foreground ml-[26px]">Power-user controls at your fingertips</p>
         </div>
         <div className="p-3 space-y-0.5 max-h-72 overflow-y-auto">
           {SHORTCUTS.map((s, i) => (
@@ -172,7 +172,7 @@ const KeyboardShortcutsModal = ({ onClose }: { onClose: () => void }) => {
         <div className="px-5 py-3 border-t border-border/50 bg-muted/50 flex justify-end">
           <button onClick={onClose} className="text-[11px] font-sans font-semibold text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5">
             Close
-            <kbd className="inline-flex items-center justify-center px-1.5 py-0.5 bg-card border border-border text-muted-foreground/70 font-mono text-[9px] rounded-md shadow-[0_1px_0_rgba(0,0,0,0.1)]">Esc</kbd>
+            <kbd className="inline-flex items-center justify-center px-1.5 py-0.5 bg-card border border-border text-muted-foreground font-mono text-[9px] rounded-md shadow-[0_1px_0_rgba(0,0,0,0.1)]">Esc</kbd>
           </button>
         </div>
       </motion.div>
@@ -214,18 +214,18 @@ const ShowSelector = ({
       <button
         onClick={() => !isCollapsed && setOpen((o) => !o)}
         className={cn(
-          'w-full flex items-center p-2 rounded-lg bg-muted/50 border border-border hover:border-stone-300/70 hover:bg-accent/80 transition-all duration-150',
+          'w-full flex items-center p-2 rounded-lg bg-muted/50 border border-border hover:border-border/70 hover:bg-accent/80 transition-all duration-150',
           isCollapsed ? 'justify-center' : 'justify-between px-3',
-          open && !isCollapsed && 'border-stone-300/70 bg-muted/80'
+          open && !isCollapsed && 'border-border/70 bg-muted/80'
         )}
       >
         <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
           <div className={cn('w-6 h-6 rounded-md flex-shrink-0 flex items-center justify-center text-white font-mono font-bold text-[10px] shadow-sm', colors[colorIndex])}>
             {initials}
           </div>
-          {!isCollapsed && <span className="text-[12.5px] font-medium truncate text-stone-700">{showName}</span>}
+          {!isCollapsed && <span className="text-[12.5px] font-medium truncate text-foreground">{showName}</span>}
         </div>
-        {!isCollapsed && <ChevronDown className={cn('w-3.5 h-3.5 text-muted-foreground/70 flex-shrink-0 transition-transform duration-200', open && 'rotate-180')} />}
+        {!isCollapsed && <ChevronDown className={cn('w-3.5 h-3.5 text-muted-foreground flex-shrink-0 transition-transform duration-200', open && 'rotate-180')} />}
       </button>
 
       <AnimatePresence>
@@ -247,7 +247,7 @@ const ShowSelector = ({
                   }}
                   className={cn(
                     'w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left transition-all duration-150',
-                    show.id === currentShow?.id ? 'bg-stone-900 text-white' : 'text-stone-700 hover:bg-accent'
+                    show.id === currentShow?.id ? 'bg-stone-900 text-white' : 'text-foreground hover:bg-accent'
                   )}
                 >
                   <div className={cn('w-5 h-5 rounded flex-shrink-0 flex items-center justify-center text-white font-mono font-bold text-[9px] shadow-sm', colors[i % colors.length])}>
@@ -259,7 +259,7 @@ const ShowSelector = ({
               ))}
             </div>
             <div className="border-t border-border/50 p-1.5">
-              <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-muted-foreground/70 hover:text-accent-foreground hover:bg-accent/50 transition-colors text-[11.5px] font-sans font-medium">
+              <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-muted-foreground hover:text-accent-foreground hover:bg-accent/50 transition-colors text-[11.5px] font-sans font-medium">
                 <Zap className="w-3.5 h-3.5" />
                 Add new show
               </button>
@@ -355,7 +355,7 @@ function Sidebar({ collapsed, onToggleCollapse, className }: SidebarProps) {
             {!collapsed && (
               <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.2 }} className="flex flex-col">
                 <span className="font-bold text-[15px] leading-tight tracking-tighter">PodBrain</span>
-                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground/70 leading-none">AI Studio v2.4</span>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground leading-none">AI Studio v2.4</span>
               </motion.div>
             )}
           </AnimatePresence>
@@ -370,7 +370,7 @@ function Sidebar({ collapsed, onToggleCollapse, className }: SidebarProps) {
           <div className="space-y-0.5">
             <AnimatePresence>
               {!collapsed && (
-                <motion.h3 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="px-3 text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground/70 mb-2">
+                <motion.h3 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="px-3 text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground mb-2">
                   Workspace
                 </motion.h3>
               )}
@@ -383,7 +383,7 @@ function Sidebar({ collapsed, onToggleCollapse, className }: SidebarProps) {
           <div className="space-y-0.5">
             <AnimatePresence>
               {!collapsed && (
-                <motion.h3 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="px-3 text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground/70 mb-2">
+                <motion.h3 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="px-3 text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground mb-2">
                   Tools
                 </motion.h3>
               )}
@@ -438,17 +438,17 @@ function Sidebar({ collapsed, onToggleCollapse, className }: SidebarProps) {
           </div>
 
           <div className={cn('flex items-center px-1 py-1', collapsed ? 'flex-col gap-1.5 items-center' : 'justify-between')}>
-            <button onClick={toggleDarkMode} className="p-1.5 rounded-md text-muted-foreground/70 hover:text-foreground hover:bg-accent transition-colors" title={isDark ? 'Light mode' : 'Dark mode'}>
+            <button onClick={toggleDarkMode} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors" title={isDark ? 'Light mode' : 'Dark mode'}>
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
 
             {!collapsed && (
-              <button onClick={() => setShowKeyboardModal(true)} className="p-1.5 rounded-md text-muted-foreground/70 hover:text-foreground hover:bg-accent transition-colors" title="Keyboard shortcuts (⌘/)">
+              <button onClick={() => setShowKeyboardModal(true)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors" title="Keyboard shortcuts (⌘/)">
                 <Keyboard className="w-4 h-4" />
               </button>
             )}
 
-            <button onClick={onToggleCollapse} className="p-1.5 rounded-md text-muted-foreground/70 hover:text-foreground hover:bg-accent transition-colors" title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+            <button onClick={onToggleCollapse} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors" title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
               {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
             </button>
           </div>

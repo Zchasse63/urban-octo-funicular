@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { DEFAULT_USER_ID, PAGINATION } from '@/lib/constants'
-import type { EpisodeListItem, ApiResponse, PaginatedResponse } from '@/types/database'
+import type { EpisodeListItem, ApiResponse, PaginatedResponse, Episode } from '@/types/database'
 
 /**
  * GET /api/episodes
@@ -95,6 +95,92 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error fetching episodes:', error)
+    return NextResponse.json<ApiResponse<null>>(
+      { data: null, error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * POST /api/episodes
+ * Create a new episode for a show
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = await createClient()
+    const body = await request.json()
+
+    const {
+      show_id,
+      title,
+      description,
+      audio_url,
+      guest_name,
+      guest_bio,
+      language = 'en',
+    } = body
+
+    // Validate required fields
+    if (!show_id) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'show_id is required' },
+        { status: 400 }
+      )
+    }
+
+    if (!audio_url) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'audio_url is required' },
+        { status: 400 }
+      )
+    }
+
+    // Verify the show exists and belongs to the default user
+    const { data: show, error: showError } = await supabase
+      .from('shows')
+      .select('id')
+      .eq('id', show_id)
+      .eq('user_id', DEFAULT_USER_ID)
+      .single()
+
+    if (showError || !show) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Show not found or access denied' },
+        { status: 404 }
+      )
+    }
+
+    // Insert the new episode
+    const { data: episode, error } = await supabase
+      .from('episodes')
+      .insert({
+        show_id,
+        title: title || null,
+        description: description || null,
+        audio_url,
+        language: language || 'en',
+        status: 'pending',
+        guest_name: guest_name || null,
+        guest_bio: guest_bio || null,
+        metadata: {},
+      })
+      .select('*')
+      .single()
+
+    if (error) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: error.message },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json<ApiResponse<Episode>>(
+      { data: episode, error: null },
+      { status: 201 }
+    )
+  } catch (error) {
+    console.error('Error creating episode:', error)
     return NextResponse.json<ApiResponse<null>>(
       { data: null, error: 'Internal server error' },
       { status: 500 }
