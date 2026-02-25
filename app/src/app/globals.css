@@ -124,12 +124,19 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body);
-    background-image: radial-gradient(circle, rgba(0, 0, 0, 0.065) 1px, transparent 1px);
-    background-size: 22px 22px;
   }
-  .dark body {
-    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
-    background-size: 22px 22px;
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0.028;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+  }
+  .dark body::before {
+    opacity: 0.020;
   }
   h1,
   h2,
