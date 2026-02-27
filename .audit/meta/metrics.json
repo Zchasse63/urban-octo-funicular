@@ -1,5 +1,6 @@
 {
-  "completed_at": "2026-02-24T00:00:00Z",
+  "completed_at": "2026-02-26T00:00:00Z",
+  "prior_run_date": "2026-02-24T00:00:00Z",
   "agents_executed": [
     "project-structure",
     "data-model",
@@ -24,6 +25,14 @@
     "info": 10,
     "total": 76
   },
+  "new_findings_this_run": [
+    {
+      "id": "security-clarification-netlify-gitignore",
+      "description": "app/.netlify/ confirmed NOT tracked by git via git ls-files. Prior HIGH finding (Netlify build artifacts with secrets) partially mitigated. app/.gitignore should still be updated to explicitly exclude .netlify/.",
+      "severity": "medium (downgraded from high)",
+      "layers_involved": ["security", "project-structure"]
+    }
+  ],
   "layer_reports": {
     "project-structure": ".audit/layers/project-structure.md",
     "data-model": ".audit/layers/data-model.md",
@@ -57,14 +66,14 @@
       "layers_involved": ["api-surface", "user-flow"]
     },
     {
-      "id": "cross-ref-timeout",
+      "id": "CRIT-04",
       "description": "Job timeout fundamentally incompatible with 4-hour audio transcription",
       "severity": "critical",
       "discovered_by": "synthesis_cross_reference",
       "layers_involved": ["performance-infra", "integration", "ai-layer"]
     },
     {
-      "id": "cross-ref-rate-limit",
+      "id": "CRIT-05",
       "description": "Rate limiting implemented but not applied — AI cost exposure",
       "severity": "critical",
       "discovered_by": "synthesis_cross_reference",
@@ -78,6 +87,7 @@
     "Viral moments detector has excellent AI response security practices",
     "Four-way test segregation infrastructure is rare for early-stage SaaS",
     "Three-client Supabase pattern is correctly implemented",
-    "prefers-reduced-motion support is complete"
+    "prefers-reduced-motion support is complete",
+    "app/.netlify/ is not tracked by git"
   ]
 }

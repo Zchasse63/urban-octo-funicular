@@ -8,7 +8,7 @@ import { getAssetPrompt, type AssetContext } from './asset-prompts';
 import { logger } from '@/lib/logger';
 
 const XAI_API_URL = 'https://api.x.ai/v1/chat/completions';
-const DEFAULT_MODEL = 'grok-beta';
+const DEFAULT_MODEL = process.env.XAI_MODEL || 'grok-4-1-fast';
 const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY = 1000;
 

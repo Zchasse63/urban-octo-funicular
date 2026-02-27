@@ -92,7 +92,7 @@ JSON structure:
 }`;
 
   const response = await grokClient.chat.completions.create({
-    model: 'grok-beta',
+    model: process.env.XAI_MODEL || 'grok-4-1-fast',
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },

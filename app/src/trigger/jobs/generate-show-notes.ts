@@ -168,7 +168,7 @@ async function generateShowNotesWithGrok(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "grok-beta",
+      model: process.env.XAI_MODEL || "grok-4-1-fast",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },

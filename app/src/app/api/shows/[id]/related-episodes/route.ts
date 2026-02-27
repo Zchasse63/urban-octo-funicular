@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { findSimilarSections, groupByEpisode } from '@/lib/cross-episode/similarity';
 import { getSupabaseClient } from '@/lib/supabase-client';
-import { validateAuth, verifyShowOwnership } from '@/lib/auth';
+import { requireAuth, verifyShowOwnership } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { validateUUID } from '@/lib/validation';
 
@@ -10,7 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await validateAuth();
+    const { userId } = await requireAuth();
 
     const rateLimitResult = await checkRateLimit(`show-related:${userId}`);
     if (!rateLimitResult.success) {
@@ -23,7 +23,7 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid show ID format' }, { status: 400 });
     }
 
-    const hasAccess = await verifyShowOwnership(showId);
+    const hasAccess = await verifyShowOwnership(showId, userId);
     if (!hasAccess) {
       return NextResponse.json({ error: 'Show not found' }, { status: 404 });
     }

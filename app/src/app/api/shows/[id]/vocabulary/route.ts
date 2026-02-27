@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { DEFAULT_USER_ID } from '@/lib/constants'
+import { requireAuth, isValidUUID } from '@/lib/auth'
 import type { VocabularyTerm, ApiResponse } from '@/types/database'
 
 // Omit the large embedding vector from API responses
@@ -11,15 +11,23 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { userId } = await requireAuth()
     const supabase = await createClient()
     const { id: showId } = await params
+
+    if (!isValidUUID(showId)) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Invalid ID format' },
+        { status: 400 }
+      )
+    }
 
     // Verify show belongs to user
     const { data: show } = await supabase
       .from('shows')
       .select('id')
       .eq('id', showId)
-      .eq('user_id', DEFAULT_USER_ID)
+      .eq('user_id', userId)
       .single()
 
     if (!show) {
@@ -46,6 +54,12 @@ export async function GET(
       { data: terms || [], error: null }
     )
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
     console.error('Error fetching vocabulary:', error)
     return NextResponse.json<ApiResponse<null>>(
       { data: null, error: 'Internal server error' },
@@ -59,9 +73,17 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { userId } = await requireAuth()
     const supabase = await createClient()
     const { id: showId } = await params
     const body = await request.json()
+
+    if (!isValidUUID(showId)) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Invalid ID format' },
+        { status: 400 }
+      )
+    }
 
     const { term, alternatives = [] } = body
 
@@ -77,7 +99,7 @@ export async function POST(
       .from('shows')
       .select('id')
       .eq('id', showId)
-      .eq('user_id', DEFAULT_USER_ID)
+      .eq('user_id', userId)
       .single()
 
     if (!show) {
@@ -110,6 +132,12 @@ export async function POST(
       { status: 201 }
     )
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
     console.error('Error creating vocabulary term:', error)
     return NextResponse.json<ApiResponse<null>>(
       { data: null, error: 'Internal server error' },
@@ -123,10 +151,18 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { userId } = await requireAuth()
     const supabase = await createClient()
     const { id: showId } = await params
     const { searchParams } = new URL(request.url)
     const termId = searchParams.get('term_id')
+
+    if (!isValidUUID(showId)) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Invalid ID format' },
+        { status: 400 }
+      )
+    }
 
     if (!termId) {
       return NextResponse.json<ApiResponse<null>>(
@@ -140,7 +176,7 @@ export async function DELETE(
       .from('shows')
       .select('id')
       .eq('id', showId)
-      .eq('user_id', DEFAULT_USER_ID)
+      .eq('user_id', userId)
       .single()
 
     if (!show) {
@@ -167,6 +203,12 @@ export async function DELETE(
       { data: { deleted: true }, error: null }
     )
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
     console.error('Error deleting vocabulary term:', error)
     return NextResponse.json<ApiResponse<null>>(
       { data: null, error: 'Internal server error' },

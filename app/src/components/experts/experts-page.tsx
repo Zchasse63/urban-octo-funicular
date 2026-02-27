@@ -2,11 +2,11 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Users, Search, Sparkles, X, Plus, Bookmark, BookmarkCheck, MapPin, Globe, Linkedin, Twitter, Filter, ChevronRight, Star, Zap, CheckCircle2, Loader2, SlidersHorizontal, TrendingUp, Award, Mic2, ArrowRight, Building2, Clock, BarChart2, MessageCircle } from 'lucide-react';
+import { Users, Search, Sparkles, X, Plus, Bookmark, BookmarkCheck, MapPin, Globe, Linkedin, Twitter, ChevronRight, Star, Zap, CheckCircle2, Loader2, SlidersHorizontal, Mic2, ArrowRight, Building2, Clock, BarChart2, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import useExperts from '@/hooks/use-experts';
 import useShows from '@/hooks/use-shows';
-import type { Expert as ApiExpert } from '@/lib/experts/types';
+import type { Expert as ApiExpert, AppearanceRecord, ExpertSource } from '@/lib/experts/types';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -21,121 +21,22 @@ interface Expert {
   expertise: string[];
   availability: 'available' | 'limited' | 'busy';
   pastAppearances: number;
-  followers: string;
   linkedIn?: string;
   twitter?: string;
   website?: string;
   initials: string;
   avatarColor: string;
   featured?: boolean;
+  source: ExpertSource;
+  appearances?: AppearanceRecord[];
 }
-type FilterOption = 'All' | 'AI & Tech' | 'Finance' | 'Health' | 'Leadership' | 'Science';
+type FilterOption = string;
 type AvailabilityFilter = 'All' | 'Available' | 'Limited' | 'Busy';
 type SortOption = 'match' | 'recent' | 'popular';
 
 // ─── Data ───────────────────────────────────────────────────────────────────────
 
 const EXAMPLE_QUERIES = ['AI researcher in edge computing', 'Fintech Series A founder', 'Climate tech policy expert', 'Behavioral economist turned VC', 'Ex-NASA engineer in deep tech', 'Neurotech startup CEO'];
-const EXPERTS: Expert[] = [{
-  id: 'e1',
-  name: 'Dr. Priya Nair',
-  title: 'Head of AI Research',
-  organization: 'DeepMind',
-  location: 'London, UK',
-  matchScore: 98,
-  aiInsight: 'Published 40+ papers on efficient neural architectures; her edge computing work directly aligns with your recent episodes on AI inference.',
-  expertise: ['Edge Computing', 'Neural Nets', 'MLOps', 'LLMs'],
-  availability: 'available',
-  pastAppearances: 0,
-  followers: '94k',
-  twitter: '#',
-  linkedIn: '#',
-  initials: 'PN',
-  avatarColor: 'from-violet-500 to-purple-600',
-  featured: true
-}, {
-  id: 'e2',
-  name: 'Marcus Chen',
-  title: 'Founder & General Partner',
-  organization: 'Horizon Ventures',
-  location: 'San Francisco, CA',
-  matchScore: 94,
-  aiInsight: 'Led 3 Series A rounds in fintech this year; vocal on regulation and open banking — themes you covered in EP 11.',
-  expertise: ['Fintech', 'Venture Capital', 'Open Banking', 'RegTech'],
-  availability: 'limited',
-  pastAppearances: 2,
-  followers: '41k',
-  linkedIn: '#',
-  twitter: '#',
-  website: '#',
-  initials: 'MC',
-  avatarColor: 'from-sky-500 to-blue-600'
-}, {
-  id: 'e3',
-  name: 'Sofia Reyes',
-  title: 'CEO & Co-founder',
-  organization: 'NovaBio',
-  location: 'Boston, MA',
-  matchScore: 91,
-  aiInsight: "Bridging CRISPR and consumer health — her TED talk on democratizing diagnostics has 2M views and matches your audience's interests.",
-  expertise: ['Biotech', 'CRISPR', 'Health Policy', 'D2C Health'],
-  availability: 'available',
-  pastAppearances: 0,
-  followers: '28k',
-  linkedIn: '#',
-  website: '#',
-  initials: 'SR',
-  avatarColor: 'from-emerald-500 to-teal-600'
-}, {
-  id: 'e4',
-  name: 'James Okafor',
-  title: 'Chief Economist',
-  organization: 'World Economic Forum',
-  location: 'Geneva, Switzerland',
-  matchScore: 87,
-  aiInsight: 'Behavioral economics applied to policy design; co-authored the WEF Future of Work report your audience has referenced multiple times.',
-  expertise: ['Behavioral Econ', 'Global Policy', 'Labor Markets', 'Future of Work'],
-  availability: 'limited',
-  pastAppearances: 1,
-  followers: '67k',
-  linkedIn: '#',
-  twitter: '#',
-  initials: 'JO',
-  avatarColor: 'from-amber-500 to-orange-500'
-}, {
-  id: 'e5',
-  name: 'Dr. Yuki Tanaka',
-  title: 'Principal Engineer, Space Systems',
-  organization: 'Relativity Space',
-  location: 'Los Angeles, CA',
-  matchScore: 85,
-  aiInsight: 'Ex-NASA JPL, now building 3D-printed rockets. Perfect for your deep tech crossover episodes — brings rare technical + commercial fluency.',
-  expertise: ['Aerospace', 'Deep Tech', 'Manufacturing', 'Systems Eng'],
-  availability: 'busy',
-  pastAppearances: 0,
-  followers: '19k',
-  twitter: '#',
-  website: '#',
-  initials: 'YT',
-  avatarColor: 'from-rose-500 to-pink-600'
-}, {
-  id: 'e6',
-  name: 'Amara Diallo',
-  title: 'Partner, Climate Tech',
-  organization: 'Breakthrough Energy Ventures',
-  location: 'New York, NY',
-  matchScore: 82,
-  aiInsight: 'Focuses on early-stage climate infrastructure; recently closed a $200M fund. Brings a boots-on-ground view of the energy transition.',
-  expertise: ['Climate Tech', 'Clean Energy', 'ESG', 'Impact Investing'],
-  availability: 'available',
-  pastAppearances: 0,
-  followers: '33k',
-  linkedIn: '#',
-  twitter: '#',
-  initials: 'AD',
-  avatarColor: 'from-lime-500 to-green-600'
-}];
-const SHORTLISTED_IDS_INIT = ['e1', 'e4'];
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -206,24 +107,37 @@ function mapApiExpert(apiExpert: ApiExpert, index: number): Expert {
     apiExpert.category === 'fresh' ? 'available' :
     apiExpert.category === 'established' ? 'limited' : 'busy';
 
+  // Build organization from notable shows or affiliation
+  const notableShows = apiExpert.metadata?.notableShows;
+  const organization = apiExpert.metadata?.affiliation
+    || (notableShows && notableShows.length > 0 ? notableShows[0] : '');
+
+  // Build AI insight from appearances or bio
+  const appearances = apiExpert.appearances || [];
+  const aiInsight = apiExpert.metadata?.bio
+    || (appearances.length > 0
+      ? `Appeared on ${appearances.length} podcast${appearances.length !== 1 ? 's' : ''} including ${appearances.slice(0, 2).map(a => a.podcastName).join(', ')}.`
+      : `${apiExpert.appearanceCount} podcast appearance${apiExpert.appearanceCount !== 1 ? 's' : ''} found.`);
+
   return {
     id: apiExpert.id,
     name: apiExpert.name,
-    title: apiExpert.metadata?.bio?.split('.')[0] || 'Expert',
-    organization: apiExpert.metadata?.affiliation || '',
+    title: apiExpert.metadata?.bio?.split('.')[0] || (apiExpert.source === 'taddy' ? 'Podcast Guest' : 'Expert'),
+    organization,
     location: '',
-    matchScore: Math.round(apiExpert.freshnessScore * 100),
-    aiInsight: apiExpert.metadata?.bio || '',
+    matchScore: apiExpert.freshnessScore,
+    aiInsight,
     expertise: apiExpert.expertise,
     availability,
     pastAppearances: apiExpert.appearanceCount,
-    followers: '',
     linkedIn: apiExpert.contactHints?.linkedin,
     twitter: apiExpert.contactHints?.twitter,
     website: apiExpert.contactHints?.website,
     initials,
     avatarColor: AVATAR_COLORS[index % AVATAR_COLORS.length],
-    featured: index === 0 && apiExpert.freshnessScore > 0.9,
+    featured: index === 0 && apiExpert.freshnessScore > 90,
+    source: apiExpert.source || 'grok',
+    appearances: apiExpert.appearances,
   };
 }
 
@@ -302,7 +216,7 @@ const MatchScore = ({
       }} className={cn('h-full rounded-full', style.bar)} />
       </div>
       <span className={cn('font-mono text-[11px] font-bold', style.text)} aria-hidden="true">
-        {score}% Match
+        {score}% Fresh
       </span>
     </div>;
 };
@@ -361,23 +275,56 @@ const ExpertCard = ({
             <div aria-hidden="true" className={cn('w-1.5 h-1.5 rounded-full', avail.dot)} />
             <span>{avail.label}</span>
           </div>
-          <div className="flex items-center gap-1 ml-auto">
+          {expert.location && <div className="flex items-center gap-1 ml-auto">
             <MapPin aria-hidden="true" className="w-3 h-3 text-muted-foreground/80" />
             <span className="font-sans text-[10px] text-muted-foreground">{expert.location}</span>
-          </div>
+          </div>}
         </div>
 
-        {/* AI Insight */}
+        {/* AI Insight / Appearances */}
         <div className="bg-muted/50 border border-border rounded-lg p-2.5">
           <div className="flex items-center gap-1.5 mb-1.5">
             <div aria-hidden="true" className="w-4 h-4 rounded bg-amber-100 border border-amber-200/60 flex items-center justify-center flex-shrink-0">
-              <Sparkles className="w-2.5 h-2.5 text-amber-600" />
+              {expert.source === 'taddy' ? <Mic2 className="w-2.5 h-2.5 text-amber-600" /> : <Sparkles className="w-2.5 h-2.5 text-amber-600" />}
             </div>
             <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-              Why This Match?
+              {expert.source === 'taddy' ? 'Podcast Appearances' : 'Why This Match?'}
             </span>
+            {expert.source === 'taddy' && (
+              <span className="ml-auto font-mono text-[8px] font-bold uppercase tracking-widest text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-1.5 py-0.5 rounded-full">
+                Verified
+              </span>
+            )}
           </div>
-          <p className="font-serif text-[12px] text-muted-foreground leading-relaxed">{expert.aiInsight}</p>
+          {expert.source === 'taddy' && expert.appearances && expert.appearances.length > 0 ? (
+            <ul className="space-y-1.5 list-none p-0 m-0">
+              {expert.appearances.slice(0, 3).map((app, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <div aria-hidden="true" className="w-1 h-1 rounded-full bg-muted-foreground/40 mt-1.5 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-sans text-[11px] text-foreground/80 leading-tight truncate">
+                      {app.podcastName}
+                    </p>
+                    <p className="font-serif text-[10px] text-muted-foreground leading-tight truncate">
+                      {app.episodeName}
+                      {app.datePublished && (
+                        <span className="ml-1.5 font-mono text-[9px] text-muted-foreground/60">
+                          {new Date(app.datePublished).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </li>
+              ))}
+              {expert.appearances.length > 3 && (
+                <li className="font-mono text-[9px] text-muted-foreground/70 pl-3">
+                  +{expert.appearances.length - 3} more appearance{expert.appearances.length - 3 !== 1 ? 's' : ''}
+                </li>
+              )}
+            </ul>
+          ) : (
+            <p className="font-serif text-[12px] text-muted-foreground leading-relaxed">{expert.aiInsight}</p>
+          )}
         </div>
 
         {/* Expertise tags */}
@@ -389,7 +336,7 @@ const ExpertCard = ({
 
         {/* Footer row */}
         <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/50">
-          {/* Social links */}
+          {/* Social links + appearance count */}
           <div className="flex items-center gap-1" role="list" aria-label="Social links">
             {expert.linkedIn && expert.linkedIn !== '#' && <a href={expert.linkedIn} aria-label={`${expert.name} on LinkedIn`} role="listitem" target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-md text-muted-foreground/80 hover:text-[#0A66C2] hover:bg-blue-50 transition-all focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:outline-none">
                 <Linkedin className="w-3.5 h-3.5" />
@@ -400,9 +347,9 @@ const ExpertCard = ({
             {expert.website && expert.website !== '#' && <a href={expert.website} aria-label={`${expert.name}'s website`} role="listitem" target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-md text-muted-foreground/80 hover:text-muted-foreground hover:bg-accent transition-all focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:outline-none">
                 <Globe className="w-3.5 h-3.5" />
               </a>}
-            {expert.pastAppearances > 0 && <span className="ml-1 flex items-center gap-1 font-mono text-[9px] text-muted-foreground" aria-label={`${expert.pastAppearances} past appearances`}>
+            {expert.pastAppearances > 0 && <span className="ml-1 flex items-center gap-1 font-mono text-[9px] text-muted-foreground" aria-label={`${expert.pastAppearances} podcast appearances`}>
                 <Mic2 aria-hidden="true" className="w-3 h-3" />
-                {expert.pastAppearances}x on show
+                {expert.pastAppearances} appearance{expert.pastAppearances !== 1 ? 's' : ''}
               </span>}
           </div>
 
@@ -507,7 +454,8 @@ const FilterBar = ({
   onFilterChange,
   onAvailabilityChange,
   onSortChange,
-  resultCount
+  resultCount,
+  expertiseFilters
 }: {
   activeFilter: FilterOption;
   availabilityFilter: AvailabilityFilter;
@@ -516,8 +464,8 @@ const FilterBar = ({
   onAvailabilityChange: (a: AvailabilityFilter) => void;
   onSortChange: (s: SortOption) => void;
   resultCount: number;
+  expertiseFilters: FilterOption[];
 }) => {
-  const expertiseFilters: FilterOption[] = ['All', 'AI & Tech', 'Finance', 'Health', 'Leadership', 'Science'];
   const availabilityOptions: AvailabilityFilter[] = ['All', 'Available', 'Limited', 'Busy'];
   return <div className="flex flex-col gap-2">
       {/* Expertise pills */}
@@ -554,31 +502,25 @@ const FilterBar = ({
 
 // ─── Stats Bar ──────────────────────────────────────────────────────────────────
 
-const StatsBar = () => <dl className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-3 sm:flex-wrap">
+const StatsBar = ({ expertCount, source }: { expertCount: number; source: ExpertSource | null }) => <dl className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-3 sm:flex-wrap">
     {[{
     icon: Users,
-    label: 'Indexed Experts',
-    value: '12,400+',
+    label: 'Experts Found',
+    value: expertCount > 0 ? String(expertCount) : '--',
     accent: 'text-foreground/80',
     bg: 'bg-muted border-border'
   }, {
-    icon: TrendingUp,
-    label: 'Avg. Match Quality',
-    value: '91%',
-    accent: 'text-emerald-700',
-    bg: 'bg-emerald-50 border-emerald-200/60'
-  }, {
-    icon: Award,
-    label: 'Domains Covered',
-    value: '38',
-    accent: 'text-sky-700',
-    bg: 'bg-sky-50 border-sky-200/60'
+    icon: Mic2,
+    label: 'Data Source',
+    value: source === 'taddy' ? 'Taddy' : source === 'grok' ? 'AI' : 'Search',
+    accent: source === 'taddy' ? 'text-emerald-700' : 'text-sky-700',
+    bg: source === 'taddy' ? 'bg-emerald-50 border-emerald-200/60' : 'bg-sky-50 border-sky-200/60'
   }, {
     icon: CheckCircle2,
-    label: 'Verified Profiles',
-    value: '8,100+',
-    accent: 'text-violet-700',
-    bg: 'bg-violet-50 border-violet-200/60'
+    label: 'Verified',
+    value: source === 'taddy' ? 'Real Data' : 'AI-Enriched',
+    accent: source === 'taddy' ? 'text-emerald-700' : 'text-violet-700',
+    bg: source === 'taddy' ? 'bg-emerald-50 border-emerald-200/60' : 'bg-violet-50 border-violet-200/60'
   }].map(stat => {
     const Icon = stat.icon;
     return <div key={stat.label} className={cn('flex items-center gap-2 px-3 py-2 rounded-lg border', stat.bg)}>
@@ -629,39 +571,33 @@ const RightPanel = ({
         </ul>
       </div>
 
-      {/* Browse by Domain */}
+      {/* Quick Search Topics */}
       <div className="bg-card border border-border rounded-xl p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
         <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-3">
-          Browse by Domain
+          Quick Search Topics
         </span>
         <ul className="space-y-1.5 list-none p-0 m-0">
           {[{
           label: 'AI & Machine Learning',
-          count: 3241,
           color: 'bg-violet-400'
         }, {
-          label: 'Fintech & Venture',
-          count: 2180,
+          label: 'Fintech & Venture Capital',
           color: 'bg-sky-400'
         }, {
           label: 'Climate & Energy',
-          count: 1840,
           color: 'bg-emerald-400'
         }, {
           label: 'Health & Biotech',
-          count: 1560,
           color: 'bg-rose-400'
         }, {
           label: 'Leadership & Strategy',
-          count: 1220,
           color: 'bg-amber-400'
         }].map(cat => <li key={cat.label}>
-              <button className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-accent/50 group transition-colors text-left focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:outline-none" aria-label={`Browse ${cat.label}: ${cat.count.toLocaleString()} experts`}>
+              <button onClick={() => onPillClick(cat.label)} className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-accent/50 group transition-colors text-left focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:outline-none" aria-label={`Search for ${cat.label} experts`}>
                 <div aria-hidden="true" className={cn('w-2 h-2 rounded-full flex-shrink-0', cat.color)} />
                 <span className="font-sans text-[11px] text-muted-foreground flex-1 group-hover:text-foreground transition-colors">
                   {cat.label}
                 </span>
-                <span className="font-mono text-[9px] text-muted-foreground">{cat.count.toLocaleString()}</span>
                 <ChevronRight aria-hidden="true" className="w-3 h-3 text-muted-foreground/80 group-hover:text-muted-foreground transition-colors" />
               </button>
             </li>)}
@@ -731,12 +667,12 @@ const RightPanel = ({
 export function ExpertsPage() {
   const { shows } = useShows();
   const activeShowId = shows?.[0]?.id;
-  const { experts: apiExperts, isLoading: apiLoading, error: apiError, search: apiSearch } = useExperts({ showId: activeShowId });
+  const { experts: apiExperts, isLoading: apiLoading, error: apiError, search: apiSearch, source: apiSource } = useExperts({ showId: activeShowId });
 
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
-  const [shortlistedIds, setShortlistedIds] = useState<string[]>(SHORTLISTED_IDS_INIT);
+  const [shortlistedIds, setShortlistedIds] = useState<string[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterOption>('All');
   const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityFilter>('All');
   const [sortOption, setSortOption] = useState<SortOption>('match');
@@ -746,11 +682,31 @@ export function ExpertsPage() {
   const debouncedQuery = useDebounce(query, 300);
 
   const mappedExperts = useMemo(() => {
-    if (apiExperts.length > 0) {
-      return apiExperts.map((e, i) => mapApiExpert(e, i));
-    }
-    return EXPERTS; // fallback to mock data
+    return apiExperts.map((e, i) => mapApiExpert(e, i));
   }, [apiExperts]);
+
+  // Derive expertise filter options from actual data
+  const expertiseFilters: FilterOption[] = useMemo(() => {
+    if (mappedExperts.length === 0) return ['All'];
+    const allTags = new Set<string>();
+    for (const expert of mappedExperts) {
+      for (const tag of expert.expertise) {
+        allTags.add(tag);
+      }
+    }
+    // Take top 5 most common tags
+    const tagCounts = new Map<string, number>();
+    for (const expert of mappedExperts) {
+      for (const tag of expert.expertise) {
+        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+      }
+    }
+    const sorted = Array.from(tagCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([tag]) => tag);
+    return ['All', ...sorted];
+  }, [mappedExperts]);
 
   const handleSearch = useCallback(async (q?: string) => {
     const searchQuery = q ?? query;
@@ -793,13 +749,24 @@ export function ExpertsPage() {
   }, []);
   const filteredExperts = useMemo(() => {
     let result = [...mappedExperts];
+    // Filter by expertise tag
+    if (activeFilter !== 'All') {
+      result = result.filter(e => e.expertise.some(tag =>
+        tag.toLowerCase().includes(activeFilter.toLowerCase())
+      ));
+    }
     if (availabilityFilter !== 'All') {
       result = result.filter(e => e.availability === availabilityFilter.toLowerCase());
     }
     if (sortOption === 'match') result.sort((a, b) => b.matchScore - a.matchScore);
-    if (sortOption === 'popular') result.sort((a, b) => parseInt(b.followers) - parseInt(a.followers));
+    if (sortOption === 'popular') result.sort((a, b) => b.pastAppearances - a.pastAppearances);
+    if (sortOption === 'recent') result.sort((a, b) => {
+      const aDate = a.appearances?.[0]?.datePublished || '';
+      const bDate = b.appearances?.[0]?.datePublished || '';
+      return bDate.localeCompare(aDate);
+    });
     return result;
-  }, [mappedExperts, availabilityFilter, sortOption]);
+  }, [mappedExperts, activeFilter, availabilityFilter, sortOption]);
   return <>
       <main id="main-content" className="flex-1 h-full overflow-y-auto">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-7">
@@ -831,7 +798,7 @@ export function ExpertsPage() {
                   Describe the ideal guest for your next episode and let PodBrain surface the most relevant experts —
                   ranked by topic relevance, audience fit, and availability.
                 </p>
-                <StatsBar />
+                <StatsBar expertCount={mappedExperts.length} source={apiSource} />
               </div>
 
               {/* Right: actions */}
@@ -902,7 +869,7 @@ export function ExpertsPage() {
             {/* ── Left: Results ── */}
             <div className="flex-1 min-w-0 space-y-3">
               {/* Filter Controls */}
-              <FilterBar activeFilter={activeFilter} availabilityFilter={availabilityFilter} sortOption={sortOption} onFilterChange={setActiveFilter} onAvailabilityChange={setAvailabilityFilter} onSortChange={setSortOption} resultCount={filteredExperts.length} />
+              <FilterBar activeFilter={activeFilter} availabilityFilter={availabilityFilter} sortOption={sortOption} onFilterChange={setActiveFilter} onAvailabilityChange={setAvailabilityFilter} onSortChange={setSortOption} resultCount={filteredExperts.length} expertiseFilters={expertiseFilters} />
 
               {/* Loading state */}
               <AnimatePresence>
@@ -917,9 +884,9 @@ export function ExpertsPage() {
                       <Sparkles className="w-5 h-5 text-amber-500 animate-pulse" />
                     </div>
                     <div className="text-center">
-                      <p className="font-sans font-semibold text-muted-foreground text-sm">Searching 12,400+ experts...</p>
+                      <p className="font-sans font-semibold text-muted-foreground text-sm">Searching podcast episodes...</p>
                       <p className="font-serif text-[12px] text-muted-foreground mt-0.5">
-                        Ranking by topic relevance and audience fit
+                        Finding real guest appearances and ranking by freshness
                       </p>
                     </div>
                     <div aria-hidden="true" className="flex gap-1.5">
@@ -945,6 +912,32 @@ export function ExpertsPage() {
                     <Search className="w-5 h-5 text-muted-foreground/80" />
                   </div>
                   <p className="font-sans text-sm text-muted-foreground">Use the search above to discover experts</p>
+                </div>}
+
+              {/* Empty state (after search, no results) */}
+              {!searching && !apiLoading && hasSearched && filteredExperts.length === 0 && <div className="flex flex-col items-center justify-center py-20 gap-3">
+                  <div aria-hidden="true" className="w-12 h-12 rounded-full bg-amber-50 border border-amber-200/60 flex items-center justify-center">
+                    <Users className="w-5 h-5 text-amber-500" />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-sans font-semibold text-muted-foreground text-sm">No experts found</p>
+                    <p className="font-serif text-[12px] text-muted-foreground mt-1 max-w-sm">
+                      Try a broader search term or different topic. Podcast guest data is based on real episode metadata from podcast feeds.
+                    </p>
+                  </div>
+                </div>}
+
+              {/* Error state */}
+              {!searching && !apiLoading && apiError && <div className="flex flex-col items-center justify-center py-16 gap-3">
+                  <div aria-hidden="true" className="w-12 h-12 rounded-full bg-rose-50 border border-rose-200/60 flex items-center justify-center">
+                    <X className="w-5 h-5 text-rose-500" />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-sans font-semibold text-rose-600 text-sm">{apiError}</p>
+                    <p className="font-serif text-[12px] text-muted-foreground mt-1">
+                      Please try again or adjust your search.
+                    </p>
+                  </div>
                 </div>}
 
               <div className="h-12" />

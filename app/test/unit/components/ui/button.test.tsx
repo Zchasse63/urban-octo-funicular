@@ -33,7 +33,7 @@ describe('Button', () => {
     it('applies default size classes', () => {
       render(<Button>Default</Button>)
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('h-10')
+      expect(button).toHaveClass('h-9')
     })
   })
 
@@ -41,7 +41,7 @@ describe('Button', () => {
     it('applies secondary variant classes', () => {
       render(<Button variant="secondary">Secondary</Button>)
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('bg-secondary')
+      expect(button).toHaveClass('bg-card')
     })
 
     it('applies ghost variant classes', () => {
@@ -57,8 +57,8 @@ describe('Button', () => {
       expect(button).toHaveClass('underline-offset-4')
     })
 
-    it('applies destructive variant classes', () => {
-      render(<Button variant="destructive">Delete</Button>)
+    it('applies danger variant classes', () => {
+      render(<Button variant="danger">Delete</Button>)
       const button = screen.getByRole('button')
       expect(button).toHaveClass('bg-destructive')
     })
@@ -68,20 +68,20 @@ describe('Button', () => {
     it('applies small size classes', () => {
       render(<Button size="sm">Small</Button>)
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('h-9')
+      expect(button).toHaveClass('h-8')
     })
 
     it('applies large size classes', () => {
       render(<Button size="lg">Large</Button>)
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('h-11')
+      expect(button).toHaveClass('h-10')
     })
 
     it('applies icon size classes', () => {
       render(<Button size="icon">+</Button>)
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('h-10')
-      expect(button).toHaveClass('w-10')
+      expect(button).toHaveClass('h-9')
+      expect(button).toHaveClass('w-9')
     })
   })
 

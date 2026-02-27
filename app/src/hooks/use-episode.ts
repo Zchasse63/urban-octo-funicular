@@ -1,13 +1,17 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { Episode } from "@/types/database";
 import { createClient } from "@/lib/supabase/client";
+
+const POLL_INTERVAL_MS = 3000; // Poll every 3 seconds during processing
 
 interface UseEpisodeResult {
   episode: Episode | null;
   isLoading: boolean;
   error: string | null;
+  processingStep: string | null;
+  processingProgress: number | null;
   refetch: () => Promise<void>;
 }
 
@@ -15,6 +19,9 @@ export default function useEpisode(id: string): UseEpisodeResult {
   const [episode, setEpisode] = useState<Episode | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [processingStep, setProcessingStep] = useState<string | null>(null);
+  const [processingProgress, setProcessingProgress] = useState<number | null>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchEpisode = useCallback(async () => {
     if (!id) return;
@@ -41,9 +48,62 @@ export default function useEpisode(id: string): UseEpisodeResult {
     }
   }, [id]);
 
+  // Poll processing status when episode is being processed
+  const pollProcessingStatus = useCallback(async () => {
+    if (!id) return;
+
+    try {
+      const res = await fetch(`/api/episodes/${id}/process`);
+      if (!res.ok) return;
+
+      const result = await res.json();
+      const data = result.data;
+
+      if (data?.processingStep) {
+        setProcessingStep(data.processingStep);
+      }
+      if (data?.processingProgress != null) {
+        setProcessingProgress(data.processingProgress);
+      }
+
+      // If processing completed or failed, refetch the full episode and stop polling
+      if (data?.status === 'completed' || data?.status === 'failed') {
+        await fetchEpisode();
+      }
+    } catch {
+      // Silently fail polling — don't break the UI
+    }
+  }, [id, fetchEpisode]);
+
+  // Initial fetch
   useEffect(() => {
     fetchEpisode();
   }, [fetchEpisode]);
 
-  return { episode, isLoading, error, refetch: fetchEpisode };
+  // Start/stop polling based on episode status
+  useEffect(() => {
+    if (episode?.status === 'processing') {
+      // Start polling
+      pollProcessingStatus(); // Immediate first poll
+      pollIntervalRef.current = setInterval(pollProcessingStatus, POLL_INTERVAL_MS);
+    } else {
+      // Stop polling
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+      // Reset processing state when not processing
+      setProcessingStep(null);
+      setProcessingProgress(null);
+    }
+
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
+  }, [episode?.status, pollProcessingStatus]);
+
+  return { episode, isLoading, error, processingStep, processingProgress, refetch: fetchEpisode };
 }

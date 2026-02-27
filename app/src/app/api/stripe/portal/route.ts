@@ -1,16 +1,18 @@
 import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe/client';
 import { createClient } from '@/lib/supabase/server';
-import { DEFAULT_USER_ID, APP_URL } from '@/lib/constants';
+import { requireAuth } from '@/lib/auth';
+import { APP_URL } from '@/lib/constants';
 
 export async function POST() {
   try {
+    const { userId } = await requireAuth();
     const supabase = await createClient();
 
     const { data: subscription } = await supabase
       .from('subscriptions')
       .select('stripe_customer_id')
-      .eq('user_id', DEFAULT_USER_ID)
+      .eq('user_id', userId)
       .single();
 
     if (!subscription?.stripe_customer_id) {
@@ -27,6 +29,12 @@ export async function POST() {
 
     return NextResponse.json({ url: session.url });
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
     console.error('Portal error:', error);
     return NextResponse.json(
       { error: 'Failed to create portal session' },

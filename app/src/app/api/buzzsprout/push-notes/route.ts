@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBuzzsproutClient } from '@/lib/buzzsprout/helpers';
-import { DEFAULT_USER_ID } from '@/lib/constants';
+import { requireAuth } from '@/lib/auth';
 import DOMPurify from 'isomorphic-dompurify';
 
 function sanitizeHtml(html: string): string {
@@ -16,6 +16,7 @@ function sanitizeHtml(html: string): string {
 
 export async function POST(request: NextRequest) {
   try {
+    const { userId } = await requireAuth();
     const { episode_id, buzzsprout_episode_id, notes } = await request.json();
 
     // episode_id is the internal PodBrain episode ID (optional for validation)
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     const sanitizedNotes = sanitizeHtml(notes);
 
-    const client = await getBuzzsproutClient(DEFAULT_USER_ID);
+    const client = await getBuzzsproutClient(userId);
 
     // Get all user's podcasts to find the one containing this episode
     const userPodcasts = await client.getPodcasts();
@@ -70,6 +71,12 @@ export async function POST(request: NextRequest) {
       episode: updatedEpisode,
     });
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
     console.error('Push notes error:', error);
 
     if (error instanceof Error && error.message === 'No Buzzsprout connection found') {

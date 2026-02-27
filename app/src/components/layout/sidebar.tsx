@@ -2,10 +2,12 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Mic2, ChevronDown, LayoutDashboard, UploadCloud, BookOpen, Users, Settings, LifeBuoy, Sun, Moon, ChevronLeft, ChevronRight, TrendingUp, Keyboard, Zap } from 'lucide-react'
+import { Mic2, ChevronDown, LayoutDashboard, UploadCloud, BookOpen, Users, Settings, LifeBuoy, Sun, Moon, ChevronLeft, ChevronRight, TrendingUp, Keyboard, Zap, Search, BarChart3 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { usePathname, useRouter } from 'next/navigation'
 import useShows from '@/hooks/use-shows'
+import useEpisodes from '@/hooks/use-episodes'
+import useVocabulary from '@/hooks/use-vocabulary'
 import useSubscription from '@/hooks/use-subscription'
 import type { Show } from '@/types/database'
 
@@ -285,6 +287,10 @@ function Sidebar({ collapsed, onToggleCollapse, className }: SidebarProps) {
   const { shows } = useShows()
   const { subscription } = useSubscription()
   const [currentShow, setCurrentShow] = useState<Show | null>(null)
+
+  const showId = currentShow?.id
+  const { total: episodeCount, isLoading: episodesLoading } = useEpisodes({ showId })
+  const { terms, isLoading: vocabularyLoading } = useVocabulary({ showId })
   const [isDark, setIsDark] = useState(false)
   const [showKeyboardModal, setShowKeyboardModal] = useState(false)
 
@@ -375,7 +381,7 @@ function Sidebar({ collapsed, onToggleCollapse, className }: SidebarProps) {
                 </motion.h3>
               )}
             </AnimatePresence>
-            <NavItem icon={LayoutDashboard} label="Episodes" isActive={isActive('/episodes')} count={12} onClick={() => navigate('/episodes')} status="active" isCollapsed={collapsed} shortcut="⌘1" />
+            <NavItem icon={LayoutDashboard} label="Episodes" isActive={isActive('/episodes')} count={episodesLoading ? undefined : episodeCount} onClick={() => navigate('/episodes')} status="active" isCollapsed={collapsed} shortcut="⌘1" />
             <NavItem icon={UploadCloud} label="Upload" isActive={isActive('/upload')} onClick={() => navigate('/upload')} isCollapsed={collapsed} shortcut="⌘U" />
           </div>
 
@@ -388,8 +394,10 @@ function Sidebar({ collapsed, onToggleCollapse, className }: SidebarProps) {
                 </motion.h3>
               )}
             </AnimatePresence>
-            <NavItem icon={BookOpen} label="Vocabulary" isActive={isActive('/vocabulary')} count={84} onClick={() => navigate('/vocabulary')} isCollapsed={collapsed} shortcut="⌘3" />
+            <NavItem icon={BookOpen} label="Vocabulary" isActive={isActive('/vocabulary')} count={vocabularyLoading ? undefined : terms.length} onClick={() => navigate('/vocabulary')} isCollapsed={collapsed} shortcut="⌘3" />
             <NavItem icon={Users} label="Experts" isActive={isActive('/experts')} onClick={() => navigate('/experts')} status="warning" isCollapsed={collapsed} />
+            <NavItem icon={Search} label="Search" isActive={isActive('/search')} onClick={() => navigate('/search')} isCollapsed={collapsed} shortcut="⌘F" />
+            <NavItem icon={BarChart3} label="Analytics" isActive={isActive('/analytics')} onClick={() => navigate('/analytics')} isCollapsed={collapsed} />
           </div>
 
           {/* Usage Card */}

@@ -125,12 +125,12 @@ describe('SUBSCRIPTION_TIERS', () => {
       expect(SUBSCRIPTION_TIERS.pro.name).toBe('Pro')
     })
 
-    it('allows unlimited episodes', () => {
-      expect(SUBSCRIPTION_TIERS.pro.episodesPerMonth).toBe(Infinity)
+    it('allows 50 episodes per month', () => {
+      expect(SUBSCRIPTION_TIERS.pro.episodesPerMonth).toBe(50)
     })
 
-    it('allows 3 shows', () => {
-      expect(SUBSCRIPTION_TIERS.pro.maxShows).toBe(3)
+    it('allows 5 shows', () => {
+      expect(SUBSCRIPTION_TIERS.pro.maxShows).toBe(5)
     })
 
     it('allows 1 team seat', () => {
@@ -147,12 +147,12 @@ describe('SUBSCRIPTION_TIERS', () => {
       expect(SUBSCRIPTION_TIERS.agency.name).toBe('Agency')
     })
 
-    it('allows unlimited episodes', () => {
-      expect(SUBSCRIPTION_TIERS.agency.episodesPerMonth).toBe(Infinity)
+    it('allows 200 episodes per month', () => {
+      expect(SUBSCRIPTION_TIERS.agency.episodesPerMonth).toBe(200)
     })
 
-    it('allows 20 shows', () => {
-      expect(SUBSCRIPTION_TIERS.agency.maxShows).toBe(20)
+    it('allows 999 shows', () => {
+      expect(SUBSCRIPTION_TIERS.agency.maxShows).toBe(999)
     })
 
     it('allows 5 team seats', () => {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { generateAssetsZipServer, type AssetForDownload } from '@/lib/export/zip-generator'
 import { getAssetDefinition } from '@/lib/assets/asset-types'
-import { DEFAULT_USER_ID } from '@/lib/constants'
+import { requireAuth, isValidUUID } from '@/lib/auth'
 
 /**
  * GET /api/episodes/[id]/assets/download
@@ -13,11 +13,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { userId } = await requireAuth()
     const { id: episodeId } = await params
 
-    if (!episodeId) {
+    if (!isValidUUID(episodeId)) {
       return NextResponse.json(
-        { error: 'Episode ID is required' },
+        { error: 'Invalid ID format' },
         { status: 400 }
       )
     }
@@ -38,7 +39,7 @@ export async function GET(
         )
       `)
       .eq('id', episodeId)
-      .eq('shows.user_id', DEFAULT_USER_ID)
+      .eq('shows.user_id', userId)
       .single()
 
     if (episodeError || !episode) {
@@ -113,6 +114,12 @@ export async function GET(
       },
     })
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
     console.error('Failed to generate assets ZIP:', error)
     return NextResponse.json(
       { error: 'Failed to generate download' },

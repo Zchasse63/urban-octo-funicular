@@ -1,292 +1,177 @@
-# PodBrain Test Strategy - Live-First Approach
+# PodBrain Test Strategy
 
-## Executive Summary
+## Current State (Updated 2026-02-27)
 
-This document outlines a comprehensive live-first testing strategy for PodBrain. The core principle: **mocks hide bugs, live tests find them**.
+### Test Infrastructure
 
----
+| Component | Technology | Status |
+|-----------|-----------|--------|
+| Unit/Integration | Vitest + happy-dom | ✅ Configured |
+| Component/Hook | @testing-library/react | ✅ Configured |
+| E2E | Playwright | ❌ Not yet configured |
+| CI Pipeline | GitHub Actions | ✅ Configured |
+| Coverage Thresholds | 60% (lines/functions/branches/statements) | ✅ Enforced |
 
-## Phase 0: Current State Assessment
+### Current Test Stats
 
-### Discovered Stack
+```
+Tests:    513 passed, 1 skipped
+Files:    22 test files
+Coverage: 60% threshold enforced
+CI:       lint → typecheck → test → build → deploy
+```
+
+### Test File Inventory
+
+**Unit Tests (15 files):**
+- `test/unit/components/ui/button.test.tsx` — Button variant rendering
+- `test/unit/hooks/utility-hooks.test.ts` — useDebounce, useToast, useKeyboardShortcuts, usePolling (33 tests)
+- `test/unit/hooks/data-fetching-hooks.test.ts` — useEpisodes, useShows, useEpisode, useEpisodeAssets, useEpisodeSeo (34 tests)
+- `test/unit/hooks/remaining-hooks.test.ts` — useExperts, useVocabulary, useSubscription, useGuestPackage, useAuth, useUsage (47 tests)
+- `test/unit/lib/constants.test.ts` — Subscription tier definitions
+- `test/unit/lib/errors.test.ts` — Error handling utilities
+- `test/unit/lib/schema-generator.test.ts` — JSON-LD schema generation
+- `test/unit/lib/seo-analyzer.test.ts` — SEO analysis logic
+- `test/unit/lib/utils.test.ts` — General utilities
+- `test/unit/lib/validation.test.ts` — Input validation
+- `test/unit/fixes/lib-modules.test.ts` — Module export verification
+- `test/unit/fixes/phase-a-data-flow.test.ts` — Data flow integrity
+- `test/unit/fixes/phase-b-schema.test.ts` — Schema alignment
+- `test/unit/fixes/phase-c-integrations.test.ts` — Integration checks
+- `test/unit/fixes/phase-d-security.test.ts` — Security patterns
+
+**Integration Tests (17 files):**
+- `test/integration/api/` — API route tests (shows, episodes, upload, processing, SEO, guest-package, Stripe, Buzzsprout, subscriptions, data-flow, full-workflow)
+- `test/integration/db/` — Database tests (shows, episodes, assets, vocabulary, redis-cache, schema-fixes)
+
+### Stack
 
 | Component | Technology |
-|-----------|------------|
-| Frontend | Next.js 14+ (App Router), TypeScript, Tailwind CSS |
-| Backend | Next.js API Routes |
+|-----------|-----------|
+| Frontend | Next.js 16+ (App Router), TypeScript, Tailwind CSS v4 |
+| Backend | Next.js API Routes (48 routes) |
 | Database | Supabase (PostgreSQL with pgvector) |
-| Auth | **DEFERRED** - single-user mode (DEFAULT_USER_ID) |
+| Auth | Supabase Auth with @supabase/ssr |
 | Background Jobs | Trigger.dev v4 |
 | Cache | Upstash Redis |
 | Payments | Stripe |
 | Email | Resend |
-| Transcription | AssemblyAI |
-| AI Content | xAI Grok |
-| Podcast Hosting | Buzzsprout API |
-
-### Current Testing State
-
-```
-Test Framework: NONE (1 file uses native node:test)
-Test Files Found: 1 (detector.test.ts)
-Mocking Libraries: None
-Test Database: None
-CI Pipeline: None
-Coverage: 0%
-```
-
-### Database Tables (8)
-
-| Table | Key Purpose |
-|-------|-------------|
-| users | User accounts (single-user mode) |
-| shows | Podcast shows/series |
-| vocabulary_terms | Custom vocabulary with embeddings |
-| episodes | Episode content and processing state |
-| episode_sections | Semantic segments with embeddings |
-| generated_assets | AI-generated content assets |
-| corrections | User corrections for learning |
-| hosting_connections | OAuth connections to platforms |
-
-### API Endpoints (25)
-
-| Endpoint | Methods | Auth | Priority |
-|----------|---------|------|----------|
-| /api/shows | GET, POST | No (single-user) | HIGH |
-| /api/episodes | GET | No | HIGH |
-| /api/episodes/[id]/process | POST | No | HIGH |
-| /api/episodes/[id]/seo | GET | No | MEDIUM |
-| /api/episodes/[id]/assets | GET | No | MEDIUM |
-| /api/episodes/[id]/assets/download | GET | No | MEDIUM |
-| /api/episodes/[id]/guest-package | GET, POST | No | MEDIUM |
-| /api/episodes/[id]/guest-package/download | GET | No | LOW |
-| /api/episodes/[id]/guest-intel | GET, POST | No | LOW |
-| /api/episodes/[id]/related | GET | No | LOW |
-| /api/episodes/[id]/viral-moments | GET, POST | No | MEDIUM |
-| /api/shows/[id]/experts | GET | No | LOW |
-| /api/shows/[id]/related-episodes | GET | No | LOW |
-| /api/stripe/portal | POST | No | HIGH |
-| /api/stripe/checkout | POST | No | HIGH |
-| /api/stripe/webhooks | POST | No | HIGH |
-| /api/buzzsprout/episodes | GET | No | MEDIUM |
-| /api/buzzsprout/podcasts | GET | No | MEDIUM |
-| /api/buzzsprout/push-notes | POST | No | MEDIUM |
-| /api/buzzsprout/connect | POST | No | MEDIUM |
-| /api/subscriptions | GET | No | MEDIUM |
-| /api/upload | POST | No | HIGH |
-| /api/test-db | GET | No | DEBUG |
-| /api/test-redis | GET | No | DEBUG |
-| /api/test-guest-package | GET | No | DEBUG |
+| Transcription | AssemblyAI (webhook-based) |
+| AI Content | xAI Grok (grok-4-1-fast) |
+| Podcast Data | Taddy API (GraphQL) |
+| Hosting | Buzzsprout API, Transistor API |
 
 ---
 
-## Test Categories
+## Test Philosophy
 
-### Category A: MUST Test Live (No Mocking)
+### Core Principle: Live-First
 
+**Mocks hide bugs, live tests find them.**
+
+- Test against real Supabase instance with isolated test data
+- Use Stripe test mode keys for payment flows
+- Use recorded responses for expensive AI calls (AssemblyAI, xAI)
+- Mock only: Date/time, UUIDs, and rate-limited external APIs
+
+### Test Categories
+
+**Category A: MUST Test Live (No Mocking)**
 - All Supabase database queries and mutations
 - All API route handlers
 - Form submissions and data validation
 - User flows end-to-end
-- Component rendering with real API responses
-- Route navigation
-- State management with real data
+- Auth flows (login, register, session management)
+- RLS policy enforcement
 
-### Category B: Use Sandbox/Test Mode
+**Category B: Use Sandbox/Test Mode**
 
-| Service | Test Mode Available | Approach |
-|---------|---------------------|----------|
-| Stripe | Yes (sk_test_*) | Use test API keys |
-| Resend | Yes (test mode) | Use test API key |
+| Service | Test Mode | Approach |
+|---------|-----------|----------|
+| Stripe | `sk_test_*` | Use test API keys |
+| Resend | Test mode | Use test API key |
 | Supabase | Same instance | Isolate test data by markers |
 
-### Category C: Acceptable to Mock (Last Resort)
+**Category C: Acceptable to Mock (Last Resort)**
 
-| What | Why Mock | No Live Alternative |
-|------|----------|---------------------|
-| Date/Time | Deterministic tests | Time is inherently variable |
-| UUIDs | Reproducible tests | Random is inherently variable |
-| AssemblyAI | Rate limits + cost | Use recorded responses for unit tests only |
-| xAI Grok | Rate limits + cost | Use recorded responses for unit tests only |
-| Buzzsprout | No sandbox | Mock only external API calls |
+| What | Why Mock | Notes |
+|------|----------|-------|
+| Date/Time | Deterministic tests | Only for time-dependent logic |
+| UUIDs | Reproducible snapshots | Only in snapshot tests |
+| AssemblyAI | Cost per transcription | Use recorded responses |
+| xAI Grok | Cost per generation | Use recorded responses |
+| Taddy API | Rate limits (100K/mo) | Use cached responses |
+| Buzzsprout | No sandbox | Mock external API calls |
+| Transistor | No sandbox | Mock external API calls |
 
 ---
 
-## Test Data Strategy
+## What Needs Testing Next
 
-### Real Database, Isolated Test Data
+### Priority 1: E2E Critical Path
+These are the user journeys that MUST work before launch:
 
-We test against the **same Supabase instance** the app uses. This ensures we're testing:
-- Same RLS policies
-- Same edge functions
-- Same database constraints
-- Same triggers
+1. **Sign up → Create show → Upload episode → See results**
+2. **Processing pipeline end-to-end** (upload → transcribe → generate → complete)
+3. **Stripe checkout → Subscription active → Tier enforcement works**
+4. **Guest package generation → Email to guest**
+5. **Vocabulary learning → Improved accuracy on next episode**
 
-### Test Data Markers
+### Priority 2: Integration Tests (Real APIs)
+Test with actual API keys in a staging environment:
 
-```typescript
-// Test data conventions
-TEST_EMAIL_PATTERN = /^test-.*@test\.local$/
-TEST_USER_PREFIX = '[TEST]'
-DEFAULT_TEST_PASSWORD = 'TestPassword123!'
+- AssemblyAI transcription (short audio clip, <2 min)
+- xAI Grok content generation (single asset type)
+- Stripe checkout + webhook flow
+- Taddy search + caching
+- Buzzsprout connect + push notes
 
-// All test shows/episodes get identifiable names
-TEST_SHOW_PREFIX = '[TEST]'
-TEST_EPISODE_PREFIX = '[TEST]'
+### Priority 3: New Features (Not Yet Tested)
+These features were added in Phases 7-8 and have no test coverage:
+
+- Taddy client, cache, search (`lib/taddy/`)
+- Podcasting 2.0 tag generators (`lib/podcasting2/`)
+- RSS parser (`lib/rss/parser.ts`)
+- Expert discovery (`lib/experts/discovery.ts`)
+- Pre-interview intelligence
+- Webhook dispatcher (`lib/webhooks/dispatcher.ts`)
+- Team management
+- Analytics aggregation
+- A/B testing
+- Schedule management
+- Transistor client
+- Learning tracker
+
+### Priority 4: Component Tests
+Test React components with @testing-library/react:
+
+- Upload wizard (3-step flow)
+- Episode detail (7-tab interface)
+- Settings page (multiple sections)
+- Asset editor (view/edit modes)
+- RSS tags panel
+- Pre-interview panel
+
+---
+
+## Test Commands
+
+```bash
+# Run all tests
+cd app && npx vitest run
+
+# Run unit tests only
+cd app && npx vitest run --config vitest.unit.config.ts
+
+# Run with coverage
+cd app && npx vitest run --coverage
+
+# Type check
+cd app && npx tsc --noEmit
+
+# Watch mode
+cd app && npx vitest --watch
 ```
-
-### Cleanup Strategy
-
-1. **After each test**: Clean up records created during that test
-2. **After test suite**: Clean up all test users (cascades to their data)
-3. **Scheduled cleanup**: Delete any test data older than 24 hours
-
----
-
-## Test Infrastructure
-
-### Directory Structure
-
-```
-app/
-├── test/
-│   ├── setup/
-│   │   ├── global-setup.ts      # Start server, setup test DB
-│   │   ├── global-teardown.ts   # Clean up test data
-│   │   ├── test-env.ts          # Load test environment
-│   │   └── database.ts          # Real DB connection helpers
-│   ├── utils/
-│   │   ├── api-client.ts        # Real HTTP client (no MSW)
-│   │   ├── auth-helper.ts       # Test user management
-│   │   ├── db-helper.ts         # Direct DB verification
-│   │   ├── test-data.ts         # Test data factories
-│   │   └── assertions.ts        # Custom assertions
-│   ├── fixtures/
-│   │   ├── shows.ts             # Test show data
-│   │   ├── episodes.ts          # Test episode data
-│   │   └── vocabulary.ts        # Test vocabulary data
-│   ├── integration/
-│   │   ├── api/                 # Live API tests
-│   │   │   ├── shows.test.ts
-│   │   │   ├── episodes.test.ts
-│   │   │   └── stripe.test.ts
-│   │   └── db/                  # Live database tests
-│   │       ├── shows.test.ts
-│   │       └── episodes.test.ts
-│   ├── e2e/
-│   │   ├── global-setup.ts
-│   │   └── flows/
-│   │       ├── show-management.spec.ts
-│   │       ├── episode-upload.spec.ts
-│   │       └── settings.spec.ts
-│   └── unit/
-│       └── lib/                 # Pure function unit tests
-│           ├── seo-analyzer.test.ts
-│           └── validation.test.ts
-├── vitest.config.ts             # Vitest configuration
-└── playwright.config.ts         # Playwright configuration
-```
-
-### Framework Stack
-
-| Purpose | Tool | Why |
-|---------|------|-----|
-| Unit/Integration | Vitest | Fast, modern, TypeScript-native |
-| Component | React Testing Library | Test user interactions |
-| E2E | Playwright | Cross-browser, reliable |
-| HTTP Client | Native fetch | No mocking layer |
-| DB Client | Supabase JS | Real queries |
-
----
-
-## Implementation Phases
-
-### Phase 1: Infrastructure Setup (Now)
-
-- [ ] Install Vitest, RTL, Playwright
-- [ ] Create test directory structure
-- [ ] Configure vitest.config.ts
-- [ ] Configure playwright.config.ts
-- [ ] Create database helpers
-- [ ] Create API client utilities
-- [ ] Add npm scripts
-
-### Phase 2: Database Tests (High Priority)
-
-- [ ] Shows CRUD operations
-- [ ] Episodes CRUD operations
-- [ ] Vocabulary terms operations
-- [ ] Generated assets operations
-- [ ] Test data cleanup verification
-
-### Phase 3: API Route Tests (High Priority)
-
-- [ ] GET /api/shows
-- [ ] POST /api/shows
-- [ ] GET /api/episodes
-- [ ] POST /api/upload
-- [ ] POST /api/episodes/[id]/process
-- [ ] Stripe webhook handling
-
-### Phase 4: Component Tests (Medium Priority)
-
-- [ ] ShowCard component
-- [ ] EpisodeList component
-- [ ] CreateShowModal component
-- [ ] VocabularyList component
-
-### Phase 5: E2E Flow Tests (Medium Priority)
-
-- [ ] Create show flow
-- [ ] Upload episode flow
-- [ ] View episode details flow
-- [ ] Settings and connections flow
-
-### Phase 6: CI/CD Integration
-
-- [ ] GitHub Actions workflow
-- [ ] Test parallelization
-- [ ] Coverage reporting
-- [ ] Scheduled cleanup jobs
-
----
-
-## Mock Elimination Checklist
-
-### Current Mocks: NONE
-
-The codebase currently has no mocks. This is ideal - we start from a clean slate.
-
-### Mocks to NEVER Add
-
-| Pattern | Why Not |
-|---------|---------|
-| MSW for API routes | Test real endpoints |
-| jest.mock('@/lib/supabase/*') | Test real database |
-| Mocked auth context | Use real test users |
-| Fake timers for everything | Only mock time when testing time-dependent logic |
-
-### Acceptable Mocks (With Justification)
-
-| Mock | Justification | Alternative |
-|------|---------------|-------------|
-| Date.now() | Deterministic time assertions | Only in time-sensitive tests |
-| crypto.randomUUID() | Reproducible IDs in snapshots | Only in snapshot tests |
-| AssemblyAI client | $$ cost per transcription | Use fixtures for unit tests; real for E2E |
-| xAI Grok client | $$ cost per generation | Use fixtures for unit tests; real for E2E |
-
----
-
-## Health Metrics (Target)
-
-| Metric | Current | Target |
-|--------|---------|--------|
-| Live Test Coverage | 0% | 80% |
-| Mock Dependency | 0% | <5% |
-| Database Coverage | 0% | 90% |
-| API Coverage | 0% | 100% |
-| E2E Flow Coverage | 0% | 70% |
-| CI Pipeline | No | Yes |
 
 ---
 
@@ -294,9 +179,9 @@ The codebase currently has no mocks. This is ideal - we start from a clean slate
 
 ```bash
 # .env.test (uses REAL Supabase)
-NEXT_PUBLIC_SUPABASE_URL=https://[your-project].supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=[your-anon-key]
-SUPABASE_SERVICE_ROLE_KEY=[your-service-key]
+NEXT_PUBLIC_SUPABASE_URL=https://[project].supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=[anon-key]
+SUPABASE_SERVICE_ROLE_KEY=[service-key]
 
 # Test server
 TEST_API_URL=http://localhost:3000
@@ -310,31 +195,19 @@ RESEND_API_KEY=re_test_...
 # These can be real for E2E, mocked for unit
 ASSEMBLYAI_API_KEY=[real-or-mock]
 XAI_API_KEY=[real-or-mock]
+TADDY_API_KEY=[real-or-mock]
+TADDY_USER_ID=[real-or-mock]
 ```
 
 ---
 
-## Commands
+## Health Metrics
 
-```bash
-# Run all tests
-npm test
-
-# Run integration tests only
-npm run test:integration
-
-# Run E2E tests
-npm run test:e2e
-
-# Run unit tests only
-npm run test:unit
-
-# Run tests in watch mode
-npm run test:watch
-
-# Generate coverage report
-npm run test:coverage
-
-# Clean up stale test data
-npm run test:cleanup
-```
+| Metric | Current | Target |
+|--------|---------|--------|
+| Unit Test Coverage | ~60% | 80% |
+| Hook Coverage | 17/17 tested | 17/17 |
+| API Route Coverage | ~12/48 tested | 48/48 |
+| E2E Flow Coverage | 0% | 70% |
+| CI Pipeline | ✅ Yes | ✅ Yes |
+| Integration Tests | 17 files | 30+ files |

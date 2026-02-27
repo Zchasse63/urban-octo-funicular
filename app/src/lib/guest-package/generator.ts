@@ -19,11 +19,24 @@ export interface QuoteCard {
   episodeTitle: string
 }
 
+export interface AlsoHeardOnAppearance {
+  podcastName: string
+  episodeName: string
+  datePublished: string | null
+  imageUrl: string | null
+}
+
+export interface AlsoHeardOnSection {
+  title: string
+  appearances: AlsoHeardOnAppearance[]
+}
+
 export interface GuestPackageContent {
   socialPosts: SocialPostVariant[]
   quoteCards: QuoteCard[]
   emailSubject: string
   emailBody: string
+  alsoHeardOn?: AlsoHeardOnSection
 }
 
 // Platform character limits
@@ -236,6 +249,32 @@ export function generateEmailBody(
   ]
 
   return lines.join('\n')
+}
+
+/**
+ * Generate "Also heard on..." section for guest packages
+ * showing real podcast appearances from Taddy data.
+ */
+export function generateAlsoHeardOn(
+  appearances: Array<{
+    podcastName: string;
+    episodeName: string;
+    datePublished: string | null;
+    podcastImageUrl?: string;
+  }>
+): AlsoHeardOnSection {
+  return {
+    title: 'Also Heard On',
+    appearances: appearances
+      .filter(a => a.podcastName && a.episodeName)
+      .slice(0, 8)
+      .map(a => ({
+        podcastName: a.podcastName,
+        episodeName: a.episodeName,
+        datePublished: a.datePublished,
+        imageUrl: a.podcastImageUrl || null,
+      })),
+  }
 }
 
 /**

@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { discoverExperts } from '@/lib/experts/discovery';
-import { validateAuth, verifyShowOwnership } from '@/lib/auth';
+import { requireAuth, verifyShowOwnership } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { validateUUID } from '@/lib/validation';
+import type { ExpertSource } from '@/lib/experts/types';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await validateAuth();
+    const { userId } = await requireAuth();
 
     const rateLimitResult = await checkRateLimit(`experts:${userId}`);
     if (!rateLimitResult.success) {
@@ -22,7 +23,7 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid show ID format' }, { status: 400 });
     }
 
-    const hasAccess = await verifyShowOwnership(showId);
+    const hasAccess = await verifyShowOwnership(showId, userId);
     if (!hasAccess) {
       return NextResponse.json({ error: 'Show not found' }, { status: 404 });
     }
@@ -37,12 +38,20 @@ export async function GET(
       );
     }
 
-    const experts = await discoverExperts(topic, showId);
+    // Optional source override: ?source=taddy|grok
+    const sourceParam = searchParams.get('source') as ExpertSource | null;
+    const forceSource =
+      sourceParam === 'taddy' || sourceParam === 'grok'
+        ? sourceParam
+        : undefined;
+
+    const { experts, source } = await discoverExperts(topic, showId, forceSource);
 
     return NextResponse.json({
       experts,
       topic,
       count: experts.length,
+      source,
     });
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {

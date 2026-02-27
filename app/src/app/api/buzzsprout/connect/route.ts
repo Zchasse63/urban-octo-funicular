@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { BuzzsproutClient } from '@/lib/buzzsprout/client';
 import { encryptCredentials } from '@/lib/buzzsprout/encryption';
-import { DEFAULT_USER_ID } from '@/lib/constants';
+import { requireAuth } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
 
   try {
+    const { userId } = await requireAuth();
     const { api_token, show_id } = await request.json();
 
     if (!api_token || typeof api_token !== 'string' || api_token.length > 200) {
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('hosting_connections')
       .insert({
-        user_id: DEFAULT_USER_ID,
+        user_id: userId,
         provider: 'buzzsprout',
         credentials: encryptedCredentials,
         show_id: show_id || null,
@@ -60,6 +61,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, id: data.id });
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
     console.error('Connect error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -70,12 +77,13 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE() {
   try {
+    const { userId } = await requireAuth();
     const supabase = await createClient();
 
     const { error } = await supabase
       .from('hosting_connections')
       .delete()
-      .eq('user_id', DEFAULT_USER_ID)
+      .eq('user_id', userId)
       .eq('provider', 'buzzsprout');
 
     if (error) {
@@ -88,6 +96,12 @@ export async function DELETE() {
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
     console.error('Disconnect error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

@@ -4,14 +4,42 @@ import "./globals.css"
 
 export const metadata: Metadata = {
   title: {
-    default: "PodBrain",
+    default: "PodBrain — AI-Powered Podcast Content Platform",
     template: "%s | PodBrain",
   },
   description:
-    "AI-Powered Podcast Content Platform — Transform audio into SEO-optimized show notes, 30+ content assets, and guest promotion packages.",
+    "Transform your podcast into SEO-optimized show notes, 30+ content assets, and guest promotion packages with AI that learns your show.",
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+    process.env.NEXT_PUBLIC_APP_URL || "https://getpodbrain.ai"
   ),
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://getpodbrain.ai",
+    siteName: "PodBrain",
+    title: "PodBrain — AI-Powered Podcast Content Platform",
+    description:
+      "Transform your podcast into SEO-optimized show notes, 30+ content assets, and guest promotion packages.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "PodBrain - AI-Powered Podcast Content Platform",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "PodBrain — AI-Powered Podcast Content Platform",
+    description:
+      "Transform your podcast into SEO-optimized show notes, 30+ content assets, and guest promotion packages.",
+    images: ["/og-image.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 }
 
 export const viewport: Viewport = {

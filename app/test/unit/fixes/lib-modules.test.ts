@@ -40,21 +40,19 @@ describe('Stripe products module', () => {
     expect(freeTier.price).toBe(0)
   })
 
-  it('exports getServerPriceId function', async () => {
+  it('does NOT export getServerPriceId (moved to server module)', async () => {
     const mod = await import('@/lib/stripe/products')
-    expect(mod.getServerPriceId).toBeDefined()
-    expect(typeof mod.getServerPriceId).toBe('function')
+    expect((mod as any).getServerPriceId).toBeUndefined()
   })
 
-  it('getServerPriceId returns null for free tier', async () => {
+  it('does NOT export getServerPriceId in client module (server-only)', async () => {
     const mod = await import('@/lib/stripe/products')
-    expect(mod.getServerPriceId('free' as any)).toBeNull()
+    expect(Object.keys(mod)).not.toContain('getServerPriceId')
   })
 
-  it('exports getTierByPriceId function', async () => {
+  it('does NOT export getTierByPriceId (moved to server module)', async () => {
     const mod = await import('@/lib/stripe/products')
-    expect(mod.getTierByPriceId).toBeDefined()
-    expect(typeof mod.getTierByPriceId).toBe('function')
+    expect((mod as any).getTierByPriceId).toBeUndefined()
   })
 })
 

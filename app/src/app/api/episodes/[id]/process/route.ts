@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { DEFAULT_USER_ID } from "@/lib/constants";
+import { requireAuth, isValidUUID } from "@/lib/auth";
+import { rateLimitByIP } from "@/lib/rate-limit";
 import {
   triggerEpisodeProcessing,
   getRunStatus,
@@ -20,6 +21,8 @@ interface ProcessingResponse {
 interface RunStatusResponse {
   runId: string;
   status: string;
+  processingStep?: string;
+  processingProgress?: number;
   createdAt: string;
   updatedAt: string;
   error?: string;
@@ -34,7 +37,26 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limit: 10 processing requests per minute per IP
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const rateLimit = await rateLimitByIP(ip, 10);
+    if (!rateLimit.success) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: "Too many requests. Please try again later." },
+        { status: 429, headers: { "Retry-After": String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)) } }
+      );
+    }
+
+    const { userId } = await requireAuth();
     const { id: episodeId } = await params;
+
+    if (!isValidUUID(episodeId)) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: "Invalid ID format" },
+        { status: 400 }
+      );
+    }
+
     const supabase = await createClient();
 
     // Fetch the episode to get required data
@@ -47,7 +69,7 @@ export async function POST(
       `
       )
       .eq("id", episodeId)
-      .eq("shows.user_id", DEFAULT_USER_ID)
+      .eq("shows.user_id", userId)
       .single();
 
     if (fetchError || !episode) {
@@ -118,6 +140,12 @@ export async function POST(
       error: null,
     });
   } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
     console.error("Error triggering episode processing:", error);
     return NextResponse.json<ApiResponse<null>>(
       {
@@ -138,7 +166,16 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { userId } = await requireAuth();
     const { id: episodeId } = await params;
+
+    if (!isValidUUID(episodeId)) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: "Invalid ID format" },
+        { status: 400 }
+      );
+    }
+
     const supabase = await createClient();
 
     // Get the episode with its processing metadata
@@ -153,7 +190,7 @@ export async function GET(
       `
       )
       .eq("id", episodeId)
-      .eq("shows.user_id", DEFAULT_USER_ID)
+      .eq("shows.user_id", userId)
       .single();
 
     if (fetchError || !episode) {
@@ -166,11 +203,17 @@ export async function GET(
     const metadata = episode.metadata as Record<string, unknown> | null;
     const runId = metadata?.processing_run_id as string | undefined;
 
+    // Extract processing step info from episode metadata (set by Trigger.dev job)
+    const processingStep = metadata?.processing_step as string | undefined;
+    const processingProgress = metadata?.processing_progress as number | undefined;
+
     if (!runId) {
       return NextResponse.json<ApiResponse<RunStatusResponse>>({
         data: {
           runId: "",
           status: episode.status,
+          processingStep,
+          processingProgress,
           createdAt: "",
           updatedAt: "",
         },
@@ -185,7 +228,9 @@ export async function GET(
       return NextResponse.json<ApiResponse<RunStatusResponse>>({
         data: {
           runId,
-          status: "UNKNOWN",
+          status: episode.status,
+          processingStep,
+          processingProgress,
           createdAt: "",
           updatedAt: "",
           error: "Could not retrieve run status",
@@ -197,7 +242,9 @@ export async function GET(
     return NextResponse.json<ApiResponse<RunStatusResponse>>({
       data: {
         runId: runStatus.id,
-        status: runStatus.status,
+        status: episode.status,
+        processingStep,
+        processingProgress,
         createdAt: runStatus.createdAt.toISOString(),
         updatedAt: runStatus.updatedAt.toISOString(),
         error: runStatus.error,
@@ -205,6 +252,12 @@ export async function GET(
       error: null,
     });
   } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
     console.error("Error getting processing status:", error);
     return NextResponse.json<ApiResponse<null>>(
       {
@@ -225,7 +278,16 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { userId } = await requireAuth();
     const { id: episodeId } = await params;
+
+    if (!isValidUUID(episodeId)) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: "Invalid ID format" },
+        { status: 400 }
+      );
+    }
+
     const supabase = await createClient();
 
     // Get the episode with its processing metadata
@@ -240,7 +302,7 @@ export async function DELETE(
       `
       )
       .eq("id", episodeId)
-      .eq("shows.user_id", DEFAULT_USER_ID)
+      .eq("shows.user_id", userId)
       .single();
 
     if (fetchError || !episode) {
@@ -295,6 +357,12 @@ export async function DELETE(
       error: null,
     });
   } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
     console.error("Error cancelling processing:", error);
     return NextResponse.json<ApiResponse<null>>(
       {
@@ -315,7 +383,16 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { userId } = await requireAuth();
     const { id: episodeId } = await params;
+
+    if (!isValidUUID(episodeId)) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: "Invalid ID format" },
+        { status: 400 }
+      );
+    }
+
     const supabase = await createClient();
 
     // Get the episode with its processing metadata
@@ -330,7 +407,7 @@ export async function PUT(
       `
       )
       .eq("id", episodeId)
-      .eq("shows.user_id", DEFAULT_USER_ID)
+      .eq("shows.user_id", userId)
       .single();
 
     if (fetchError || !episode) {
@@ -392,6 +469,12 @@ export async function PUT(
       error: null,
     });
   } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
     console.error("Error replaying processing:", error);
     return NextResponse.json<ApiResponse<null>>(
       {

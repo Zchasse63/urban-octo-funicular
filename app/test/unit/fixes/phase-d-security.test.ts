@@ -56,8 +56,8 @@ describe('Test routes have dev guards', () => {
 describe('Assets download route has user scoping', () => {
   const source = readSource('app/api/episodes/[id]/assets/download/route.ts')
 
-  it('imports DEFAULT_USER_ID', () => {
-    expect(source).toContain('DEFAULT_USER_ID')
+  it('uses requireAuth for authentication', () => {
+    expect(source).toContain('requireAuth')
   })
 
   it('filters by user_id in query', () => {

@@ -26,6 +26,24 @@ export default defineConfig({
     // Parallel execution is safe for unit tests
     pool: 'threads',
 
+    // Coverage configuration
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        'src/**/*.test.{ts,tsx}',
+        'src/**/types.ts',
+        'src/**/*.d.ts',
+      ],
+      thresholds: {
+        statements: 60,
+        branches: 60,
+        functions: 60,
+        lines: 60,
+      },
+    },
+
     env: {
       NODE_ENV: 'test',
     },

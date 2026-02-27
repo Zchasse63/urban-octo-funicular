@@ -78,6 +78,28 @@ export const processEpisodeTask = task({
       throw new Error(`Transcription failed: ${transcriptionResult.error}`);
     }
 
+    // --- WEBHOOK MODE ---
+    // When using webhooks (production), the transcription task returns immediately
+    // with status 'webhook_pending'. The remaining pipeline steps are handled by
+    // the AssemblyAI webhook handler (/api/webhooks/assemblyai) which triggers
+    // the postTranscriptionPipelineTask when the transcript is ready.
+    if (transcriptionResult.output.status === "webhook_pending") {
+      logger.info("Transcription submitted with webhook callback, pipeline will continue asynchronously", {
+        episodeId,
+        transcriptId: transcriptionResult.output.transcriptId,
+      });
+
+      return {
+        episodeId,
+        transcription: transcriptionResult.output,
+        showNotes: { showNotes: "", showNotesHtml: "", schemaMarkup: {}, summary: "", keyTopics: [], timestamps: [], viralMoments: [] } as unknown as ShowNotesResult,
+        assets: { assets: [] } as unknown as AssetsResult,
+        processingTimeMs: Date.now() - startTime,
+      };
+    }
+
+    // --- POLLING MODE (local dev) ---
+    // Transcription completed synchronously, continue with the pipeline.
     logger.info("Transcription completed", {
       episodeId,
       wordCount: transcriptionResult.output.transcript.split(" ").length,

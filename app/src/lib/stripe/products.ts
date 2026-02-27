@@ -62,18 +62,5 @@ export const PRICING_TIERS: Record<PricingTier, TierFeatures> = {
   },
 };
 
-/**
- * Get the Stripe price ID for a tier. Must be called server-side only.
- */
-export function getServerPriceId(tier: PricingTier): string | null {
-  if (tier === 'pro') return process.env.STRIPE_PRO_PRICE_ID || null;
-  if (tier === 'agency') return process.env.STRIPE_AGENCY_PRICE_ID || null;
-  return null;
-}
-
-export function getTierByPriceId(priceId: string): PricingTier | null {
-  // Must check against server env vars
-  if (priceId === process.env.STRIPE_PRO_PRICE_ID) return 'pro';
-  if (priceId === process.env.STRIPE_AGENCY_PRICE_ID) return 'agency';
-  return null;
-}
+// Server-only price functions have been moved to ./products.server.ts
+// to prevent accidental client-side usage of process.env secrets.

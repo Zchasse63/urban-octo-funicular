@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import type { Expert } from "@/lib/experts/types";
+import type { Expert, ExpertSource } from "@/lib/experts/types";
 
 interface UseExpertsOptions {
   showId?: string;
@@ -10,6 +10,7 @@ interface UseExpertsOptions {
 interface UseExpertsResult {
   experts: Expert[];
   topic: string;
+  source: ExpertSource | null;
   isLoading: boolean;
   error: string | null;
   search: (topic: string) => Promise<void>;
@@ -21,6 +22,7 @@ export default function useExperts(
   const { showId } = options;
   const [experts, setExperts] = useState<Expert[]>([]);
   const [topic, setTopic] = useState("");
+  const [source, setSource] = useState<ExpertSource | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,9 +49,11 @@ export default function useExperts(
 
         const result = await response.json();
         setExperts(result.experts || []);
+        setSource(result.source || null);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to search experts");
         setExperts([]);
+        setSource(null);
       } finally {
         setIsLoading(false);
       }
@@ -57,5 +61,5 @@ export default function useExperts(
     [showId]
   );
 
-  return { experts, topic, isLoading, error, search };
+  return { experts, topic, source, isLoading, error, search };
 }

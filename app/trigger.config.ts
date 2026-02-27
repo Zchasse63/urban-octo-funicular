@@ -8,8 +8,10 @@ export default defineConfig({
   dirs: ["./src/trigger/jobs"],
 
   // Maximum duration for jobs (in seconds)
-  // 4-hour audio files need longer processing time
-  maxDuration: 1800, // 30 minutes max
+  // 4-hour audio files need longer processing time.
+  // With webhook-based transcription, the main bottleneck is content generation.
+  // 60 minutes allows generous headroom for the full post-transcription pipeline.
+  maxDuration: 3600, // 60 minutes max
 
   // Retry configuration
   retries: {

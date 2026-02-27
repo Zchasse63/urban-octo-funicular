@@ -1,5 +1,6 @@
 import { task, logger, wait } from "@trigger.dev/sdk";
 import type { TranscriptSegment } from "@/types/database";
+import { getTriggerClient } from "@/lib/supabase/trigger-client";
 
 /**
  * Input payload for the transcribe-audio job
@@ -13,15 +14,25 @@ export interface TranscribeAudioPayload {
 }
 
 /**
- * Result of the transcription job
+ * Result of the transcription job.
+ *
+ * In webhook mode (production), the job submits to AssemblyAI with a webhook_url,
+ * stores the transcript_id in episode metadata, and returns immediately with
+ * status: 'webhook_pending'. The AssemblyAI webhook handler at
+ * /api/webhooks/assemblyai picks up the result asynchronously.
+ *
+ * In polling mode (local dev), the job polls until completion and returns the
+ * full transcript with status: 'completed'.
  */
 export interface TranscriptionResult {
+  status: "completed" | "webhook_pending";
   transcript: string;
   segments: TranscriptSegment[];
   audioDurationSeconds: number;
   speakerCount: number;
   wordCount: number;
   confidence: number;
+  transcriptId?: string;
 }
 
 /**
@@ -50,11 +61,29 @@ interface AssemblyAITranscript {
 }
 
 /**
- * Transcribe audio using AssemblyAI with speaker diarization
+ * Determine if the webhook URL is available for use.
+ * Only use webhooks in production when NEXT_PUBLIC_APP_URL is set,
+ * since the webhook endpoint must be publicly accessible.
+ */
+function getWebhookUrl(): string | undefined {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!appUrl) return undefined;
+
+  // Only use webhooks in production (local dev URLs aren't reachable by AssemblyAI)
+  if (process.env.NODE_ENV !== "production") return undefined;
+
+  return `${appUrl}/api/webhooks/assemblyai`;
+}
+
+/**
+ * Transcribe audio using AssemblyAI with speaker diarization.
+ *
+ * In production, uses webhook callbacks to avoid polling timeouts on long podcasts.
+ * In development, falls back to polling every 10 seconds.
  */
 export const transcribeAudioTask = task({
   id: "transcribe-audio",
-  // Transcription can take up to 2x audio duration, allow 30 minutes max
+  // Polling fallback needs up to 30 min; webhook mode returns in seconds
   maxDuration: 1800,
   retry: {
     maxAttempts: 3,
@@ -77,6 +106,14 @@ export const transcribeAudioTask = task({
       throw new Error("ASSEMBLYAI_API_KEY environment variable is not set");
     }
 
+    const webhookUrl = getWebhookUrl();
+
+    logger.info("Transcription mode", {
+      episodeId,
+      mode: webhookUrl ? "webhook" : "polling",
+      webhookUrl: webhookUrl || "none",
+    });
+
     // Step 1: Submit transcription request to AssemblyAI
     logger.info("Submitting transcription request", { episodeId });
 
@@ -85,34 +122,85 @@ export const transcribeAudioTask = task({
       audioUrl,
       language,
       speakerLabels,
-      wordBoost
+      wordBoost,
+      webhookUrl
     );
 
     logger.info("Transcription request submitted", {
       episodeId,
       transcriptId: transcriptRequest.id,
+      webhookConfigured: !!webhookUrl,
     });
 
-    // Step 2: Poll for completion
+    // --- WEBHOOK MODE (production) ---
+    // Store the transcript ID in episode metadata so the webhook can find
+    // the episode when AssemblyAI calls back, then return immediately.
+    if (webhookUrl) {
+      const supabase = getTriggerClient();
+
+      // Fetch current metadata to merge with
+      const { data: episode } = await supabase
+        .from("episodes")
+        .select("metadata")
+        .eq("id", episodeId)
+        .single();
+
+      const existingMetadata = (episode?.metadata as Record<string, unknown>) || {};
+
+      await supabase
+        .from("episodes")
+        .update({
+          metadata: {
+            ...existingMetadata,
+            assemblyai_transcript_id: transcriptRequest.id,
+            processing_step: "transcribing",
+            processing_progress: 10,
+            transcription_mode: "webhook",
+            transcription_submitted_at: new Date().toISOString(),
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", episodeId);
+
+      logger.info("Webhook mode: stored transcript_id and returning early", {
+        episodeId,
+        transcriptId: transcriptRequest.id,
+      });
+
+      return {
+        status: "webhook_pending",
+        transcript: "",
+        segments: [],
+        audioDurationSeconds: 0,
+        speakerCount: 0,
+        wordCount: 0,
+        confidence: 0,
+        transcriptId: transcriptRequest.id,
+      };
+    }
+
+    // --- POLLING MODE (local development fallback) ---
     const completedTranscript = await pollTranscriptionStatus(
       apiKey,
       transcriptRequest.id,
       episodeId
     );
 
-    // Step 3: Process the transcript into our format
+    // Process the transcript into our format
     const segments = processTranscriptSegments(completedTranscript);
 
     const result: TranscriptionResult = {
+      status: "completed",
       transcript: completedTranscript.text || "",
       segments,
       audioDurationSeconds: completedTranscript.audio_duration || 0,
       speakerCount: countUniqueSpeakers(segments),
       wordCount: completedTranscript.words?.length || 0,
       confidence: calculateAverageConfidence(completedTranscript.words || []),
+      transcriptId: transcriptRequest.id,
     };
 
-    logger.info("Transcription completed successfully", {
+    logger.info("Transcription completed successfully (polling mode)", {
       episodeId,
       wordCount: result.wordCount,
       audioDurationSeconds: result.audioDurationSeconds,
@@ -124,20 +212,23 @@ export const transcribeAudioTask = task({
 });
 
 /**
- * Submit a transcription request to AssemblyAI
+ * Submit a transcription request to AssemblyAI.
+ * Optionally includes a webhook_url for async completion callbacks.
  */
 async function submitTranscriptionRequest(
   apiKey: string,
   audioUrl: string,
   language: string,
   speakerLabels: boolean,
-  wordBoost: string[]
+  wordBoost: string[],
+  webhookUrl?: string
 ): Promise<{ id: string }> {
   logger.info("AssemblyAI API request", {
     audioUrl,
     language,
     speakerLabels,
     wordBoostCount: wordBoost.length,
+    webhookUrl: webhookUrl || "none",
   });
 
   const response = await fetch("https://api.assemblyai.com/v2/transcript", {
@@ -154,6 +245,7 @@ async function submitTranscriptionRequest(
       boost_param: wordBoost.length > 0 ? "high" : undefined,
       punctuate: true,
       format_text: true,
+      ...(webhookUrl && { webhook_url: webhookUrl }),
     }),
   });
 
@@ -166,7 +258,8 @@ async function submitTranscriptionRequest(
 }
 
 /**
- * Poll AssemblyAI for transcription completion
+ * Poll AssemblyAI for transcription completion.
+ * Used as fallback in local development where webhooks are not reachable.
  */
 async function pollTranscriptionStatus(
   apiKey: string,

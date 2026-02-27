@@ -18,12 +18,11 @@ function readSource(relativePath: string): string {
   return fs.readFileSync(path.join(SRC, relativePath), 'utf-8')
 }
 
-describe('C1: Upload page uses correct response shape', () => {
-  const source = readSource('app/(app)/upload/page.tsx')
+describe('C1: Upload wizard uses correct response shape', () => {
+  const source = readSource('components/upload/upload-wizard.tsx')
 
-  it('uses publicUrl or signedUrl from upload response', () => {
+  it('uses publicUrl from upload response', () => {
     expect(source).toContain('publicUrl')
-    expect(source).toContain('signedUrl')
   })
 
   it('does NOT use result.data?.url or result.url', () => {
@@ -32,21 +31,17 @@ describe('C1: Upload page uses correct response shape', () => {
   })
 })
 
-describe('C2: Upload page uses Trigger.dev status format', () => {
-  const source = readSource('app/(app)/upload/page.tsx')
-
-  it('checks for COMPLETED status from Trigger.dev', () => {
-    // Upload page uses double quotes and optional chaining
-    expect(source).toContain('"COMPLETED"')
-  })
+describe('C2: Upload wizard does not use old status fields', () => {
+  const source = readSource('components/upload/upload-wizard.tsx')
 
   it('does NOT use old current_step field', () => {
     expect(source).not.toContain("current_step === 'completed'")
     expect(source).not.toContain('current_step')
   })
 
-  it('uses EXECUTING status for progress indication', () => {
-    expect(source).toContain('EXECUTING')
+  it('triggers processing via API and navigates to episode', () => {
+    expect(source).toContain('/process')
+    expect(source).toContain('router.push')
   })
 })
 
@@ -98,34 +93,33 @@ describe('C5: SEO hook maps response fields correctly', () => {
   })
 })
 
-describe('C8: Settings vocabulary uses alternatives, not definition', () => {
-  const source = readSource('app/(app)/settings/page.tsx')
+describe('C8: Vocabulary hook uses alternatives, not definition', () => {
+  const source = readSource('hooks/use-vocabulary.ts')
 
-  it('selects alternatives column', () => {
+  it('sends alternatives in add term request', () => {
     expect(source).toContain('alternatives')
   })
 
-  it('does NOT select definition column', () => {
-    // Should not reference 'definition' in vocabulary queries
-    expect(source).not.toMatch(/select\(.*definition/)
+  it('does NOT reference definition column', () => {
+    // Should not reference 'definition' in vocabulary API calls
+    expect(source).not.toMatch(/definition/)
   })
 
-  it('does NOT use user_id in vocabulary insert', () => {
-    // Vocab terms don't need user_id
-    expect(source).not.toMatch(/vocabulary.*user_id.*DEFAULT_USER_ID/s)
+  it('does NOT use user_id or DEFAULT_USER_ID in vocabulary requests', () => {
+    // Vocab terms don't need user_id in the hook
+    expect(source).not.toContain('DEFAULT_USER_ID')
   })
 })
 
-describe('C9: Guest package unwraps data.data correctly', () => {
-  const source = readSource('app/(app)/episodes/[id]/guest-package/page.tsx')
+describe('C9: Guest package hook unwraps data correctly', () => {
+  const source = readSource('hooks/use-guest-package.ts')
 
-  it('accesses data.data?.package for guest package', () => {
-    expect(source).toContain('data.data?.package')
+  it('accesses result.data from guest package API response', () => {
+    expect(source).toContain('result.data')
   })
 
-  it('does NOT access data.package directly', () => {
-    // Old: data.package
-    expect(source).not.toMatch(/(?<!data\.)data\.package(?!\?)/)
+  it('sets guestPackage from response data', () => {
+    expect(source).toContain('setGuestPackage(result.data')
   })
 })
 
@@ -150,7 +144,7 @@ describe('C11: Redis cache does not double-serialize', () => {
 describe('C12: Stripe pricing does not use env vars at module level', () => {
   const source = readSource('lib/stripe/products.ts')
 
-  it('has getServerPriceId function for server-side resolution', () => {
+  it('references getServerPriceId for server-side resolution', () => {
     expect(source).toContain('getServerPriceId')
   })
 
@@ -164,8 +158,10 @@ describe('C12: Stripe pricing does not use env vars at module level', () => {
     }
   })
 
-  it('resolves price IDs inside function, not at module scope', () => {
-    expect(source).toContain('function getServerPriceId')
+  it('server-only functions are moved to products.server.ts', () => {
+    // getServerPriceId is no longer defined in the client module
+    expect(source).not.toContain('export function getServerPriceId')
+    expect(source).toContain('products.server.ts')
   })
 })
 

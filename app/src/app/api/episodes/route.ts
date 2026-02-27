@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { DEFAULT_USER_ID, PAGINATION } from '@/lib/constants'
+import { requireAuth } from '@/lib/auth'
+import { canCreateEpisode } from '@/lib/tier-limits'
+import { PAGINATION } from '@/lib/constants'
 import type { EpisodeListItem, ApiResponse, PaginatedResponse, Episode } from '@/types/database'
 
 /**
@@ -9,6 +11,7 @@ import type { EpisodeListItem, ApiResponse, PaginatedResponse, Episode } from '@
  */
 export async function GET(request: NextRequest) {
   try {
+    const { userId } = await requireAuth()
     const supabase = await createClient()
     const { searchParams } = new URL(request.url)
 
@@ -25,7 +28,7 @@ export async function GET(request: NextRequest) {
     let countQuery = supabase
       .from('episodes')
       .select('*, shows!inner(user_id)', { count: 'exact', head: true })
-      .eq('shows.user_id', DEFAULT_USER_ID)
+      .eq('shows.user_id', userId)
 
     // Apply filters to count query
     if (showId) {
@@ -65,7 +68,7 @@ export async function GET(request: NextRequest) {
         updated_at,
         shows!inner(user_id, name)
       `)
-      .eq('shows.user_id', DEFAULT_USER_ID)
+      .eq('shows.user_id', userId)
 
     // Apply filters to data query
     if (showId) {
@@ -94,6 +97,12 @@ export async function GET(request: NextRequest) {
       per_page: perPage,
     })
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
     console.error('Error fetching episodes:', error)
     return NextResponse.json<ApiResponse<null>>(
       { data: null, error: 'Internal server error' },
@@ -108,6 +117,17 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const { userId } = await requireAuth()
+
+    // Tier enforcement: check episode limit
+    const episodeCheck = await canCreateEpisode(userId)
+    if (!episodeCheck.allowed) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: episodeCheck.reason || 'Episode limit reached' },
+        { status: 403 }
+      )
+    }
+
     const supabase = await createClient()
     const body = await request.json()
 
@@ -136,12 +156,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify the show exists and belongs to the default user
+    // Verify the show exists and belongs to the user
     const { data: show, error: showError } = await supabase
       .from('shows')
       .select('id')
       .eq('id', show_id)
-      .eq('user_id', DEFAULT_USER_ID)
+      .eq('user_id', userId)
       .single()
 
     if (showError || !show) {
@@ -180,6 +200,12 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     )
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
     console.error('Error creating episode:', error)
     return NextResponse.json<ApiResponse<null>>(
       { data: null, error: 'Internal server error' },

@@ -196,39 +196,42 @@ async function generateAsset(
     promptLength: prompt.length,
   });
 
-  // Actual implementation:
-  // const response = await fetch("https://api.x.ai/v1/chat/completions", {
-  //   method: "POST",
-  //   headers: {
-  //     "Authorization": `Bearer ${apiKey}`,
-  //     "Content-Type": "application/json",
-  //   },
-  //   body: JSON.stringify({
-  //     model: "grok-beta",
-  //     messages: [
-  //       { role: "system", content: getAssetSystemPrompt(assetType) },
-  //       { role: "user", content: prompt },
-  //     ],
-  //     temperature: 0.8,
-  //   }),
-  // });
-  //
-  // if (!response.ok) {
-  //   throw new Error(`xAI API error: ${response.status}`);
-  // }
-  //
-  // const data = await response.json();
-  // const content = data.choices[0].message.content;
+  const xaiModel = process.env.XAI_MODEL || "grok-4-1-fast";
 
-  // Placeholder: Return mock content
-  const content = getMockAssetContent(assetType, guestName);
+  const response = await fetch("https://api.x.ai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: xaiModel,
+      messages: [
+        { role: "system", content: getAssetSystemPrompt(assetType) },
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.8,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`xAI API error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices[0]?.message?.content;
+
+  if (!content) {
+    throw new Error(`xAI returned empty content for asset type: ${assetType}`);
+  }
 
   return {
     assetType,
     content,
     metadata: {
       generatedAt: new Date().toISOString(),
-      model: "grok-beta",
+      model: xaiModel,
       promptTokens: Math.ceil(prompt.length / 4),
     },
   };

@@ -49,6 +49,12 @@ export default defineConfig({
         'src/**/types.ts',
         'src/**/*.d.ts',
       ],
+      thresholds: {
+        statements: 60,
+        branches: 60,
+        functions: 60,
+        lines: 60,
+      },
     },
 
     // Environment variables

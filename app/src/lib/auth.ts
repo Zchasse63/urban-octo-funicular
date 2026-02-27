@@ -1,49 +1,81 @@
 /**
- * Auth module - DEFERRED for MVP
- * Using single-user mode with DEFAULT_USER_ID
+ * Auth module - Supabase Auth integration
+ * Provides authentication utilities for API routes and server components
  */
 
-import { DEFAULT_USER_ID } from './constants';
-import { createClient } from './supabase/server';
+import { createClient } from './supabase/server'
 
 /**
- * Validate auth - returns default user in single-user mode
+ * Get the authenticated user from the current request context.
+ * Returns the user ID or null if not authenticated.
+ * In API routes, use this instead of DEFAULT_USER_ID.
  */
-export async function validateAuth(): Promise<{ userId: string }> {
-  // Auth is deferred - always return default user
-  return { userId: DEFAULT_USER_ID };
+export async function getAuthUser(): Promise<{ userId: string; email: string } | null> {
+  const supabase = await createClient()
+  const { data: { user }, error } = await supabase.auth.getUser()
+
+  if (error || !user) {
+    return null
+  }
+
+  return {
+    userId: user.id,
+    email: user.email || '',
+  }
 }
 
 /**
- * Verify episode ownership - always passes in single-user mode
+ * Require authentication - throws/returns 401 response data if not authenticated.
+ * Use in API route handlers.
+ */
+export async function requireAuth(): Promise<{ userId: string; email: string }> {
+  const user = await getAuthUser()
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+  return user
+}
+
+/**
+ * Verify episode ownership - checks if the episode belongs to the user's show
  */
 export async function verifyEpisodeOwnership(
   episodeId: string,
-  _userId?: string
+  userId: string
 ): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = await createClient()
   const { data } = await supabase
     .from('episodes')
-    .select('id')
+    .select('id, shows!inner(user_id)')
     .eq('id', episodeId)
-    .single();
+    .eq('shows.user_id', userId)
+    .single()
 
-  return !!data;
+  return !!data
 }
 
 /**
- * Verify show ownership - always passes in single-user mode
+ * Verify show ownership - checks if the show belongs to the user
  */
 export async function verifyShowOwnership(
   showId: string,
-  _userId?: string
+  userId: string
 ): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = await createClient()
   const { data } = await supabase
     .from('shows')
     .select('id')
     .eq('id', showId)
-    .single();
+    .eq('user_id', userId)
+    .single()
 
-  return !!data;
+  return !!data
+}
+
+/**
+ * Validate UUID format for path parameters
+ */
+export function isValidUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  return uuidRegex.test(str)
 }

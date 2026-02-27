@@ -96,18 +96,19 @@ describe('Redis cache operations are guarded', () => {
   })
 })
 
-describe('H4: Buzzsprout connection status check', () => {
-  const source = readSource('app/(app)/settings/page.tsx')
+describe('H4: Buzzsprout connection status in settings component', () => {
+  const source = readSource('components/settings/settings-page.tsx')
 
-  it('checks hosting_connections table on mount', () => {
-    expect(source).toContain('hosting_connections')
-  })
-
-  it('queries for buzzsprout platform', () => {
+  it('includes buzzsprout as an integration', () => {
     expect(source).toContain('buzzsprout')
   })
 
-  it('sets connection state from DB', () => {
-    expect(source).toContain('setIsConnected')
+  it('tracks connection state for integrations', () => {
+    expect(source).toContain('connected')
+    expect(source).toContain('setConnected')
+  })
+
+  it('has an integrations tab for managing connections', () => {
+    expect(source).toContain('integrations')
   })
 })

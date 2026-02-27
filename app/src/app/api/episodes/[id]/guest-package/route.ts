@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { DEFAULT_USER_ID } from '@/lib/constants'
-import { generateGuestPackage } from '@/lib/guest-package/generator'
+import { requireAuth, isValidUUID } from '@/lib/auth'
+import { generateGuestPackage, generateAlsoHeardOn } from '@/lib/guest-package/generator'
 import { sendGuestPackageEmail, validateEmailAddress, EmailConfigurationError } from '@/lib/email/service'
 import { logger } from '@/lib/logger'
 import type { ApiResponse, Episode, Show } from '@/types/database'
-import type { SocialPostVariant, QuoteCard } from '@/lib/guest-package/generator'
+import type { SocialPostVariant, QuoteCard, AlsoHeardOnSection } from '@/lib/guest-package/generator'
 
 interface GuestPackageResponse {
   episode: Episode
@@ -15,6 +15,7 @@ interface GuestPackageResponse {
     quoteCards: QuoteCard[]
     emailSubject: string
     emailBody: string
+    alsoHeardOn?: AlsoHeardOnSection
   }
 }
 
@@ -32,7 +33,16 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { userId } = await requireAuth()
     const { id: episodeId } = await params
+
+    if (!isValidUUID(episodeId)) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Invalid ID format' },
+        { status: 400 }
+      )
+    }
+
     const supabase = await createClient()
 
     // Fetch episode with show relation
@@ -43,7 +53,7 @@ export async function GET(
         shows!inner(*)
       `)
       .eq('id', episodeId)
-      .eq('shows.user_id', DEFAULT_USER_ID)
+      .eq('shows.user_id', userId)
       .single()
 
     if (fetchError || !episode) {
@@ -72,6 +82,59 @@ export async function GET(
       episodeUrl
     )
 
+    // Enrich with "Also heard on..." section from Taddy cached appearances
+    if (episode.guest_name) {
+      try {
+        const { getCachedAppearances } = await import('@/lib/taddy/cache')
+        const appearances = await getCachedAppearances(episode.guest_name)
+        if (appearances.length > 0) {
+          // Look up podcast image URLs from taddy_podcast_cache
+          const podcastUuids = [
+            ...new Set(
+              appearances
+                .map((a) => a.podcastTaddyUuid)
+                .filter((uuid): uuid is string => !!uuid)
+            ),
+          ]
+
+          let podcastImageMap = new Map<string, string>()
+          if (podcastUuids.length > 0) {
+            const { data: podcasts } = await supabase
+              .from('taddy_podcast_cache')
+              .select('taddy_uuid, image_url')
+              .in('taddy_uuid', podcastUuids)
+
+            if (podcasts) {
+              podcastImageMap = new Map(
+                podcasts
+                  .filter((p) => p.image_url)
+                  .map((p) => [p.taddy_uuid, p.image_url as string])
+              )
+            }
+          }
+
+          const alsoHeardOn = generateAlsoHeardOn(
+            appearances
+              .filter((a) => a.podcastName && a.episodeName)
+              .map((a) => ({
+                podcastName: a.podcastName!,
+                episodeName: a.episodeName!,
+                datePublished: a.datePublished,
+                podcastImageUrl: a.podcastTaddyUuid
+                  ? podcastImageMap.get(a.podcastTaddyUuid)
+                  : undefined,
+              }))
+          )
+
+          if (alsoHeardOn.appearances.length > 0) {
+            packageContent.alsoHeardOn = alsoHeardOn
+          }
+        }
+      } catch {
+        // Silently fall back to package without Taddy data
+      }
+    }
+
     const response: GuestPackageResponse = {
       episode: episode as unknown as Episode,
       show: showData as unknown as Show,
@@ -83,6 +146,12 @@ export async function GET(
       error: null,
     })
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
     logger.error('Error fetching guest package', error instanceof Error ? error : { error })
     return NextResponse.json<ApiResponse<null>>(
       {
@@ -103,7 +172,16 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { userId } = await requireAuth()
     const { id: episodeId } = await params
+
+    if (!isValidUUID(episodeId)) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Invalid ID format' },
+        { status: 400 }
+      )
+    }
+
     const body: SendEmailRequest = await request.json()
     const supabase = await createClient()
 
@@ -126,7 +204,7 @@ export async function POST(
         shows!inner(*)
       `)
       .eq('id', episodeId)
-      .eq('shows.user_id', DEFAULT_USER_ID)
+      .eq('shows.user_id', userId)
       .single()
 
     if (fetchError || !episode) {
@@ -186,6 +264,13 @@ export async function POST(
       error: null,
     })
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     // Handle EmailConfigurationError specifically
     if (error instanceof EmailConfigurationError) {
       logger.error('Email service not configured', { error: error.message })

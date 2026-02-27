@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { DEFAULT_USER_ID } from '@/lib/constants';
+import { requireAuth, isValidUUID } from '@/lib/auth';
 import { analyzeSEO, type SEOAnalysisResult } from '@/lib/seo/analyzer';
 import {
   generatePodcastEpisodeSchema,
@@ -36,7 +36,16 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { userId } = await requireAuth();
     const { id: episodeId } = await params;
+
+    if (!isValidUUID(episodeId)) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Invalid ID format' },
+        { status: 400 }
+      );
+    }
+
     const supabase = await createClient();
 
     // Fetch the episode with show data
@@ -47,7 +56,7 @@ export async function GET(
         shows!inner(id, user_id, name, artwork_url)
       `)
       .eq('id', episodeId)
-      .eq('shows.user_id', DEFAULT_USER_ID)
+      .eq('shows.user_id', userId)
       .single();
 
     if (fetchError || !episode) {
@@ -84,8 +93,18 @@ export async function GET(
     return NextResponse.json<ApiResponse<SEOResponse>>({
       data: response,
       error: null,
+    }, {
+      headers: {
+        'Cache-Control': 'private, max-age=60, stale-while-revalidate=120',
+      },
     });
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
     console.error('Error getting SEO analysis:', error);
     return NextResponse.json<ApiResponse<null>>(
       {
@@ -106,7 +125,16 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { userId } = await requireAuth();
     const { id: episodeId } = await params;
+
+    if (!isValidUUID(episodeId)) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Invalid ID format' },
+        { status: 400 }
+      );
+    }
+
     const body: SEOFixRequest = await request.json();
     const supabase = await createClient();
 
@@ -118,7 +146,7 @@ export async function POST(
         shows!inner(user_id)
       `)
       .eq('id', episodeId)
-      .eq('shows.user_id', DEFAULT_USER_ID)
+      .eq('shows.user_id', userId)
       .single();
 
     if (fetchError || !episode) {
@@ -197,6 +225,12 @@ export async function POST(
       error: null,
     });
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
     console.error('Error applying SEO fix:', error);
     return NextResponse.json<ApiResponse<null>>(
       {
@@ -217,7 +251,16 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { userId } = await requireAuth();
     const { id: episodeId } = await params;
+
+    if (!isValidUUID(episodeId)) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Invalid ID format' },
+        { status: 400 }
+      );
+    }
+
     const supabase = await createClient();
 
     // Fetch the episode
@@ -228,7 +271,7 @@ export async function PUT(
         shows!inner(user_id, name, artwork_url)
       `)
       .eq('id', episodeId)
-      .eq('shows.user_id', DEFAULT_USER_ID)
+      .eq('shows.user_id', userId)
       .single();
 
     if (fetchError || !episode) {
@@ -292,6 +335,12 @@ export async function PUT(
       error: null,
     });
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
     console.error('Error regenerating SEO analysis:', error);
     return NextResponse.json<ApiResponse<null>>(
       {

@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import useShows from '@/hooks/use-shows';
+import { useUsage } from '@/hooks/use-usage';
+import { UpgradePrompt } from '@/components/ui/upgrade-prompt';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,12 +30,15 @@ interface QueueItem {
 type ContentStyle = 'educational' | 'conversational' | 'interview' | 'storytelling' | 'news';
 type ToneStyle = 'professional' | 'casual' | 'inspirational' | 'technical' | 'humorous';
 
+type EpisodeLanguage = 'en' | 'es' | 'pt' | 'fr' | 'de';
+
 interface ExpertContext {
   showName: string;
   episodeTitle: string;
   description: string;
   guestName: string;
   guestBio: string;
+  language: EpisodeLanguage;
   topics: string[];
 }
 
@@ -428,6 +433,13 @@ const Step1 = ({
 // ─── Step 2: Expert Context ───────────────────────────────────────────────────
 
 const TOPIC_SUGGESTIONS = ['Entrepreneurship', 'Mindset', 'Productivity', 'Leadership', 'Philosophy', 'Technology', 'Health & Wellness', 'Finance', 'Creativity', 'Science'];
+const LANGUAGE_OPTIONS: { value: EpisodeLanguage; label: string; flag: string }[] = [
+  { value: 'en', label: 'English', flag: '🇺🇸' },
+  { value: 'es', label: 'Spanish', flag: '🇪🇸' },
+  { value: 'pt', label: 'Portuguese', flag: '🇧🇷' },
+  { value: 'fr', label: 'French', flag: '🇫🇷' },
+  { value: 'de', label: 'German', flag: '🇩🇪' },
+];
 const Step2 = ({
   context,
   onChange
@@ -476,6 +488,23 @@ const Step2 = ({
         <div className="grid grid-cols-2 gap-4">
           {field("Guest Name", 'guestName', 'Full name or "Solo Episode"')}
           {field('Guest Bio / Role', 'guestBio', 'e.g. Author & Stoic philosopher')}
+        </div>
+        <div className="space-y-1.5">
+          <label className="font-sans text-[12px] font-medium text-muted-foreground block flex items-center gap-1.5">
+            <Globe className="w-3 h-3" />
+            Episode Language
+          </label>
+          <select
+            value={context.language}
+            onChange={e => onChange({ ...context, language: e.target.value as EpisodeLanguage })}
+            className="w-full px-3.5 py-3 rounded-xl text-sm font-sans text-foreground bg-card border border-border focus:outline-none focus:border-stone-400 focus:shadow-[0_0_0_3px_rgba(120,113,108,0.1)] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.04)] appearance-none cursor-pointer"
+          >
+            {LANGUAGE_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>
+                {opt.flag} {opt.label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -794,6 +823,7 @@ export const UploadWizard = ({
 }) => {
   const router = useRouter();
   const { shows } = useShows();
+  const { usage } = useUsage();
   const [currentStep, setCurrentStep] = useState(1);
   const [localQueue, setLocalQueue] = useState<QueueItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -803,6 +833,7 @@ export const UploadWizard = ({
     description: '',
     guestName: '',
     guestBio: '',
+    language: 'en',
     topics: []
   });
   const [styleSelection, setStyleSelection] = useState<StyleSelection>({
@@ -838,7 +869,9 @@ export const UploadWizard = ({
   const removeItem = useCallback((localId: string) => {
     setLocalQueue(prev => prev.filter(i => i.localId !== localId));
   }, []);
-  const canProceed = localQueue.length > 0;
+  const episodeLimitReached = usage ? usage.episodes.percentage >= 100 : false;
+  const episodeLimitApproaching = usage ? usage.episodes.percentage >= 80 && usage.episodes.percentage < 100 : false;
+  const canProceed = localQueue.length > 0 && !episodeLimitReached;
   const handleFinish = useCallback(async () => {
     if (localQueue.length === 0 || isSubmitting) return;
     setIsSubmitting(true);
@@ -879,6 +912,7 @@ export const UploadWizard = ({
           audio_url: audioUrl,
           guest_name: expertContext.guestName || null,
           guest_bio: expertContext.guestBio || null,
+          language: expertContext.language || 'en',
         }),
       });
       if (!createRes.ok) {
@@ -981,7 +1015,29 @@ export const UploadWizard = ({
           duration: 0.22,
           ease: 'easeOut'
         }}>
-            {currentStep === 1 && <Step1 queue={localQueue} onAddFile={addFile} onAddUrl={addUrl} onRemove={removeItem} />}
+            {currentStep === 1 && <>
+              {episodeLimitReached && (
+                <UpgradePrompt
+                  title="Episode limit reached"
+                  description="Upgrade your plan to continue uploading episodes."
+                  currentUsage={usage!.episodes.used}
+                  limit={usage!.episodes.limit}
+                  variant="banner"
+                  className="mb-4"
+                />
+              )}
+              {episodeLimitApproaching && (
+                <UpgradePrompt
+                  title="Approaching episode limit"
+                  description={`You've used ${usage!.episodes.used} of ${usage!.episodes.limit} episodes this period.`}
+                  currentUsage={usage!.episodes.used}
+                  limit={usage!.episodes.limit}
+                  variant="banner"
+                  className="mb-4"
+                />
+              )}
+              <Step1 queue={localQueue} onAddFile={episodeLimitReached ? () => {} : addFile} onAddUrl={episodeLimitReached ? () => {} : addUrl} onRemove={removeItem} />
+            </>}
             {currentStep === 2 && <Step2 context={expertContext} onChange={setExpertContext} />}
             {currentStep === 3 && <Step3 style={styleSelection} onChange={setStyleSelection} />}
           </motion.div>
@@ -1023,9 +1079,13 @@ export const UploadWizard = ({
             </motion.button>}
         </div>
 
-        {currentStep === 1 && !canProceed && <p className="text-center font-sans text-[11px] text-muted-foreground mt-2.5">
-            Select a file or import a URL to continue
-          </p>}
+        {currentStep === 1 && !canProceed && (
+          <p className="text-center font-sans text-[11px] text-muted-foreground mt-2.5">
+            {episodeLimitReached
+              ? 'Upgrade your plan to upload more episodes'
+              : 'Select a file or import a URL to continue'}
+          </p>
+        )}
 
         <div className="h-10" />
       </div>

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { detectViralMoments } from '@/lib/viral-moments/detector';
 import type { TranscriptSegment } from '@/lib/viral-moments/types';
 import { getSupabaseClient } from '@/lib/supabase-client';
-import { validateAuth, verifyEpisodeOwnership } from '@/lib/auth';
+import { requireAuth, verifyEpisodeOwnership } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { validateUUID } from '@/lib/validation';
 
@@ -11,7 +11,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await validateAuth();
+    const { userId } = await requireAuth();
 
     const rateLimitResult = await checkRateLimit(`viral-moments:${userId}`);
     if (!rateLimitResult.success) {
@@ -24,7 +24,7 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid episode ID format' }, { status: 400 });
     }
 
-    const hasAccess = await verifyEpisodeOwnership(episodeId);
+    const hasAccess = await verifyEpisodeOwnership(episodeId, userId);
     if (!hasAccess) {
       return NextResponse.json({ error: 'Episode not found' }, { status: 404 });
     }

@@ -20,6 +20,10 @@ import {
   type GenerateAssetsPayload,
   type AssetsResult,
 } from "@/trigger/jobs/generate-assets";
+import {
+  postTranscriptionPipelineTask,
+  type PostTranscriptionPipelinePayload,
+} from "@/trigger/jobs/post-transcription-pipeline";
 import type { AssetType } from "@/types/database";
 
 /**
@@ -59,6 +63,22 @@ export async function triggerTranscription(
   const handle = await transcribeAudioTask.trigger(payload, {
     tags: [`episode:${payload.episodeId}`, "transcription"],
     idempotencyKey: `transcribe-${payload.episodeId}`,
+  });
+
+  return { runId: handle.id };
+}
+
+/**
+ * Trigger the post-transcription processing pipeline.
+ * Called by the AssemblyAI webhook handler when a transcription completes.
+ * Runs vocabulary processing, show notes generation, SEO analysis, and asset generation.
+ */
+export async function triggerPostTranscriptionPipeline(
+  payload: PostTranscriptionPipelinePayload
+): Promise<{ runId: string }> {
+  const handle = await postTranscriptionPipelineTask.trigger(payload, {
+    tags: [`episode:${payload.episodeId}`, `show:${payload.showId}`, "post-transcription"],
+    idempotencyKey: `post-transcription-${payload.episodeId}-${Date.now()}`,
   });
 
   return { runId: handle.id };
@@ -216,4 +236,5 @@ export type {
   ShowNotesResult,
   GenerateAssetsPayload,
   AssetsResult,
+  PostTranscriptionPipelinePayload,
 };

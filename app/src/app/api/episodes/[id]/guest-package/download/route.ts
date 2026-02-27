@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { DEFAULT_USER_ID } from '@/lib/constants'
+import { requireAuth, isValidUUID } from '@/lib/auth'
 import { generateGuestPackage } from '@/lib/guest-package/generator'
 import { generateGuestPackageZipServer } from '@/lib/export/zip-generator'
 import { logger } from '@/lib/logger'
@@ -15,7 +15,16 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { userId } = await requireAuth()
     const { id: episodeId } = await params
+
+    if (!isValidUUID(episodeId)) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Invalid ID format' },
+        { status: 400 }
+      )
+    }
+
     const supabase = await createClient()
 
     // Fetch episode with show relation
@@ -26,7 +35,7 @@ export async function GET(
         shows!inner(*)
       `)
       .eq('id', episodeId)
-      .eq('shows.user_id', DEFAULT_USER_ID)
+      .eq('shows.user_id', userId)
       .single()
 
     if (fetchError || !episode) {
@@ -82,6 +91,12 @@ export async function GET(
       },
     })
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
     logger.error('Error generating guest package ZIP', error instanceof Error ? error : { error })
     return NextResponse.json<ApiResponse<null>>(
       {

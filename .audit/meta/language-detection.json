@@ -1,24 +1,41 @@
 {
   "primary_language": "TypeScript",
-  "languages": ["TypeScript", "JavaScript", "CSS", "SQL", "HTML"],
-  "frameworks": ["Next.js 16.1.6", "React 19.2.3", "Tailwind CSS 4", "Radix UI", "Trigger.dev v4"],
+  "languages": ["TypeScript", "JavaScript", "CSS", "SQL"],
+  "frameworks": {
+    "frontend": "Next.js 16 (App Router)",
+    "ui": "React 19 + Tailwind CSS v4",
+    "backend": "Next.js API Routes",
+    "database": "Supabase (PostgreSQL + pgvector)",
+    "background_jobs": "Trigger.dev v4",
+    "testing": "Vitest + Playwright"
+  },
   "has_frontend": true,
   "has_backend": true,
   "ai_detected": true,
-  "test_frameworks": ["Vitest", "Playwright", "@testing-library/react", "@testing-library/dom"],
-  "database": "Supabase (PostgreSQL with pgvector)",
+  "ai_services": ["xAI Grok (content generation)", "AssemblyAI (transcription)"],
   "package_manager": "npm",
-  "key_directories": [
-    "app/src/app",
-    "app/src/components",
-    "app/src/lib",
-    "app/src/trigger",
-    "app/src/hooks",
-    "app/src/types",
-    "supabase/migrations",
-    "app/test"
-  ],
-  "ai_services": ["xAI Grok", "AssemblyAI", "pgvector embeddings"],
-  "external_integrations": ["Stripe", "Resend", "Upstash Redis", "Buzzsprout API"],
-  "api_routes_count": 26
+  "monorepo": false,
+  "app_directory": "app/",
+  "key_directories": {
+    "pages": "app/src/app/",
+    "components": "app/src/components/",
+    "api_routes": "app/src/app/api/",
+    "lib": "app/src/lib/",
+    "hooks": "app/src/hooks/",
+    "types": "app/src/types/",
+    "trigger_jobs": "trigger/",
+    "migrations": "supabase/migrations/",
+    "tests": "app/test/"
+  },
+  "external_integrations": [
+    "Supabase (DB + Auth + Storage)",
+    "AssemblyAI (Transcription)",
+    "xAI Grok (AI Content Generation)",
+    "Trigger.dev (Background Jobs)",
+    "Upstash Redis (Caching + Rate Limiting)",
+    "Stripe (Payments)",
+    "Resend (Email)",
+    "Buzzsprout (Podcast Hosting)",
+    "Netlify (Deployment)"
+  ]
 }

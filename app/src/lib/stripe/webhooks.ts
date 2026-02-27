@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 import { stripe } from './client';
 import { createClient } from '@/lib/supabase/server';
-import { getTierByPriceId } from './products';
+import { getTierByPriceId } from './products.server';
 
 export async function constructEvent(
   payload: string | Buffer,
@@ -22,6 +22,18 @@ export async function handleCheckoutCompleted(
 
   if (!userId || !subscriptionId) {
     throw new Error(`Missing userId or subscriptionId in checkout session: ${JSON.stringify({ userId, subscriptionId })}`);
+  }
+
+  // Idempotency: skip if this subscription has already been created
+  const { data: existingSubscription } = await supabase
+    .from('subscriptions')
+    .select('id, updated_at')
+    .eq('stripe_subscription_id', subscriptionId)
+    .maybeSingle();
+
+  if (existingSubscription) {
+    console.log(`Subscription ${subscriptionId} already exists (id: ${existingSubscription.id}), skipping checkout handler`);
+    return;
   }
 
   const subscriptionData = await stripe.subscriptions.retrieve(subscriptionId);
@@ -90,12 +102,26 @@ export async function handleSubscriptionUpdated(
 
   const { data: existingSub, error: fetchError } = await supabase
     .from('subscriptions')
-    .select('user_id')
+    .select('user_id, updated_at')
     .eq('stripe_subscription_id', subscription.id)
     .single();
 
   if (fetchError || !existingSub) {
     throw new Error(`Subscription not found for update: ${subscription.id}, error: ${fetchError?.message}`);
+  }
+
+  // Idempotency: skip if our record was updated after this Stripe event was created
+  // Stripe subscription objects have a `created` timestamp (seconds) that stays constant,
+  // but we use the event delivery time as a guard. If our DB was already updated more
+  // recently than 5 seconds ago (accounting for clock skew), this is likely a duplicate.
+  if (existingSub.updated_at) {
+    const dbUpdatedAt = new Date(existingSub.updated_at).getTime();
+    const now = Date.now();
+    // If the record was updated less than 2 seconds ago, this is likely a duplicate delivery
+    if (now - dbUpdatedAt < 2000) {
+      console.log(`Subscription ${subscription.id} was just updated ${now - dbUpdatedAt}ms ago, likely duplicate — skipping`);
+      return;
+    }
   }
 
   // Access period timestamps (in seconds) from the subscription

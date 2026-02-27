@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe/client';
 import { createClient } from '@/lib/supabase/server';
-import { DEFAULT_USER_ID, APP_URL } from '@/lib/constants';
-import { getServerPriceId, type PricingTier } from '@/lib/stripe/products';
+import { requireAuth } from '@/lib/auth';
+import { APP_URL } from '@/lib/constants';
+import { getServerPriceId } from '@/lib/stripe/products.server';
+import type { PricingTier } from '@/lib/stripe/products';
 
 const VALID_TIERS: PricingTier[] = ['pro', 'agency'];
 
 export async function POST(request: NextRequest) {
   try {
+    const { userId } = await requireAuth();
     const body = await request.json();
 
     // Accept either tier name or price_id for backwards compatibility
@@ -30,11 +33,11 @@ export async function POST(request: NextRequest) {
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('email')
-      .eq('id', DEFAULT_USER_ID)
+      .eq('id', userId)
       .single();
 
     if (userError || !user) {
-      console.error('User not found:', { userError, userId: DEFAULT_USER_ID });
+      console.error('User not found:', { userError, userId });
       return NextResponse.json(
         { error: 'User not found' },
         { status: 500 }
@@ -42,7 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!user.email) {
-      console.error('User email not configured:', { userId: DEFAULT_USER_ID });
+      console.error('User email not configured:', { userId });
       return NextResponse.json(
         { error: 'User email not configured' },
         { status: 500 }
@@ -54,7 +57,7 @@ export async function POST(request: NextRequest) {
     const { data: existingSub, error: subError } = await supabase
       .from('subscriptions')
       .select('stripe_customer_id')
-      .eq('user_id', DEFAULT_USER_ID)
+      .eq('user_id', userId)
       .maybeSingle();
 
     if (subError && subError.code !== 'PGRST116') {
@@ -79,7 +82,7 @@ export async function POST(request: NextRequest) {
         const customer = await stripe.customers.create({
           email: user.email,
           metadata: {
-            user_id: DEFAULT_USER_ID,
+            user_id: userId,
           },
         });
         customerId = customer.id;
@@ -88,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
-      client_reference_id: DEFAULT_USER_ID,
+      client_reference_id: userId,
       line_items: [
         {
           price: priceId,
@@ -99,12 +102,18 @@ export async function POST(request: NextRequest) {
       success_url: `${APP_URL}/settings?tab=billing&success=true`,
       cancel_url: `${APP_URL}/settings?tab=billing&canceled=true`,
       metadata: {
-        user_id: DEFAULT_USER_ID,
+        user_id: userId,
       },
     });
 
     return NextResponse.json({ url: session.url });
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
     console.error('Checkout error:', error);
     return NextResponse.json(
       { error: 'Failed to create checkout session' },

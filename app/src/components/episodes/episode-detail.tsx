@@ -1,18 +1,24 @@
 "use client"
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, CheckCircle2, Loader2, Circle, ChevronRight, BarChart2, Zap, FileText, Package, AlignLeft, User, Brain, RefreshCw, Download, Copy, Check, Sparkles, Link2, Hash, Target, TrendingUp, AlertCircle, Globe, Clock, Mic2, MessageSquare, Twitter, Linkedin, Youtube, Mail, Image, BookOpen, Users, Wand2, Play, Volume2, ExternalLink, ChevronDown, ArrowUpRight, Radio, Activity, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Loader2, Circle, ChevronRight, BarChart2, Zap, FileText, Package, AlignLeft, User, Brain, RefreshCw, Download, Copy, Check, Sparkles, Link2, Hash, Target, TrendingUp, AlertCircle, Globe, Clock, Mic2, MessageSquare, Twitter, Linkedin, Youtube, Mail, Image, BookOpen, Users, Wand2, Play, Volume2, ExternalLink, ChevronDown, ArrowUpRight, Radio, Activity, X, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter, useParams } from 'next/navigation';
+import Link from 'next/link';
 import useEpisode from '@/hooks/use-episode';
 import useEpisodeAssets from '@/hooks/use-episode-assets';
 import useEpisodeSeo from '@/hooks/use-episode-seo';
 import type { Episode, GeneratedAsset, SEOAnalysis } from '@/types/database';
+import RSSTagsPanel from './rss-tags-panel';
+import PreInterviewPanel from './pre-interview-panel';
+import { AssetEditor } from './asset-editor';
+import RelatedEpisodes from './related-episodes';
+import LearningInsights from './learning-insights';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Tab = 'show-notes' | 'assets' | 'transcript' | 'guest' | 'intelligence';
+type Tab = 'show-notes' | 'assets' | 'transcript' | 'guest' | 'intelligence' | 'rss-tags';
 type ProcessingStep = 'upload' | 'transcribe' | 'generate' | 'ready';
 type StepStatus = 'done' | 'active' | 'pending';
 type AssetStatus = 'generated' | 'generating' | 'idle';
@@ -28,6 +34,7 @@ interface AssetItem {
   description: string;
   status: AssetStatus;
   accentColor: string;
+  content?: string;
 }
 interface AssetCategory {
   id: string;
@@ -131,6 +138,10 @@ const TAB_CONFIG: {
   id: 'intelligence',
   label: 'Intelligence',
   icon: Brain
+}, {
+  id: 'rss-tags',
+  label: 'RSS Tags',
+  icon: Radio
 }];
 
 // ─── SEO Score Gauge ─────────────────────────────────────────────────────────
@@ -284,8 +295,10 @@ const listItemVariants = {
 };
 interface ShowNotesTabProps {
   episode: Episode | null;
+  episodeId: string;
   seoScore: number | null;
   seoAnalysis: SEOAnalysis | null;
+  onSaved: () => Promise<void>;
 }
 
 // ─── Mock fallback data for show notes ──────────────────────────────────────
@@ -307,7 +320,92 @@ const MOCK_RESOURCES = [
 const MOCK_KEYWORDS = ['stoic philosophy', 'entrepreneur mindset', 'Marcus Aurelius', 'startup resilience', 'mental models', 'meditations', 'decision making'];
 const MOCK_SEO_SUGGESTIONS = ['Add 2 more internal links to related episodes', 'Consider a FAQ section for featured snippet targeting'];
 
-const ShowNotesTab = ({ episode, seoScore, seoAnalysis }: ShowNotesTabProps) => {
+type NotesFormat = 'html' | 'markdown' | 'plain';
+
+function stripHtmlTags(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<\/h[1-6]>/gi, '\n\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+const FormatToggle = ({ value, onChange }: { value: NotesFormat; onChange: (v: NotesFormat) => void }) => {
+  const options: { value: NotesFormat; label: string }[] = [
+    { value: 'html', label: 'HTML' },
+    { value: 'markdown', label: 'MD' },
+    { value: 'plain', label: 'TXT' },
+  ];
+  return (
+    <div className="flex items-center border border-border rounded-lg overflow-hidden">
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          onClick={() => onChange(opt.value)}
+          className={cn(
+            'px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider transition-colors',
+            value === opt.value
+              ? 'bg-stone-900 text-white'
+              : 'text-muted-foreground hover:text-foreground bg-muted'
+          )}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+};
+
+const ShowNotesTab = ({ episode, episodeId, seoScore, seoAnalysis, onSaved }: ShowNotesTabProps) => {
+  const [notesFormat, setNotesFormat] = useState<NotesFormat>('html');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const hasUnsavedChanges = isEditing && editContent !== (episode?.show_notes || '');
+
+  const startEditing = useCallback(() => {
+    setEditContent(episode?.show_notes || '');
+    setIsEditing(true);
+    setNotesFormat('markdown');
+    setTimeout(() => editTextareaRef.current?.focus(), 0);
+  }, [episode?.show_notes]);
+
+  const cancelEditing = useCallback(() => {
+    setIsEditing(false);
+    setEditContent('');
+  }, []);
+
+  const saveShowNotes = useCallback(async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/episodes/${episodeId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ show_notes: editContent }),
+      });
+      if (!res.ok) throw new Error('Failed to save show notes');
+      await onSaved();
+      setIsEditing(false);
+      setEditContent('');
+    } catch (err) {
+      console.error('Failed to save show notes:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [editContent, episodeId, isSaving, onSaved]);
+
   // Derive SEO keywords from analysis if available
   const keywords = useMemo(() => {
     if (seoAnalysis?.keyword_density) {
@@ -358,29 +456,99 @@ const ShowNotesTab = ({ episode, seoScore, seoAnalysis }: ShowNotesTabProps) => 
       <div className="bg-card border border-border rounded-lg overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
         {/* Toolbar */}
         <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-border bg-muted/50">
-          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Show Notes</span>
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              {isEditing ? 'Editing Show Notes' : 'Show Notes'}
+            </span>
+            {showNotesContent && !isEditing && <FormatToggle value={notesFormat} onChange={setNotesFormat} />}
+            {isEditing && (
+              <span className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-wider">Markdown</span>
+            )}
+          </div>
           <div className="flex items-center gap-1">
-            <CopyButton text={showNotesContent || 'Show notes content'} />
-            <button className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-md text-muted-foreground hover:text-foreground/80 hover:bg-accent border border-transparent hover:border-border transition-all text-[11px] font-sans font-medium">
-              <Download className="w-3 h-3" />
-              <span className="hidden sm:inline">Export</span>
-            </button>
-            <button className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-md bg-stone-900 text-white hover:bg-stone-800 transition-colors text-[11px] font-sans font-semibold ml-1 shadow-sm">
-              <RefreshCw className="w-3 h-3" />
-              <span className="hidden sm:inline">Regenerate</span>
-            </button>
+            {!isEditing && (
+              <>
+                <CopyButton text={
+                  notesFormat === 'html'
+                    ? (showNotesContent || 'Show notes content')
+                    : notesFormat === 'markdown'
+                      ? (episode?.show_notes || showNotesContent || 'Show notes content')
+                      : stripHtmlTags(episode?.show_notes_html || showNotesContent || 'Show notes content')
+                } />
+                <button className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-md text-muted-foreground hover:text-foreground/80 hover:bg-accent border border-transparent hover:border-border transition-all text-[11px] font-sans font-medium">
+                  <Download className="w-3 h-3" />
+                  <span className="hidden sm:inline">Export</span>
+                </button>
+                <button
+                  onClick={startEditing}
+                  className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-md text-muted-foreground hover:text-foreground/80 hover:bg-accent border border-transparent hover:border-border transition-all text-[11px] font-sans font-medium"
+                >
+                  <Pencil className="w-3 h-3" />
+                  <span className="hidden sm:inline">Edit</span>
+                </button>
+                <button className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-md bg-stone-900 text-white hover:bg-stone-800 transition-colors text-[11px] font-sans font-semibold ml-1 shadow-sm">
+                  <RefreshCw className="w-3 h-3" />
+                  <span className="hidden sm:inline">Regenerate</span>
+                </button>
+              </>
+            )}
+            {isEditing && (
+              <div className="flex items-center gap-2">
+                {hasUnsavedChanges && (
+                  <span className="font-mono text-[10px] text-amber-600 font-medium">Unsaved changes</span>
+                )}
+                <button
+                  onClick={cancelEditing}
+                  disabled={isSaving}
+                  className="bg-muted text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg font-sans text-[11px] transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveShowNotes}
+                  disabled={isSaving || !hasUnsavedChanges}
+                  className="flex items-center gap-1.5 bg-stone-900 text-white hover:bg-stone-800 px-3 py-1.5 rounded-lg font-sans text-[11px] font-semibold shadow-sm transition-colors disabled:opacity-50"
+                >
+                  {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                  <span>{isSaving ? 'Saving...' : 'Save'}</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Content */}
-        <div className="px-5 sm:px-8 py-5 sm:py-7 space-y-5 font-serif text-foreground/80 leading-relaxed max-h-[calc(100vh-320px)] overflow-y-auto">
-          {showNotesContent ? (
-            /* Render real show notes (HTML or plain text) */
-            episode?.show_notes_html ? (
-              <div dangerouslySetInnerHTML={{ __html: episode.show_notes_html }} className="prose prose-stone max-w-none" />
+        <div className={cn(
+          "px-5 sm:px-8 py-5 sm:py-7 space-y-5 font-serif text-foreground/80 leading-relaxed max-h-[calc(100vh-320px)] overflow-y-auto",
+          isEditing && "p-0"
+        )}>
+          {isEditing ? (
+            /* Edit mode: markdown textarea */
+            <textarea
+              ref={editTextareaRef}
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              className="w-full h-[calc(100vh-380px)] min-h-[400px] font-mono text-sm leading-relaxed p-5 sm:p-6 bg-card border-0 rounded-none resize-none focus:outline-none focus:ring-0 text-foreground/80 placeholder:text-muted-foreground/50"
+              placeholder="Enter your show notes in markdown..."
+              spellCheck={false}
+            />
+          ) : showNotesContent ? (
+            /* Render real show notes in the selected format */
+            notesFormat === 'html' ? (
+              episode?.show_notes_html ? (
+                <div dangerouslySetInnerHTML={{ __html: episode.show_notes_html }} className="prose prose-stone max-w-none" />
+              ) : (
+                <div className="whitespace-pre-wrap text-[14.5px] leading-[1.8] text-muted-foreground">
+                  {showNotesContent}
+                </div>
+              )
+            ) : notesFormat === 'markdown' ? (
+              <pre className="whitespace-pre-wrap font-mono text-[13px] leading-[1.75] text-foreground/70 bg-muted/30 rounded-lg p-4 border border-border overflow-x-auto">
+                {episode?.show_notes || showNotesContent}
+              </pre>
             ) : (
               <div className="whitespace-pre-wrap text-[14.5px] leading-[1.8] text-muted-foreground">
-                {showNotesContent}
+                {stripHtmlTags(episode?.show_notes_html || showNotesContent)}
               </div>
             )
           ) : (
@@ -774,51 +942,89 @@ const GenerateAllOverlay = ({
 const AssetRow = ({
   asset,
   iconBg,
-  index
+  index,
+  episodeId,
+  realAssetId,
+  realAssetContent,
 }: {
   asset: AssetItem;
   iconBg: string;
   index: number;
+  episodeId?: string;
+  realAssetId?: string;
+  realAssetContent?: string;
 }) => {
-  const [status, setStatus] = useState<AssetStatus>(asset.status);
+  const [status, setStatus] = useState<AssetStatus>(realAssetContent ? 'generated' : asset.status);
+  const [copied, setCopied] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const Icon = asset.icon;
   const handleGenerate = () => {
     if (status !== 'idle') return;
     setStatus('generating');
     setTimeout(() => setStatus('generated'), 2200);
   };
-  return <motion.div variants={listItemVariants} className="flex items-center gap-4 py-2.5 px-4 rounded-lg hover:bg-accent/50 transition-colors group">
-      <div className={cn('w-8 h-8 rounded-lg border flex items-center justify-center flex-shrink-0', iconBg)}>
-        <Icon className={cn('w-3.5 h-3.5', asset.accentColor)} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className="font-sans text-[13px] font-medium text-foreground">{asset.label}</span>
-          {status === 'generated' && <span className="flex items-center gap-1 font-mono text-[9px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-1.5 py-0.5 rounded-full uppercase tracking-wider">
-              <CheckCircle2 className="w-2.5 h-2.5" />
-              Ready
-            </span>}
+  const handleCopy = () => {
+    const text = realAssetContent || asset.content || `${asset.label}: ${asset.description}`;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
+  const hasRealContent = !!realAssetId && !!realAssetContent && !!episodeId;
+  return <motion.div variants={listItemVariants} className="flex flex-col">
+      <div className="flex items-center gap-4 py-2.5 px-4 rounded-lg hover:bg-accent/50 transition-colors group cursor-pointer" onClick={() => hasRealContent && setExpanded(!expanded)}>
+        <div className={cn('w-8 h-8 rounded-lg border flex items-center justify-center flex-shrink-0', iconBg)}>
+          <Icon className={cn('w-3.5 h-3.5', asset.accentColor)} />
         </div>
-        <p className="font-sans text-[11px] text-muted-foreground">{asset.description}</p>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="font-sans text-[13px] font-medium text-foreground">{asset.label}</span>
+            {(status === 'generated' || hasRealContent) && <span className="flex items-center gap-1 font-mono text-[9px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                <CheckCircle2 className="w-2.5 h-2.5" />
+                Ready
+              </span>}
+            {hasRealContent && <span className={cn('transition-transform duration-150', expanded ? 'rotate-90' : 'rotate-0')}>
+                <ChevronRight className="w-3 h-3 text-muted-foreground" />
+              </span>}
+          </div>
+          <p className="font-sans text-[11px] text-muted-foreground">{asset.description}</p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+          {(status === 'generated' || hasRealContent) && <>
+              <button onClick={handleCopy} aria-label={copied ? 'Copied!' : `Copy ${asset.label}`} className={cn('p-1.5 rounded-md transition-all opacity-0 group-hover:opacity-100', copied ? 'text-emerald-500 bg-emerald-50' : 'text-muted-foreground hover:text-accent-foreground hover:bg-accent')}>
+                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
+              <button aria-label={`Download ${asset.label}`} className="p-1.5 rounded-md text-muted-foreground hover:text-accent-foreground hover:bg-accent transition-all opacity-0 group-hover:opacity-100">
+                <Download className="w-3.5 h-3.5" />
+              </button>
+            </>}
+          {status === 'generating' && !hasRealContent && <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-50 border border-amber-200/60 text-[10px] font-sans font-semibold text-amber-600">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Generating...
+            </div>}
+          {status === 'idle' && !hasRealContent && <button onClick={handleGenerate} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-stone-900 text-white text-[10px] font-sans font-semibold hover:bg-stone-800 transition-colors shadow-sm">
+              <Wand2 className="w-3 h-3" />
+              Generate
+            </button>}
+        </div>
       </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
-        {status === 'generated' && <>
-            <button aria-label={`Copy ${asset.label}`} className="p-1.5 rounded-md text-muted-foreground hover:text-accent-foreground hover:bg-accent transition-all opacity-0 group-hover:opacity-100">
-              <Copy className="w-3.5 h-3.5" />
-            </button>
-            <button aria-label={`Download ${asset.label}`} className="p-1.5 rounded-md text-muted-foreground hover:text-accent-foreground hover:bg-accent transition-all opacity-0 group-hover:opacity-100">
-              <Download className="w-3.5 h-3.5" />
-            </button>
-          </>}
-        {status === 'generating' && <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-50 border border-amber-200/60 text-[10px] font-sans font-semibold text-amber-600">
-            <Loader2 className="w-3 h-3 animate-spin" />
-            Generating…
-          </div>}
-        {status === 'idle' && <button onClick={handleGenerate} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-stone-900 text-white text-[10px] font-sans font-semibold hover:bg-stone-800 transition-colors shadow-sm">
-            <Wand2 className="w-3 h-3" />
-            Generate
-          </button>}
-      </div>
+      <AnimatePresence>
+        {expanded && hasRealContent && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="px-4 pb-3 overflow-hidden"
+          >
+            <AssetEditor
+              episodeId={episodeId}
+              assetId={realAssetId}
+              assetType={asset.id}
+              initialContent={realAssetContent}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>;
 };
 
@@ -826,12 +1032,22 @@ const AssetRow = ({
 
 const CategoryCard = ({
   cat,
-  catIndex
+  catIndex,
+  episodeId,
+  assetMap,
 }: {
   cat: AssetCategory;
   catIndex: number;
+  episodeId?: string;
+  assetMap?: Map<string, GeneratedAsset>;
 }) => {
-  const readyCount = cat.assets.filter(a => a.status === 'generated').length;
+  const readyCount = cat.assets.filter(a => {
+    if (assetMap) {
+      const real = assetMap.get(a.id);
+      if (real) return true;
+    }
+    return a.status === 'generated';
+  }).length;
   const total = cat.assets.length;
   const allReady = readyCount === total;
   return <motion.div variants={listVariants} className="bg-card border border-border rounded-lg overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
@@ -848,13 +1064,77 @@ const CategoryCard = ({
 
       {/* Assets */}
       <motion.div className="divide-y divide-border/50" variants={listVariants} initial="hidden" animate="visible">
-        {cat.assets.map((asset, i) => <AssetRow key={asset.id} asset={asset} iconBg={cat.iconBg} index={i} />)}
+        {cat.assets.map((asset, i) => {
+          const realAsset = assetMap?.get(asset.id);
+          return <AssetRow
+            key={asset.id}
+            asset={asset}
+            iconBg={cat.iconBg}
+            index={i}
+            episodeId={episodeId}
+            realAssetId={realAsset?.id}
+            realAssetContent={realAsset?.content}
+          />;
+        })}
       </motion.div>
     </motion.div>;
 };
-const AssetsTab = () => {
+
+// Map from UI asset IDs to database asset_type values
+const UI_ID_TO_DB_TYPE: Record<string, string> = {
+  'show-notes': 'show_notes',
+  'chapter-markers': 'chapter_markers',
+  'episode-description': 'seo_description',
+  'twitter-thread': 'twitter_thread',
+  'linkedin-post': 'linkedin_post',
+  'instagram-captions': 'instagram_caption',
+  'blog-post': 'blog_post',
+  'newsletter': 'newsletter_email',
+  'guest-bio': 'guest_bio_short',
+  'guest-email': 'guest_promo_kit',
+  'audiogram-script': 'audiogram_clips',
+  'youtube-desc': 'youtube_description',
+  '1-liner': 'ai_summary_short',
+  'tldr': 'key_takeaways',
+};
+
+interface AssetsTabProps {
+  episodeId: string;
+  apiAssets: GeneratedAsset[];
+}
+
+const AssetsTab = ({ episodeId, apiAssets }: AssetsTabProps) => {
   const [showOverlay, setShowOverlay] = useState(false);
   const [allGenerated, setAllGenerated] = useState(false);
+
+  // Build a map from UI asset IDs to real API assets
+  const assetMap = useMemo(() => {
+    const map = new Map<string, GeneratedAsset>();
+    if (!apiAssets || apiAssets.length === 0) return map;
+
+    // Build reverse lookup: db type -> UI ID
+    const dbTypeToUiId = new Map<string, string>();
+    for (const [uiId, dbType] of Object.entries(UI_ID_TO_DB_TYPE)) {
+      dbTypeToUiId.set(dbType, uiId);
+    }
+
+    for (const asset of apiAssets) {
+      const uiId = dbTypeToUiId.get(asset.asset_type);
+      if (uiId) {
+        map.set(uiId, asset);
+      }
+    }
+    return map;
+  }, [apiAssets]);
+
+  const totalAssets = ASSET_CATEGORIES.reduce((sum, cat) => sum + cat.assets.length, 0);
+  const generatedCount = ASSET_CATEGORIES.reduce((sum, cat) => {
+    return sum + cat.assets.filter(a => {
+      if (assetMap.has(a.id)) return true;
+      return a.status === 'generated';
+    }).length;
+  }, 0);
+
   const handleGenerateAll = () => {
     setShowOverlay(true);
     setAllGenerated(false);
@@ -864,7 +1144,7 @@ const AssetsTab = () => {
       <div className="flex items-center justify-between px-1">
         <div>
           <p className="font-sans text-sm text-muted-foreground">
-            <span className="font-semibold text-foreground">7 of 14</span> assets generated
+            <span className="font-semibold text-foreground">{generatedCount} of {totalAssets}</span> assets generated
           </p>
         </div>
         <button onClick={handleGenerateAll} disabled={showOverlay} className={cn('flex items-center gap-2 px-4 py-2 rounded-lg text-[12px] font-sans font-semibold transition-all shadow-sm', showOverlay ? 'bg-stone-700 text-muted-foreground/80 cursor-not-allowed' : 'bg-stone-900 text-white hover:bg-stone-800')}>
@@ -883,7 +1163,7 @@ const AssetsTab = () => {
 
       {/* Category Cards with stagger */}
       <motion.div className="space-y-4" variants={listVariants} initial="hidden" animate="visible">
-        {ASSET_CATEGORIES.map((cat, i) => <CategoryCard key={cat.id} cat={cat} catIndex={i} />)}
+        {ASSET_CATEGORIES.map((cat, i) => <CategoryCard key={cat.id} cat={cat} catIndex={i} episodeId={episodeId} assetMap={assetMap} />)}
       </motion.div>
     </div>;
 };
@@ -1343,7 +1623,15 @@ const IntelligenceTab = () => <div className="space-y-4">
 
 // ─── Status → Signal Chain mapping ──────────────────────────────────────────
 
-const statusToSignalSteps = (status: Episode['status'] | undefined): SignalStep[] => {
+/**
+ * Maps episode status + detailed processing step to signal chain steps.
+ * Processing steps from Trigger.dev job: uploading → transcribing →
+ * vocabulary_processing → generating_show_notes → seo_analysis → generating_assets → completed
+ */
+const statusToSignalSteps = (
+  status: Episode['status'] | undefined,
+  processingStep?: string | null
+): SignalStep[] => {
   switch (status) {
     case 'completed':
       return [
@@ -1352,13 +1640,39 @@ const statusToSignalSteps = (status: Episode['status'] | undefined): SignalStep[
         { id: 'generate', label: 'Generate', status: 'done' },
         { id: 'ready', label: 'Ready', status: 'done' },
       ];
-    case 'processing':
-      return [
-        { id: 'upload', label: 'Upload', status: 'done' },
-        { id: 'transcribe', label: 'Transcribe', status: 'active' },
-        { id: 'generate', label: 'Generate', status: 'pending' },
-        { id: 'ready', label: 'Ready', status: 'pending' },
-      ];
+    case 'processing': {
+      // Map detailed processing steps to the 4 visual steps
+      const step = processingStep || 'transcribing';
+
+      // Steps that map to "Transcribe" phase
+      const transcribeSteps = ['uploading', 'transcribing', 'vocabulary_processing'];
+      // Steps that map to "Generate" phase
+      const generateSteps = ['generating_show_notes', 'seo_analysis', 'generating_assets'];
+
+      if (transcribeSteps.includes(step)) {
+        return [
+          { id: 'upload', label: 'Upload', status: 'done' },
+          { id: 'transcribe', label: 'Transcribe', status: 'active' },
+          { id: 'generate', label: 'Generate', status: 'pending' },
+          { id: 'ready', label: 'Ready', status: 'pending' },
+        ];
+      } else if (generateSteps.includes(step)) {
+        return [
+          { id: 'upload', label: 'Upload', status: 'done' },
+          { id: 'transcribe', label: 'Transcribe', status: 'done' },
+          { id: 'generate', label: 'Generate', status: 'active' },
+          { id: 'ready', label: 'Ready', status: 'pending' },
+        ];
+      } else {
+        // Default processing state
+        return [
+          { id: 'upload', label: 'Upload', status: 'done' },
+          { id: 'transcribe', label: 'Transcribe', status: 'active' },
+          { id: 'generate', label: 'Generate', status: 'pending' },
+          { id: 'ready', label: 'Ready', status: 'pending' },
+        ];
+      }
+    }
     case 'failed':
       return [
         { id: 'upload', label: 'Upload', status: 'done' },
@@ -1385,6 +1699,7 @@ const STATUS_CONFIG: Record<Episode['status'], { dot: string; text: string; bg: 
   processing: { dot: 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.5)] animate-pulse', text: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200/60', label: 'Processing' },
   pending: { dot: 'bg-stone-400', text: 'text-stone-600', bg: 'bg-stone-50', border: 'border-stone-200/60', label: 'Pending' },
   failed: { dot: 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]', text: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200/60', label: 'Failed' },
+  scheduled: { dot: 'bg-sky-500 shadow-[0_0_6px_rgba(14,165,233,0.5)]', text: 'text-sky-700', bg: 'bg-sky-50', border: 'border-sky-200/60', label: 'Scheduled' },
 };
 
 // ─── Duration formatting ────────────────────────────────────────────────────
@@ -1398,22 +1713,87 @@ const formatDuration = (seconds: number | null | undefined): string => {
   return `${m}:${String(s).padStart(2, '0')}`;
 };
 
+/**
+ * Estimate remaining processing time based on audio duration and current step.
+ * Transcription: ~0.5x audio duration; AI generation: ~60 seconds.
+ */
+const estimateEta = (
+  audioDuration: number | null | undefined,
+  processingStep: string | null | undefined
+): string => {
+  if (!audioDuration) return 'Estimating...';
+
+  const generateSteps = ['generating_show_notes', 'seo_analysis', 'generating_assets'];
+  const step = processingStep || 'transcribing';
+
+  let remainingSeconds: number;
+
+  if (generateSteps.includes(step)) {
+    // Already past transcription — only generation phase remains
+    remainingSeconds = 60;
+  } else {
+    // Still in transcription phase
+    remainingSeconds = Math.round(audioDuration * 0.5) + 60;
+  }
+
+  const mins = Math.ceil(remainingSeconds / 60);
+  return `~${mins} min remaining`;
+};
+
 export const EpisodeDetail = () => {
   const router = useRouter();
   const params = useParams();
   const episodeId = params?.id as string;
 
   // ── Data hooks ──
-  const { episode, isLoading: episodeLoading, error: episodeError } = useEpisode(episodeId);
-  // TODO: Wire apiAssets into AssetsTab when asset mapping is implemented
-  const { assets: apiAssets, isLoading: assetsLoading } = useEpisodeAssets(episodeId); // eslint-disable-line @typescript-eslint/no-unused-vars
+  const { episode, isLoading: episodeLoading, error: episodeError, processingStep, refetch } = useEpisode(episodeId);
+  const { assets: apiAssets, isLoading: assetsLoading } = useEpisodeAssets(episodeId);
   const { seoData, isLoading: _seoLoading } = useEpisodeSeo(episodeId);
-  void apiAssets; void assetsLoading; void _seoLoading; // referenced below via seoData; assets tab TODO
+  void assetsLoading; void _seoLoading; // used indirectly via seoData
 
   const [activeTab, setActiveTab] = useState<Tab>('show-notes');
 
+  // ── Inline title editing ──
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
+  const startEditingTitle = useCallback(() => {
+    setEditTitle(episode?.title || '');
+    setIsEditingTitle(true);
+    // Focus the input after React renders it
+    setTimeout(() => titleInputRef.current?.focus(), 0);
+  }, [episode?.title]);
+
+  const cancelEditingTitle = useCallback(() => {
+    setIsEditingTitle(false);
+    setEditTitle('');
+  }, []);
+
+  const saveTitle = useCallback(async () => {
+    const trimmed = editTitle.trim();
+    if (!trimmed || trimmed === episode?.title) {
+      cancelEditingTitle();
+      return;
+    }
+    try {
+      const res = await fetch(`/api/episodes/${episodeId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: trimmed }),
+      });
+      if (!res.ok) throw new Error('Failed to update title');
+      await refetch();
+    } catch (err) {
+      console.error('Failed to save episode title:', err);
+    } finally {
+      setIsEditingTitle(false);
+      setEditTitle('');
+    }
+  }, [editTitle, episode?.title, episodeId, refetch, cancelEditingTitle]);
+
   // ── Derived data ──
-  const signalSteps = useMemo(() => statusToSignalSteps(episode?.status), [episode?.status]);
+  const signalSteps = useMemo(() => statusToSignalSteps(episode?.status, processingStep), [episode?.status, processingStep]);
   const statusCfg = episode?.status ? STATUS_CONFIG[episode.status] : STATUS_CONFIG.completed;
   const seoScore = seoData?.seo_score ?? episode?.seo_score ?? null;
   const seoAnalysis = seoData?.seo_analysis ?? episode?.seo_analysis ?? null;
@@ -1447,10 +1827,21 @@ export const EpisodeDetail = () => {
         {/* ── Header ── */}
         <div className="mb-5 sm:mb-6">
           {/* Back link */}
-          <button onClick={() => router.push('/episodes')} aria-label="Back to all episodes" className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground/80 transition-colors mb-4 sm:mb-5 group">
+          <button onClick={() => router.push('/episodes')} aria-label="Back to all episodes" className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground/80 transition-colors mb-3 sm:mb-4 group">
             <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
             <span className="font-sans text-[12px] font-medium">All Episodes</span>
           </button>
+
+          {/* Breadcrumb navigation */}
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 mb-4 sm:mb-5">
+            <Link href="/episodes" className="font-mono text-[11px] text-muted-foreground hover:text-foreground transition-colors">
+              Episodes
+            </Link>
+            <ChevronRight className="w-3 h-3 text-muted-foreground/50 flex-shrink-0" />
+            <span className="font-mono text-[11px] text-muted-foreground/70 truncate max-w-[240px] sm:max-w-[400px]">
+              {episode?.title || 'Untitled Episode'}
+            </span>
+          </nav>
 
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
             {/* Left: title + meta */}
@@ -1467,9 +1858,39 @@ export const EpisodeDetail = () => {
                   <span className="font-mono text-[10px]">{formatDuration(episode?.audio_duration_seconds)}</span>
                 </div>
               </div>
-              <h1 className="font-sans font-bold text-xl sm:text-[22px] text-foreground tracking-tight leading-tight mb-1.5">
-                {episode?.title || 'Untitled Episode'}
-              </h1>
+              {/* Inline-editable title */}
+              {isEditingTitle ? (
+                <input
+                  ref={titleInputRef}
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      saveTitle();
+                    } else if (e.key === 'Escape') {
+                      cancelEditingTitle();
+                    }
+                  }}
+                  onBlur={saveTitle}
+                  className="font-sans font-bold text-xl sm:text-[22px] text-foreground tracking-tight leading-tight mb-1.5 w-full bg-transparent border-b-2 border-blue-500 outline-none py-0.5 -my-0.5"
+                  aria-label="Edit episode title"
+                />
+              ) : (
+                <div className="group/title flex items-center gap-2 mb-1.5">
+                  <h1 className="font-sans font-bold text-xl sm:text-[22px] text-foreground tracking-tight leading-tight">
+                    {episode?.title || 'Untitled Episode'}
+                  </h1>
+                  <button
+                    onClick={startEditingTitle}
+                    aria-label="Edit episode title"
+                    className="opacity-0 group-hover/title:opacity-100 transition-opacity p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
               <p className="font-serif text-sm text-muted-foreground leading-relaxed">
                 {episode?.description || 'No description available.'}
               </p>
@@ -1479,6 +1900,14 @@ export const EpisodeDetail = () => {
             <div className="bg-card border border-border rounded-xl px-4 sm:px-5 py-3 sm:py-4 shadow-[0_2px_4px_rgba(0,0,0,0.05)] flex flex-col items-center gap-2 sm:flex-shrink-0 overflow-x-auto">
               <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Signal Chain</span>
               <SignalChain steps={signalSteps} />
+              {episode?.status === 'processing' && (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <Clock className="w-3 h-3 text-muted-foreground" />
+                  <span className="font-mono text-[10px] text-muted-foreground">
+                    {estimateEta(episode?.audio_duration_seconds, processingStep)}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1513,11 +1942,12 @@ export const EpisodeDetail = () => {
           duration: 0.2,
           ease: 'easeOut' as const
         }}>
-            {activeTab === 'show-notes' && <ShowNotesTab episode={episode} seoScore={seoScore} seoAnalysis={seoAnalysis} />}
-            {activeTab === 'assets' && <AssetsTab />}
+            {activeTab === 'show-notes' && <ShowNotesTab episode={episode} episodeId={episodeId} seoScore={seoScore} seoAnalysis={seoAnalysis} onSaved={refetch} />}
+            {activeTab === 'assets' && <AssetsTab episodeId={episodeId} apiAssets={apiAssets} />}
             {activeTab === 'transcript' && <TranscriptTab episode={episode} />}
             {activeTab === 'guest' && <GuestPackageTab episode={episode} />}
-            {activeTab === 'intelligence' && <IntelligenceTab />}
+            {activeTab === 'intelligence' && <><IntelligenceTab /><div className="mt-6"><RelatedEpisodes episodeId={episodeId} /></div><div className="mt-6"><LearningInsights episodeId={episodeId} /></div><div className="mt-6"><PreInterviewPanel episodeId={episodeId} guestName={episode?.guest_name} /></div></>}
+            {activeTab === 'rss-tags' && <RSSTagsPanel episodeId={episodeId} />}
           </motion.div>
         </AnimatePresence>
 

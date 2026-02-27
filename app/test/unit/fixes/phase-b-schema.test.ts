@@ -63,18 +63,16 @@ describe('Phase B: TypeScript types match schema', () => {
   })
 })
 
-describe('Phase B: Episode shows access uses object (not array)', () => {
-  it('dashboard page uses episode.shows?.name (not [0].name)', () => {
-    const source = readSource('app/(app)/page.tsx')
-    // Should NOT have .shows?.[0]?.name
-    expect(source).not.toContain('shows?.[0]?.name')
-    // Should have direct .shows?.name
-    expect(source).toContain('shows?.name')
+describe('Phase B: Episode shows access uses hooks (not inline array)', () => {
+  it('episodes page delegates to EpisodeList component', () => {
+    const source = readSource('app/(app)/episodes/page.tsx')
+    expect(source).toContain('EpisodeList')
   })
 
-  it('episodes list page uses episode.shows?.name (not [0].name)', () => {
-    const source = readSource('app/(app)/episodes/page.tsx')
+  it('EpisodeList component fetches shows via hook (not inline query)', () => {
+    const source = readSource('components/episodes/episode-list.tsx')
+    expect(source).toContain('useShows')
+    // Should NOT have the old .shows?.[0]?.name pattern on episode objects
     expect(source).not.toContain('shows?.[0]?.name')
-    expect(source).toContain('shows?.name')
   })
 })

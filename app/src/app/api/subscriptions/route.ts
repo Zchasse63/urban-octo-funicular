@@ -1,17 +1,18 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { DEFAULT_USER_ID } from '@/lib/constants';
+import { requireAuth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    const { userId } = await requireAuth();
     const supabase = await createClient();
 
     const { data: subscription, error } = await supabase
       .from('subscriptions')
       .select('*, users!inner(subscription_tier)')
-      .eq('user_id', DEFAULT_USER_ID)
+      .eq('user_id', userId)
       .single();
 
     if (error && error.code !== 'PGRST116') {
@@ -26,7 +27,7 @@ export async function GET() {
       const { data: user } = await supabase
         .from('users')
         .select('subscription_tier')
-        .eq('id', DEFAULT_USER_ID)
+        .eq('id', userId)
         .single();
 
       return NextResponse.json({
@@ -45,6 +46,12 @@ export async function GET() {
       current_period_end: subscription.current_period_end,
     });
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
     console.error('Subscription error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { devGuard } from '@/lib/api/dev-guard'
 
-const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000001'
+// Seed route uses a hardcoded user ID for development data only
+const SEED_USER_ID = '00000000-0000-0000-0000-000000000001'
 
 // ─── Show Notes Content ───
 
@@ -167,6 +168,10 @@ function makeSeoDescription(title: string): string {
 // ─── Main Seed Logic ───
 
 export async function POST() {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not available in production' }, { status: 403 })
+  }
+
   const guard = devGuard()
   if (guard) return guard
 
@@ -188,14 +193,14 @@ export async function POST() {
       .from('shows')
       .insert([
         {
-          user_id: DEFAULT_USER_ID,
+          user_id: SEED_USER_ID,
           name: 'The AI Breakdown',
           description: 'Weekly deep-dives into artificial intelligence, machine learning, and their impact on business and society',
           default_language: 'en',
           style_preferences: { tone: 'analytical yet accessible', format_preferences: { show_notes_style: 'detailed' } },
         },
         {
-          user_id: DEFAULT_USER_ID,
+          user_id: SEED_USER_ID,
           name: 'Founder Fuel',
           description: 'Conversations with startup founders about building, scaling, and surviving the entrepreneurial journey',
           default_language: 'en',

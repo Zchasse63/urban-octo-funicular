@@ -2,8 +2,8 @@
  * PodBrain Application Constants
  */
 
-// Single-user mode placeholder - will be replaced with auth pre-launch
-// Must match the default user inserted in 0001_initial_schema.sql
+// DEPRECATED: No longer used. Auth now uses real user IDs from Supabase Auth.
+// Kept for backwards compatibility only - do not import this in new code.
 export const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000001'
 
 // Application URL
@@ -145,3 +145,9 @@ export const ASSET_TYPES = [
   'ai_summary_detailed',
   'highlight_reel',
 ] as const
+
+// Taddy API — Podcast search and discovery
+export const TADDY_API_URL = 'https://api.taddy.org'
+export const TADDY_CACHE_TTL_HOURS = 24 * 7 // 7 days
+export const TADDY_MONTHLY_REQUEST_LIMIT = 100_000 // Pro plan
+export const TADDY_DEFAULT_PAGE_SIZE = 25

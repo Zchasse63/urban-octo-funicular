@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { DEFAULT_USER_ID } from '@/lib/constants';
 import { devGuard } from '@/lib/api/dev-guard';
 
+// Test route uses a hardcoded user ID for development data only
+const TEST_USER_ID = '00000000-0000-0000-0000-000000000001';
+
 export async function GET() {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not available in production' }, { status: 403 });
+  }
+
   const guard = devGuard();
   if (guard) return guard;
 
@@ -14,7 +20,7 @@ export async function GET() {
     const { data: show, error: showError } = await supabase
       .from('shows')
       .insert({
-        user_id: DEFAULT_USER_ID,
+        user_id: TEST_USER_ID,
         name: `Guest Package Test Show ${Date.now()}`,
         description: 'Test show for guest package feature',
         default_language: 'en',

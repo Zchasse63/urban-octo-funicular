@@ -1,7 +1,7 @@
 // PodBrain Database Types
 // Based on PRD Data Model
 
-export type EpisodeStatus = 'pending' | 'processing' | 'completed' | 'failed'
+export type EpisodeStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'scheduled'
 
 export type AssetType =
   // Core Content

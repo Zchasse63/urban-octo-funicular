@@ -49,194 +49,8 @@ interface Toast {
 }
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
-
-const VOCAB_TERMS: VocabTerm[] = [{
-  id: 'v1',
-  term: 'Marcus Aurelius',
-  phonetic: 'MAR-kus aw-REE-lee-us',
-  category: 'Person',
-  usageCount: 47,
-  accuracyBoost: 18,
-  status: 'active',
-  addedDate: '2024-05-01',
-  tags: ['stoic', 'philosophy'],
-  usageTrend: [3, 5, 7, 4, 8, 6, 9],
-  pronunciationValidated: true
-}, {
-  id: 'v2',
-  term: 'Stoicism',
-  phonetic: 'STOH-ih-siz-um',
-  category: 'Technical',
-  usageCount: 34,
-  accuracyBoost: 12,
-  status: 'active',
-  addedDate: '2024-05-01',
-  tags: ['philosophy'],
-  usageTrend: [4, 3, 6, 5, 7, 5, 8],
-  pronunciationValidated: true
-}, {
-  id: 'v3',
-  term: 'Ryan Holiday',
-  phonetic: 'RY-un HOL-ih-day',
-  category: 'Person',
-  usageCount: 28,
-  accuracyBoost: 15,
-  status: 'active',
-  addedDate: '2024-05-08',
-  tags: ['author'],
-  usageTrend: [2, 4, 3, 5, 4, 6, 5],
-  pronunciationValidated: true
-}, {
-  id: 'v4',
-  term: 'Memento Mori',
-  phonetic: 'meh-MEN-toh MOR-ee',
-  category: 'Technical',
-  usageCount: 19,
-  accuracyBoost: 22,
-  status: 'active',
-  addedDate: '2024-05-08',
-  tags: ['stoic'],
-  usageTrend: [1, 2, 3, 2, 4, 3, 5],
-  pronunciationValidated: false
-}, {
-  id: 'v5',
-  term: 'Dichotomy of Control',
-  phonetic: 'dy-KOT-oh-mee',
-  category: 'Technical',
-  usageCount: 16,
-  accuracyBoost: 14,
-  status: 'active',
-  addedDate: '2024-05-08',
-  tags: ['philosophy', 'stoic'],
-  usageTrend: [2, 1, 3, 2, 3, 4, 2],
-  pronunciationValidated: false
-}, {
-  id: 'v6',
-  term: 'Hubspot',
-  phonetic: 'HUB-spot',
-  category: 'Brand',
-  usageCount: 31,
-  accuracyBoost: 9,
-  status: 'active',
-  addedDate: '2024-04-24',
-  tags: ['saas'],
-  usageTrend: [5, 4, 6, 3, 5, 4, 4],
-  pronunciationValidated: true
-}, {
-  id: 'v7',
-  term: 'Y Combinator',
-  phonetic: 'why COM-bih-nay-tor',
-  category: 'Brand',
-  usageCount: 24,
-  accuracyBoost: 11,
-  status: 'active',
-  addedDate: '2024-04-24',
-  tags: ['vc', 'startup'],
-  usageTrend: [3, 2, 4, 3, 3, 5, 4],
-  pronunciationValidated: true
-}, {
-  id: 'v8',
-  term: 'SaaS',
-  phonetic: 'SASS',
-  category: 'Acronym',
-  usageCount: 52,
-  accuracyBoost: 8,
-  status: 'active',
-  addedDate: '2024-04-17',
-  tags: ['startup'],
-  usageTrend: [6, 8, 7, 9, 8, 10, 9],
-  pronunciationValidated: true
-}, {
-  id: 'v9',
-  term: 'Epictetus',
-  phonetic: 'ep-ik-TEE-tus',
-  category: 'Person',
-  usageCount: 11,
-  accuracyBoost: 24,
-  status: 'review',
-  notes: 'Verify pronunciation',
-  addedDate: '2024-05-15',
-  tags: ['stoic', 'philosophy'],
-  usageTrend: [1, 0, 2, 1, 1, 2, 3],
-  pronunciationValidated: false
-}, {
-  id: 'v10',
-  term: 'Amor Fati',
-  phonetic: 'ah-MORE FAH-tee',
-  category: 'Technical',
-  usageCount: 8,
-  accuracyBoost: 20,
-  status: 'active',
-  addedDate: '2024-05-15',
-  tags: ['stoic'],
-  usageTrend: [0, 1, 1, 2, 1, 1, 2],
-  pronunciationValidated: false
-}, {
-  id: 'v11',
-  term: 'AngelList',
-  phonetic: 'AYN-jel-list',
-  category: 'Brand',
-  usageCount: 14,
-  accuracyBoost: 7,
-  status: 'pending',
-  addedDate: '2024-05-18',
-  tags: ['startup', 'vc'],
-  usageTrend: [1, 1, 2, 1, 2, 3, 2],
-  pronunciationValidated: false
-}, {
-  id: 'v12',
-  term: 'ROI',
-  phonetic: 'R-O-I',
-  category: 'Acronym',
-  usageCount: 41,
-  accuracyBoost: 5,
-  status: 'active',
-  addedDate: '2024-04-17',
-  tags: ['business'],
-  usageTrend: [5, 4, 6, 5, 7, 6, 8],
-  pronunciationValidated: true
-}];
-const AI_SUGGESTIONS: AISuggestion[] = [{
-  id: 's1',
-  term: 'Seneca',
-  phonetic: 'SEN-ih-kuh',
-  category: 'Person',
-  confidence: 94,
-  sourceEpisode: 'EP 12 – Stoic Entrepreneur',
-  detectedCount: 7
-}, {
-  id: 's2',
-  term: 'Zeno of Citium',
-  phonetic: 'ZEE-noh',
-  category: 'Person',
-  confidence: 88,
-  sourceEpisode: 'EP 12 – Stoic Entrepreneur',
-  detectedCount: 4
-}, {
-  id: 's3',
-  term: 'Premeditatio Malorum',
-  phonetic: 'preh-MED-ih-TAT-ee-oh',
-  category: 'Technical',
-  confidence: 91,
-  sourceEpisode: 'EP 12 – Stoic Entrepreneur',
-  detectedCount: 3
-}, {
-  id: 's4',
-  term: 'Sequoia Capital',
-  phonetic: 'seh-KWOY-uh',
-  category: 'Brand',
-  confidence: 82,
-  sourceEpisode: 'EP 11 – VC Landscape',
-  detectedCount: 9
-}, {
-  id: 's5',
-  term: 'PMF',
-  phonetic: 'P-M-F',
-  category: 'Acronym',
-  confidence: 97,
-  sourceEpisode: 'EP 11 – VC Landscape',
-  detectedCount: 12
-}];
+// Hardcoded fallback data removed. Terms are fetched via the useVocabulary hook.
+// AI suggestions will be populated from future API integration.
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1122,7 +936,7 @@ export const VocabularyPage = () => {
   }, [apiTerms]);
 
   const [terms, setTerms] = useState<VocabTerm[]>([]);
-  const [suggestions, setSuggestions] = useState<AISuggestion[]>(AI_SUGGESTIONS);
+  const [suggestions, setSuggestions] = useState<AISuggestion[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<TermCategory | 'All'>('All');
@@ -1593,16 +1407,28 @@ export const VocabularyPage = () => {
                       <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
                         <BookOpen className="w-5 h-5 text-muted-foreground/80" />
                       </div>
-                      <p className="font-sans text-sm text-muted-foreground">
-                        No terms match{' '}
-                        {debouncedQuery ? <><span className="font-semibold text-muted-foreground">"{debouncedQuery}"</span></> : <span className="font-semibold text-muted-foreground">{selectedCategory}</span>}
-                      </p>
-                      <button onClick={() => {
-                    setSearchQuery('');
-                    setSelectedCategory('All');
-                  }} className="font-sans text-[11px] text-muted-foreground hover:text-accent-foreground underline underline-offset-2 transition-colors">
-                        Clear filters
-                      </button>
+                      {terms.length === 0 && !debouncedQuery && selectedCategory === 'All' ? <>
+                        <p className="font-sans text-sm text-muted-foreground text-center">
+                          Your vocabulary is empty
+                        </p>
+                        <p className="font-sans text-[11px] text-muted-foreground/70 text-center max-w-xs leading-relaxed">
+                          Add custom terms to improve transcription accuracy for names, brands, and technical jargon.
+                        </p>
+                        <button onClick={() => setShowAddModal(true)} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-stone-900 text-white text-[12px] font-sans font-semibold hover:bg-stone-800 transition-colors shadow-sm mt-1">
+                          <Plus className="w-3.5 h-3.5" />Add Your First Term
+                        </button>
+                      </> : <>
+                        <p className="font-sans text-sm text-muted-foreground">
+                          No terms match{' '}
+                          {debouncedQuery ? <><span className="font-semibold text-muted-foreground">&quot;{debouncedQuery}&quot;</span></> : <span className="font-semibold text-muted-foreground">{selectedCategory}</span>}
+                        </p>
+                        <button onClick={() => {
+                      setSearchQuery('');
+                      setSelectedCategory('All');
+                    }} className="font-sans text-[11px] text-muted-foreground hover:text-accent-foreground underline underline-offset-2 transition-colors">
+                          Clear filters
+                        </button>
+                      </>}
                     </motion.div> : <motion.div key={`${debouncedQuery}-${selectedCategory}-${sortField}-${sortDir}`} variants={listVariants} initial="hidden" animate="visible">
                       {filteredTerms.map((term, i) => <TermRow key={term.id} term={term} index={i} onDelete={handleDelete} selected={selectedIds.has(term.id)} onSelect={handleSelect} />)}
                     </motion.div>}
