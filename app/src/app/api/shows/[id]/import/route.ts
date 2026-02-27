@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth, isValidUUID } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { canCreateEpisode, getTierLimits, getUserTier, getEpisodeCount } from '@/lib/tier-limits';
 import { parseRSSFeed } from '@/lib/rss/parser';
 import type { ApiResponse } from '@/types/database';
 
@@ -89,6 +90,22 @@ export async function POST(
       );
     }
 
+    // Check episode tier limits before importing
+    const tier = await getUserTier(userId);
+    const limits = getTierLimits(tier);
+    const currentCount = await getEpisodeCount(userId);
+    const remainingQuota = Math.max(0, limits.episodesPerMonth - currentCount);
+
+    if (remainingQuota === 0) {
+      return NextResponse.json<ApiResponse<null>>(
+        {
+          data: null,
+          error: `You've reached your ${limits.episodesPerMonth} episodes/month limit on the ${tier} plan. Upgrade to import more episodes.`,
+        },
+        { status: 403 }
+      );
+    }
+
     // Parse the RSS feed
     let feed;
     try {
@@ -110,8 +127,9 @@ export async function POST(
       });
     }
 
-    // Limit episodes
-    const episodesToProcess = feed.episodes.slice(0, MAX_IMPORT_EPISODES);
+    // Limit episodes to both the max import limit AND remaining tier quota
+    const maxEpisodes = Math.min(MAX_IMPORT_EPISODES, remainingQuota);
+    const episodesToProcess = feed.episodes.slice(0, maxEpisodes);
 
     // Fetch existing episodes for this show to detect duplicates
     // We check by audio_url since guid may differ across feeds

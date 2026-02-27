@@ -95,24 +95,26 @@ const INTEGRATIONS: Integration[] = [{
   connected: false,
   badge: 'Coming Soon'
 }];
+// Placeholder API keys for UI demonstration — will be replaced with
+// real user API key management backed by the database.
 const API_KEYS: ApiKey[] = [{
   id: 'key1',
   name: 'Production Studio',
-  key: 'pb_live_sk_a4f8c2e1b9d7f3a0c5e2',
+  key: 'pb_live_sk_••••••••••••••••••••',
   lastUsed: '2 minutes ago',
   created: 'Mar 15, 2024',
   status: 'active'
 }, {
   id: 'key2',
   name: 'Zapier Integration',
-  key: 'pb_live_sk_b9e3d7c1a0f4e8b2c6d9',
+  key: 'pb_live_sk_••••••••••••••••••••',
   lastUsed: '3 hours ago',
   created: 'Feb 2, 2024',
   status: 'active'
 }, {
   id: 'key3',
   name: 'Dev / Staging',
-  key: 'pb_test_sk_c2a9f1e7b4d0c8e3a7f2',
+  key: 'pb_test_sk_••••••••••••••••••••',
   lastUsed: '14 days ago',
   created: 'Jan 10, 2024',
   status: 'expired'

@@ -8,3 +8,36 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# Security headers for all pages
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+# Cache static assets aggressively
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Cache fonts
+[[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Webhook endpoints must not be cached
+[[headers]]
+  for = "/api/webhooks/*"
+  [headers.values]
+    Cache-Control = "no-store"
+
+# Stripe webhook needs raw body - no caching
+[[headers]]
+  for = "/api/stripe/webhooks"
+  [headers.values]
+    Cache-Control = "no-store"

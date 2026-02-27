@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
+  // Don't leak framework info in X-Powered-By header
+  poweredByHeader: false,
+
   async headers() {
     return [
       {
@@ -16,4 +20,19 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // Only print source map upload logs in CI
+  silent: !process.env.CI,
+
+  // Disable source map upload until Sentry project is created
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
+
+  // Tree-shake Sentry logger statements to reduce bundle size
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
+});

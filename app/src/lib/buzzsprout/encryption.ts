@@ -57,7 +57,9 @@ export function encryptCredentials(credentials: object): object {
   };
 }
 
-export function decryptCredentials(encryptedData: { version?: number; encrypted: string; salt: string; iv: string; tag: string }): object {
+export type EncryptedPayload = { version?: number; encrypted: string; salt: string; iv: string; tag: string };
+
+export function decryptCredentials(encryptedData: EncryptedPayload): object {
   const version = encryptedData.version ?? 1;
 
   if (version !== 1) {
@@ -80,4 +82,20 @@ export function decryptCredentials(encryptedData: { version?: number; encrypted:
   decrypted = Buffer.concat([decrypted, decipher.final()]);
 
   return JSON.parse(decrypted.toString('utf8'));
+}
+
+/**
+ * Convenience: encrypt a plain string (e.g. a webhook secret).
+ * Returns the same encrypted envelope as encryptCredentials.
+ */
+export function encryptString(value: string): EncryptedPayload {
+  return encryptCredentials({ __v: value }) as EncryptedPayload;
+}
+
+/**
+ * Convenience: decrypt a string that was encrypted with encryptString.
+ */
+export function decryptString(encryptedData: EncryptedPayload): string {
+  const obj = decryptCredentials(encryptedData) as { __v: string };
+  return obj.__v;
 }

@@ -10,6 +10,7 @@
  */
 
 import { createAdminClient } from '@/lib/supabase/server';
+import { decryptString, type EncryptedPayload } from '@/lib/buzzsprout/encryption';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
@@ -100,9 +101,20 @@ export async function dispatchWebhooks(
           'User-Agent': 'PodBrain-Webhook/1.0',
         };
 
-        // Add HMAC signature if secret is configured
+        // Add HMAC signature if secret is configured.
+        // Secrets are stored encrypted (JSON envelope). We decrypt at
+        // delivery time so the plaintext never sits in the database.
         if (webhook.secret) {
-          headers['X-PodBrain-Signature'] = signPayload(body, webhook.secret);
+          let plaintextSecret: string;
+          try {
+            const parsed = JSON.parse(webhook.secret) as EncryptedPayload;
+            plaintextSecret = decryptString(parsed);
+          } catch {
+            // Fallback: treat as plaintext for backwards-compatibility
+            // with any secrets created before encryption was enabled.
+            plaintextSecret = webhook.secret;
+          }
+          headers['X-PodBrain-Signature'] = signPayload(body, plaintextSecret);
         }
 
         const response = await fetch(webhook.url, {

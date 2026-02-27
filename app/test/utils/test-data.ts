@@ -18,6 +18,31 @@ import type { Show, Episode, VocabularyTerm, GeneratedAsset } from '@/types/data
 // Default user ID from the app (single-user mode)
 const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000001'
 
+let _testUserEnsured = false
+
+/**
+ * Ensure the default test user exists in the database.
+ * Uses upsert to handle race conditions gracefully.
+ */
+async function ensureTestUser(): Promise<void> {
+  if (_testUserEnsured) return
+  const adminClient = getAdminClient()
+
+  const { error } = await adminClient.from('users').upsert(
+    {
+      id: DEFAULT_USER_ID,
+      email: 'test-user@test.local',
+      name: 'Test User',
+    },
+    { onConflict: 'id' }
+  )
+
+  if (error) {
+    console.warn('Failed to ensure test user:', error.message || JSON.stringify(error))
+  }
+  _testUserEnsured = true
+}
+
 /**
  * Create a test show in the REAL database
  */
@@ -25,6 +50,9 @@ export async function createTestShow(
   overrides: Partial<Omit<Show, 'id' | 'created_at' | 'updated_at'>> = {}
 ): Promise<Show> {
   const adminClient = getAdminClient()
+
+  // Ensure the test user exists before creating a show
+  await ensureTestUser()
 
   const showData = {
     user_id: DEFAULT_USER_ID,
@@ -39,7 +67,7 @@ export async function createTestShow(
   const { data, error } = await adminClient.from('shows').insert(showData).select().single()
 
   if (error) {
-    throw new Error(`Failed to create test show: ${error.message}`)
+    throw new Error(`Failed to create test show: ${error.message || JSON.stringify(error)}`)
   }
 
   // Track for cleanup

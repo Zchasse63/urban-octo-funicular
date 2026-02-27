@@ -95,6 +95,40 @@ export async function POST(
       );
     }
 
+    // ── Atomic status transition to prevent TOCTOU race ──
+    // Two concurrent requests could both pass the status check above.
+    // This atomic UPDATE with a WHERE clause on status ensures only ONE
+    // request succeeds — the second will find 0 rows matched and bail out.
+    const { data: claimedRows, error: claimError } = await supabase
+      .from("episodes")
+      .update({
+        status: "processing",
+        metadata: {
+          ...((episode.metadata as Record<string, unknown>) || {}),
+          processing_claimed_at: new Date().toISOString(),
+        },
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", episodeId)
+      .neq("status", "processing")
+      .select("id");
+
+    if (claimError) {
+      console.error("Failed to claim episode for processing:", claimError);
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: "Failed to start processing" },
+        { status: 500 }
+      );
+    }
+
+    if (!claimedRows || claimedRows.length === 0) {
+      // Another request beat us to it
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: "Episode is already being processed" },
+        { status: 409 }
+      );
+    }
+
     // Get optional parameters from request body
     const body = await request.json().catch(() => ({}));
 
@@ -109,13 +143,32 @@ export async function POST(
     };
 
     // Trigger the processing job
-    const { runId } = await triggerEpisodeProcessing(payload);
+    let runId: string;
+    try {
+      const result = await triggerEpisodeProcessing(payload);
+      runId = result.runId;
+    } catch (triggerError) {
+      // If trigger fails, roll back the status so the user can retry
+      await supabase
+        .from("episodes")
+        .update({
+          status: "pending",
+          metadata: {
+            ...((episode.metadata as Record<string, unknown>) || {}),
+            processing_trigger_failed_at: new Date().toISOString(),
+            trigger_error: triggerError instanceof Error ? triggerError.message : "Unknown error",
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", episodeId);
 
-    // Update episode status to processing
+      throw triggerError;
+    }
+
+    // Update metadata with the run ID (status is already 'processing' from the claim)
     const { error: updateError } = await supabase
       .from("episodes")
       .update({
-        status: "processing",
         metadata: {
           ...((episode.metadata as Record<string, unknown>) || {}),
           processing_run_id: runId,
@@ -126,8 +179,8 @@ export async function POST(
       .eq("id", episodeId);
 
     if (updateError) {
-      console.error("Failed to update episode status:", updateError);
-      // Don't fail the request - the job has been triggered
+      console.error("Failed to update episode metadata with run ID:", updateError);
+      // Don't fail — the job is running and status is already 'processing'
     }
 
     return NextResponse.json<ApiResponse<ProcessingResponse>>({

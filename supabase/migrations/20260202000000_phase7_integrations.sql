@@ -81,12 +81,15 @@ ALTER TABLE hosting_connections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies for single-user mode (allow all operations)
+DROP POLICY IF EXISTS "Allow all operations for default user on subscriptions" ON subscriptions;
 CREATE POLICY "Allow all operations for default user on subscriptions" ON subscriptions
   FOR ALL USING (user_id = '00000000-0000-0000-0000-000000000001'::uuid);
 
+DROP POLICY IF EXISTS "Allow all operations for default user on hosting_connections" ON hosting_connections;
 CREATE POLICY "Allow all operations for default user on hosting_connections" ON hosting_connections
   FOR ALL USING (user_id = '00000000-0000-0000-0000-000000000001'::uuid);
 
+DROP POLICY IF EXISTS "Allow all operations for default user on users" ON users;
 CREATE POLICY "Allow all operations for default user on users" ON users
   FOR ALL USING (id = '00000000-0000-0000-0000-000000000001'::uuid);
 
@@ -99,12 +102,15 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Add updated_at triggers
+-- Add updated_at triggers (drop first to be idempotent)
+DROP TRIGGER IF EXISTS update_subscriptions_updated_at ON subscriptions;
 CREATE TRIGGER update_subscriptions_updated_at BEFORE UPDATE ON subscriptions
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_hosting_connections_updated_at ON hosting_connections;
 CREATE TRIGGER update_hosting_connections_updated_at BEFORE UPDATE ON hosting_connections
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

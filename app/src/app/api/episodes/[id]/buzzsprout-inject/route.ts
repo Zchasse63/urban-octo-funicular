@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth, isValidUUID } from '@/lib/auth';
+import { getUserTier, getTierLimits } from '@/lib/tier-limits';
 import { getBuzzsproutClient } from '@/lib/buzzsprout/helpers';
 import { logger } from '@/lib/logger';
 import type { ApiResponse, Episode } from '@/types/database';
@@ -53,6 +54,19 @@ export async function POST(
   try {
     const { userId } = await requireAuth();
     const { id: episodeId } = await params;
+
+    // ── Tier gate: Buzzsprout integration requires Pro or Agency ──
+    const tier = await getUserTier(userId);
+    const limits = getTierLimits(tier);
+    if (!limits.features.buzzsproutIntegration) {
+      return NextResponse.json<ApiResponse<null>>(
+        {
+          data: null,
+          error: 'Pushing to Buzzsprout requires a Pro or Agency plan. Upgrade to use hosting integrations.',
+        },
+        { status: 403 }
+      );
+    }
 
     if (!isValidUUID(episodeId)) {
       return NextResponse.json<ApiResponse<null>>(

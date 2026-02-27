@@ -42,6 +42,7 @@ CREATE INDEX IF NOT EXISTS experts_category_idx ON experts(category);
 ALTER TABLE experts ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Users can only read experts for shows they own
+DROP POLICY IF EXISTS experts_read ON experts;
 CREATE POLICY experts_read ON experts
     FOR SELECT
     USING (
@@ -51,6 +52,7 @@ CREATE POLICY experts_read ON experts
     );
 
 -- RLS Policy: Users can only insert experts for shows they own
+DROP POLICY IF EXISTS experts_insert ON experts;
 CREATE POLICY experts_insert ON experts
     FOR INSERT
     WITH CHECK (
@@ -60,6 +62,7 @@ CREATE POLICY experts_insert ON experts
     );
 
 -- RLS Policy: Users can only update experts for shows they own
+DROP POLICY IF EXISTS experts_update ON experts;
 CREATE POLICY experts_update ON experts
     FOR UPDATE
     USING (
@@ -69,6 +72,7 @@ CREATE POLICY experts_update ON experts
     );
 
 -- RLS Policy: Users can only delete experts for shows they own
+DROP POLICY IF EXISTS experts_delete ON experts;
 CREATE POLICY experts_delete ON experts
     FOR DELETE
     USING (

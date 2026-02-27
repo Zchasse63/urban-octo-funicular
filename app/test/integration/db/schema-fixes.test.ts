@@ -5,6 +5,7 @@
  * Tests the fixes from Phase B (C6, C7, C8, H8).
  *
  * Uses REAL database — no mocking.
+ * Each test is fully self-contained to avoid cross-file interference.
  *
  * NOTE: Tests for C6, C7, H8 require the schema alignment migration
  * (20260218000000_schema_alignment.sql) to be applied to the database.
@@ -15,23 +16,19 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import {
   getAdminClient,
   cleanupAllTestData,
-  trackTestShow,
   trackTestRecord,
 } from '../../setup/database'
 import { createTestShow, createTestEpisode } from '../../utils/test-data'
-import type { Show } from '@/types/database'
 
 const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000001'
-let testShow: Show
 let migrationApplied = false
 
 beforeAll(async () => {
-  testShow = await createTestShow()
-
   // Check if the schema alignment migration has been applied
   // by testing for one of the new enum values
   const client = getAdminClient()
-  const episode = await createTestEpisode(testShow.id, { status: 'completed' })
+  const show = await createTestShow()
+  const episode = await createTestEpisode(show.id, { status: 'completed' })
   const { error } = await client
     .from('generated_assets')
     .insert({
@@ -60,11 +57,12 @@ afterAll(async () => {
 describe('C8: Vocabulary terms schema', () => {
   it('vocabulary_terms table has `alternatives` column (not `definition`)', async () => {
     const client = getAdminClient()
+    const show = await createTestShow()
 
     const { data, error } = await client
       .from('vocabulary_terms')
       .insert({
-        show_id: testShow.id,
+        show_id: show.id,
         term: `[TEST] VocabTerm ${Date.now()}`,
         alternatives: ['alt1', 'alt2'],
       })
@@ -93,12 +91,13 @@ describe('C8: Vocabulary terms schema', () => {
 
   it('vocabulary_terms does NOT require `user_id`', async () => {
     const client = getAdminClient()
+    const show = await createTestShow()
 
     // Insert without user_id — should succeed
     const { data, error } = await client
       .from('vocabulary_terms')
       .insert({
-        show_id: testShow.id,
+        show_id: show.id,
         term: `[TEST] NoUserIdTerm ${Date.now()}`,
         alternatives: [],
       })
@@ -113,11 +112,12 @@ describe('C8: Vocabulary terms schema', () => {
 
   it('vocabulary_terms supports empty alternatives array', async () => {
     const client = getAdminClient()
+    const show = await createTestShow()
 
     const { data, error } = await client
       .from('vocabulary_terms')
       .insert({
-        show_id: testShow.id,
+        show_id: show.id,
         term: `[TEST] EmptyAlts ${Date.now()}`,
         alternatives: [],
       })
@@ -139,7 +139,8 @@ describe('C6: Asset type enum expansion (requires migration)', () => {
     }
 
     const client = getAdminClient()
-    const episode = await createTestEpisode(testShow.id, { status: 'completed' })
+    const show = await createTestShow()
+    const episode = await createTestEpisode(show.id, { status: 'completed' })
 
     const coreTypes = ['show_notes', 'episode_titles', 'key_takeaways', 'chapter_markers']
 
@@ -169,7 +170,8 @@ describe('C6: Asset type enum expansion (requires migration)', () => {
     }
 
     const client = getAdminClient()
-    const episode = await createTestEpisode(testShow.id, { status: 'completed' })
+    const show = await createTestShow()
+    const episode = await createTestEpisode(show.id, { status: 'completed' })
 
     const socialTypes = [
       'linkedin_post', 'linkedin_post_host', 'linkedin_post_guest', 'linkedin_article',
@@ -205,7 +207,8 @@ describe('C6: Asset type enum expansion (requires migration)', () => {
     }
 
     const client = getAdminClient()
-    const episode = await createTestEpisode(testShow.id, { status: 'completed' })
+    const show = await createTestShow()
+    const episode = await createTestEpisode(show.id, { status: 'completed' })
 
     const advancedTypes = [
       'discussion_questions', 'poll_ideas', 'call_to_action',
@@ -271,6 +274,7 @@ describe('C7: Hosting connections schema (requires migration)', () => {
     }
 
     const client = getAdminClient()
+    const show = await createTestShow()
 
     const { data, error } = await client
       .from('hosting_connections')
@@ -279,14 +283,14 @@ describe('C7: Hosting connections schema (requires migration)', () => {
         platform: 'transistor',
         provider: 'transistor',
         credentials: {},
-        show_id: testShow.id,
+        show_id: show.id,
         status: 'active',
       })
       .select('id, show_id')
       .single()
 
     expect(error).toBeNull()
-    expect(data.show_id).toBe(testShow.id)
+    expect(data.show_id).toBe(show.id)
 
     await client.from('hosting_connections').delete().eq('id', data.id)
   })
@@ -321,6 +325,7 @@ describe('H8: User subscription_tier column (requires migration)', () => {
 describe('Episodes table completeness', () => {
   it('episodes store full metadata including seo_analysis', async () => {
     const client = getAdminClient()
+    const show = await createTestShow()
 
     const seoAnalysis = {
       keyword_density: { 'podcast': 0.03, 'AI': 0.02 },
@@ -330,7 +335,7 @@ describe('Episodes table completeness', () => {
       estimated_position: 15,
     }
 
-    const episode = await createTestEpisode(testShow.id, {
+    const episode = await createTestEpisode(show.id, {
       status: 'completed',
       seo_score: 78,
       seo_analysis: seoAnalysis,
@@ -351,6 +356,7 @@ describe('Episodes table completeness', () => {
 
   it('episodes support viral_moments JSON array', async () => {
     const client = getAdminClient()
+    const show = await createTestShow()
 
     const viralMoments = [
       {
@@ -363,7 +369,7 @@ describe('Episodes table completeness', () => {
       },
     ]
 
-    const episode = await createTestEpisode(testShow.id, {
+    const episode = await createTestEpisode(show.id, {
       status: 'completed',
       viral_moments: viralMoments,
     })

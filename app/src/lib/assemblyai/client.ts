@@ -1,16 +1,26 @@
 import { AssemblyAI } from 'assemblyai';
 import type { TranscriptResult, TranscribeOptions } from './types';
 
-const client = new AssemblyAI({
-  apiKey: process.env.ASSEMBLYAI_API_KEY!,
-});
+let _client: AssemblyAI | null = null;
+
+function getClient(): AssemblyAI {
+  if (!_client) {
+    const apiKey = process.env.ASSEMBLYAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('ASSEMBLYAI_API_KEY environment variable is not set');
+    }
+    _client = new AssemblyAI({ apiKey });
+  }
+  return _client;
+}
 
 export async function transcribeAudio(
   audioUrl: string,
   options: TranscribeOptions = {}
 ): Promise<TranscriptResult> {
   try {
-    const config: Parameters<typeof client.transcripts.transcribe>[0] = {
+    const aai = getClient();
+    const config: Parameters<typeof aai.transcripts.transcribe>[0] = {
       audio_url: audioUrl,
       speaker_labels: true,
       auto_highlights: true,
@@ -25,7 +35,7 @@ export async function transcribeAudio(
       config.boost_param = 'high';
     }
 
-    const transcript = await client.transcripts.transcribe(config);
+    const transcript = await aai.transcripts.transcribe(config);
 
     if (transcript.status === 'error') {
       throw new Error(`Transcription failed: ${transcript.error}`);

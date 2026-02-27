@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth, isValidUUID } from '@/lib/auth';
 import { rateLimitByIP } from '@/lib/rate-limit';
+import { getUserTier, canGenerateAssetType } from '@/lib/tier-limits';
 import {
   generateAsset,
   buildAssetContext,
@@ -140,6 +141,19 @@ export async function POST(
     }
 
     const body: GenerateAssetRequest = await request.json();
+
+    // ── Tier gate: check if user can generate this asset type ──
+    const tier = await getUserTier(userId);
+    if (!canGenerateAssetType(tier, body.assetType)) {
+      return NextResponse.json<ApiResponse<null>>(
+        {
+          data: null,
+          error: `The "${body.assetType}" asset type requires a Pro or Agency plan. Upgrade to unlock advanced content generation.`,
+        },
+        { status: 403 }
+      );
+    }
+
     const supabase = await createClient();
 
     // Verify episode exists and has transcript
@@ -187,15 +201,6 @@ export async function POST(
       }
     }
 
-    // Delete existing asset if regenerating
-    if (body.regenerate) {
-      await supabase
-        .from('generated_assets')
-        .delete()
-        .eq('episode_id', episodeId)
-        .eq('asset_type', body.assetType);
-    }
-
     // Build context for content generation
     const showData = Array.isArray(episode.shows) ? episode.shows[0] : episode.shows;
     const context = buildAssetContext(
@@ -207,7 +212,8 @@ export async function POST(
       }
     );
 
-    // Generate asset using xAI Grok
+    // Generate asset using xAI Grok BEFORE deleting old one
+    // This prevents data loss if the AI call fails
     const result = await generateAsset(body.assetType, context);
 
     if (!result.success) {
@@ -215,6 +221,15 @@ export async function POST(
         { data: null, error: result.error || 'Failed to generate asset' },
         { status: 500 }
       );
+    }
+
+    // Only delete old asset AFTER new one generated successfully
+    if (body.regenerate) {
+      await supabase
+        .from('generated_assets')
+        .delete()
+        .eq('episode_id', episodeId)
+        .eq('asset_type', body.assetType);
     }
 
     // Format for storage

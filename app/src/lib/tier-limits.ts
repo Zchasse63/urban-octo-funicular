@@ -57,6 +57,29 @@ export function getTierLimits(tier: string): TierLimits {
 }
 
 /**
+ * Core asset types available on ALL tiers (including free).
+ * Everything not listed here requires the `advancedAssets` feature flag.
+ */
+export const CORE_ASSET_TYPES = new Set([
+  'show_notes',
+  'episode_titles',
+  'key_takeaways',
+  'chapter_markers',
+  'transcript_summary',
+  'seo_description',
+])
+
+/**
+ * Check if a user's tier allows generating a specific asset type.
+ * Core assets are available to all tiers. Advanced assets require Pro or Agency.
+ */
+export function canGenerateAssetType(tier: string, assetType: string): boolean {
+  if (CORE_ASSET_TYPES.has(assetType)) return true
+  const limits = getTierLimits(tier)
+  return limits.features.advancedAssets
+}
+
+/**
  * Get the user's current tier from the database
  */
 export async function getUserTier(userId: string): Promise<string> {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
+import crypto from 'crypto'
 
 /**
  * AssemblyAI Webhook Handler
@@ -8,14 +9,44 @@ import { createAdminClient } from '@/lib/supabase/server'
  * In production, AssemblyAI calls this endpoint when a transcript is ready,
  * eliminating the need to poll for completion (which can time out on long podcasts).
  *
+ * Security: Authenticated via ASSEMBLYAI_WEBHOOK_SECRET passed as a
+ * query parameter in the callback URL registered with AssemblyAI.
+ * AssemblyAI does not natively support HMAC signatures, so token-based
+ * auth in the URL is the standard approach.
+ *
  * Flow:
  * 1. AssemblyAI POSTs a notification with { transcript_id, status }
- * 2. We fetch the full transcript from the AssemblyAI API
- * 3. We store the transcript on the episode record
- * 4. We trigger the remaining processing pipeline via Trigger.dev
+ * 2. We verify the webhook token in the URL query parameter
+ * 3. We fetch the full transcript from the AssemblyAI API
+ * 4. We store the transcript on the episode record
+ * 5. We trigger the remaining processing pipeline via Trigger.dev
  */
 export async function POST(request: NextRequest) {
   try {
+    // ── Authenticate webhook request ──
+    // The webhook URL registered with AssemblyAI includes a ?token=<secret>
+    // query parameter. We verify it here to prevent unauthorized POSTs.
+    const webhookSecret = process.env.ASSEMBLYAI_WEBHOOK_SECRET
+    if (webhookSecret) {
+      const url = new URL(request.url)
+      const token = url.searchParams.get('token')
+      if (
+        !token ||
+        !crypto.timingSafeEqual(
+          Buffer.from(token),
+          Buffer.from(webhookSecret)
+        )
+      ) {
+        console.error('AssemblyAI webhook: invalid or missing authentication token')
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+    } else {
+      console.warn(
+        'ASSEMBLYAI_WEBHOOK_SECRET not set — webhook endpoint is unauthenticated. ' +
+        'Set this variable in production to prevent unauthorized access.'
+      )
+    }
+
     const body = await request.json()
 
     const transcriptId = body.transcript_id
@@ -99,7 +130,7 @@ export async function POST(request: NextRequest) {
     const speakerCount = new Set(segments.map((s: { speaker: string }) => s.speaker)).size
 
     // Store transcript on the episode record
-    await supabase
+    const { error: transcriptWriteError } = await supabase
       .from('episodes')
       .update({
         transcript: transcriptText,
@@ -118,6 +149,30 @@ export async function POST(request: NextRequest) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', episode.id)
+
+    if (transcriptWriteError) {
+      console.error(
+        'Failed to write transcript to episode:',
+        transcriptWriteError.message,
+        { episodeId: episode.id, transcriptId }
+      )
+      // Mark episode as failed so user knows something went wrong
+      await supabase
+        .from('episodes')
+        .update({
+          status: 'failed',
+          metadata: {
+            ...existingMetadata,
+            processing_step: 'transcript_write_failed',
+            error_message: `Failed to store transcript: ${transcriptWriteError.message}`,
+            webhook_received_at: new Date().toISOString(),
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', episode.id)
+
+      return NextResponse.json({ error: 'Failed to store transcript' }, { status: 500 })
+    }
 
     // Trigger the remaining processing pipeline (vocabulary -> show notes -> SEO -> assets)
     // Uses dynamic import to avoid circular dependency issues in the webhook context

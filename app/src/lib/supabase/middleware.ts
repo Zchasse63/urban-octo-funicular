@@ -36,7 +36,8 @@ export async function updateSession(request: NextRequest) {
   const publicPaths = ['/login', '/register', '/forgot-password', '/auth', '/api/stripe/webhooks', '/api/webhooks', '/api/auth', '/terms', '/privacy', '/cookies']
   const isPublicPath =
     request.nextUrl.pathname === '/' ||
-    publicPaths.some(path => request.nextUrl.pathname.startsWith(path))
+    publicPaths.some(path => request.nextUrl.pathname.startsWith(path)) ||
+    request.nextUrl.pathname.endsWith('/rss') // Public RSS proxy feeds
 
   // API routes need auth but return 401 instead of redirect
   const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
