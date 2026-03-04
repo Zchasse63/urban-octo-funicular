@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Episode } from "@/types/database";
 import { createClient } from "@/lib/supabase/client";
-
-const POLL_INTERVAL_MS = 3000; // Poll every 3 seconds during processing
+import { POLL_INTERVAL_MS } from "@/lib/constants";
 
 interface UseEpisodeResult {
   episode: Episode | null;

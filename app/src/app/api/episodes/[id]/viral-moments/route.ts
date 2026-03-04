@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { detectViralMoments } from '@/lib/viral-moments/detector';
 import type { TranscriptSegment } from '@/lib/viral-moments/types';
-import { getSupabaseClient } from '@/lib/supabase-client';
+import { createClient } from '@/lib/supabase/server';
 import { requireAuth, verifyEpisodeOwnership } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { validateUUID } from '@/lib/validation';
@@ -29,7 +29,7 @@ export async function GET(
       return NextResponse.json({ error: 'Episode not found' }, { status: 404 });
     }
 
-    const supabase = await getSupabaseClient();
+    const supabase = await createClient();
 
     const { data: episode, error: episodeError } = await supabase
       .from('episodes')

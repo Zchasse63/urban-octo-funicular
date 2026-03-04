@@ -1,12 +1,12 @@
 import type { RelatedEpisode, SimilarityResult, EpisodeContext } from './types';
 import { generateEmbeddings } from './embeddings';
-import { getSupabaseClient } from '@/lib/supabase-client';
+import { createClient } from '@/lib/supabase/server';
 
 export async function findSimilarSections(
   episodeId: string,
   threshold: number = 0.75
 ): Promise<SimilarityResult[]> {
-  const supabase = await getSupabaseClient();
+  const supabase = await createClient();
   const { data: querySections, error: sectionsError } = await supabase
     .from('episode_sections')
     .select('id, content, embedding')
@@ -66,7 +66,7 @@ export async function groupByEpisode(
   if (similarSections.length === 0) return [];
 
   const episodeIds = [...new Set(similarSections.map((s) => s.episodeId))];
-  const supabase = await getSupabaseClient();
+  const supabase = await createClient();
   const { data: episodes } = await supabase
     .from('episodes')
     .select('id, title, metadata')

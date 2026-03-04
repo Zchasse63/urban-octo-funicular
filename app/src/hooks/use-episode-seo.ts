@@ -9,8 +9,24 @@ interface SEOData {
   schema_markup: Record<string, unknown> | null;
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-function normalizeAnalysis(raw: any): SEOAnalysis | null {
+interface RawSEOFactors {
+  readability?: { score?: number };
+  headerStructure?: { score?: number };
+}
+
+type RawSuggestion = string | { title?: string; text?: string; description?: string };
+
+interface RawSEOResponse {
+  keyword_density?: Record<string, number>;
+  keywordDensityMap?: Record<string, number>;
+  readability_score?: number;
+  factors?: RawSEOFactors;
+  header_structure?: boolean;
+  suggestions?: RawSuggestion[];
+  estimated_position?: number | null;
+}
+
+function normalizeAnalysis(raw: RawSEOResponse | null): SEOAnalysis | null {
   if (!raw) return null;
   // The API may return either the DB format (SEOAnalysis) or the rich API format
   // with camelCase keys and nested factors. Normalize to the flat SEOAnalysis shape.
@@ -18,7 +34,7 @@ function normalizeAnalysis(raw: any): SEOAnalysis | null {
     keyword_density: raw.keyword_density ?? raw.keywordDensityMap ?? {},
     readability_score: raw.readability_score ?? raw.factors?.readability?.score ?? 0,
     header_structure: raw.header_structure ?? (raw.factors?.headerStructure?.score != null ? raw.factors.headerStructure.score > 0 : false),
-    suggestions: (raw.suggestions ?? []).map((s: any) =>
+    suggestions: (raw.suggestions ?? []).map((s: RawSuggestion) =>
       typeof s === 'string' ? s : s?.title ?? s?.text ?? s?.description ?? String(s)
     ),
     estimated_position: raw.estimated_position ?? null,

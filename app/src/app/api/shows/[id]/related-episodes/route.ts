@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { findSimilarSections, groupByEpisode } from '@/lib/cross-episode/similarity';
-import { getSupabaseClient } from '@/lib/supabase-client';
+import { createClient } from '@/lib/supabase/server';
 import { requireAuth, verifyShowOwnership } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { validateUUID } from '@/lib/validation';
@@ -28,7 +28,7 @@ export async function GET(
       return NextResponse.json({ error: 'Show not found' }, { status: 404 });
     }
 
-    const supabase = await getSupabaseClient();
+    const supabase = await createClient();
 
     const { data: episodes, error: episodesError } = await supabase
       .from('episodes')

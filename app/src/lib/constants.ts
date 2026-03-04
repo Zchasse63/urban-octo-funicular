@@ -49,6 +49,9 @@ export const PAGINATION = {
   maxPageSize: 100,
 } as const
 
+// Polling Interval (used by usePolling, useEpisode for status checks)
+export const POLL_INTERVAL_MS = 3000
+
 // Subscription Tiers — hours-based pricing aligned with stripe/products.ts
 export const SUBSCRIPTION_TIERS = {
   free: {

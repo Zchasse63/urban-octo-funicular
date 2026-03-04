@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { POLL_INTERVAL_MS } from "@/lib/constants";
 
 interface UsePollingOptions<T> {
   fetcher: () => Promise<T>;
@@ -23,7 +24,7 @@ interface UsePollingResult<T> {
 
 export default function usePolling<T>({
   fetcher,
-  interval = 3000,
+  interval = POLL_INTERVAL_MS,
   enabled = true,
   shouldStop,
   onSuccess,

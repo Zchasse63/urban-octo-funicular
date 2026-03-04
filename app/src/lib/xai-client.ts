@@ -141,7 +141,9 @@ interface GrokClient {
 }
 
 /**
- * Create a Grok client instance
+ * Create a Grok client instance.
+ * Used by viral-moments/detector, guest-intel/service, cross-episode/embeddings, experts/discovery
+ * via dynamic import.
  */
 export function createGrokClient(): GrokClient {
   return {
@@ -155,10 +157,3 @@ export function createGrokClient(): GrokClient {
     },
   };
 }
-
-/**
- * Simple interface for grok client (default export)
- */
-export const grokClient = createGrokClient();
-
-export default grokClient;

@@ -1,6 +1,6 @@
 import type { ShowNotesResult, GenerateShowNotesOptions } from './types';
 import { buildShowNotesPrompt } from './prompts';
-import { xaiCircuitBreaker } from '@/lib/circuit-breaker';
+import { createChatCompletion } from '@/lib/xai-client';
 
 const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY = 1000;
@@ -36,40 +36,19 @@ export async function generateShowNotes(
     try {
       const prompt = buildShowNotesPrompt(transcript, options);
 
-      const data = await xaiCircuitBreaker.execute(async () => {
-        const response = await fetch('https://api.x.ai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.XAI_API_KEY}`,
+      const data = await createChatCompletion({
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert podcast show notes writer. Generate SEO-optimized, engaging show notes that are ready to publish. Always respond with valid JSON.'
           },
-          body: JSON.stringify({
-            model: process.env.XAI_MODEL || 'grok-4-1-fast',
-            messages: [
-              {
-                role: 'system',
-                content: 'You are an expert podcast show notes writer. Generate SEO-optimized, engaging show notes that are ready to publish. Always respond with valid JSON.'
-              },
-              {
-                role: 'user',
-                content: prompt
-              }
-            ],
-            temperature: 0.7,
-            response_format: { type: 'json_object' }
-          }),
-          signal: AbortSignal.timeout(30000),
-        });
-
-        if (response.status === 429) {
-          throw new Error(`xAI API rate limited: 429`);
-        }
-
-        if (!response.ok) {
-          throw new Error(`xAI API error: ${response.status} ${response.statusText}`);
-        }
-
-        return response.json();
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        response_format: { type: 'json_object' }
       });
 
       const content = data.choices[0]?.message?.content;
