@@ -70,7 +70,7 @@ export interface User {
   google_id: string | null
   avatar_url: string | null
   preferences: Record<string, unknown>
-  subscription_tier: 'free' | 'pro' | 'agency'
+  subscription_tier: 'free' | 'pro' | 'creator' | 'agency'
   created_at: string
   updated_at: string
 }

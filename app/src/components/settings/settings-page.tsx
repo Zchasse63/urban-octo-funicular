@@ -307,7 +307,7 @@ const SubscriptionTab = ({
   subLoading: boolean;
   onManageStripe: () => void;
   onCheckout: (tier: string) => Promise<void>;
-  usage: { tier: string; billingPeriod: { start: string; end: string }; episodes: { used: number; limit: number; percentage: number }; shows: { used: number; limit: number; percentage: number } } | null;
+  usage: { tier: string; billingPeriod: { start: string; end: string }; audioHours: { used: number; limit: number; percentage: number }; shows: { used: number; limit: number; percentage: number } } | null;
   usageLoading: boolean;
 }) => {
   const [showAllBilling, setShowAllBilling] = useState(false);
@@ -385,7 +385,7 @@ const SubscriptionTab = ({
             </div>
             <div className="flex sm:flex-col items-center sm:items-end gap-3 sm:gap-2 sm:flex-shrink-0">
               <button
-                onClick={() => onCheckout(tier === 'free' ? 'pro' : 'agency')}
+                onClick={() => onCheckout(tier === 'free' ? 'pro' : tier === 'pro' ? 'creator' : 'agency')}
                 className="flex items-center gap-2 px-4 py-2 bg-stone-900 text-white rounded-lg text-[12px] font-sans font-semibold hover:bg-stone-800 transition-colors shadow-sm"
               >
                 <TrendingUp className="w-3.5 h-3.5 text-amber-300" />
@@ -413,7 +413,7 @@ const SubscriptionTab = ({
       </div>
 
       {/* Nearing limit warning banner */}
-      {!usageLoading && usage && (usage.episodes.percentage >= 80 || usage.shows.percentage >= 80) && (
+      {!usageLoading && usage && (usage.audioHours.percentage >= 80 || usage.shows.percentage >= 80) && (
         <div className="flex items-center gap-3 bg-amber-50 border border-amber-200/60 rounded-xl px-4 sm:px-5 py-3.5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
           <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
             <AlertTriangle className="w-4 h-4 text-amber-600" />
@@ -423,13 +423,13 @@ const SubscriptionTab = ({
               You&apos;re nearing your plan limits
             </p>
             <p className="font-sans text-[11px] text-amber-700/80 mt-0.5">
-              {usage.episodes.percentage >= 80 && `${usage.episodes.used} of ${usage.episodes.limit} episodes used. `}
+              {usage.audioHours.percentage >= 80 && `${usage.audioHours.used} of ${usage.audioHours.limit} audio hours used. `}
               {usage.shows.percentage >= 80 && `${usage.shows.used} of ${usage.shows.limit} shows used. `}
               Upgrade to avoid interruptions.
             </p>
           </div>
           <button
-            onClick={() => onCheckout(tier === 'free' ? 'pro' : 'agency')}
+            onClick={() => onCheckout(tier === 'free' ? 'pro' : tier === 'pro' ? 'creator' : 'agency')}
             className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 text-white rounded-lg text-[11px] font-sans font-semibold hover:bg-amber-700 transition-colors shadow-sm flex-shrink-0"
           >
             <TrendingUp className="w-3 h-3" />
@@ -471,9 +471,8 @@ const SubscriptionTab = ({
           </div>
         ) : (
           <div className="space-y-5">
-            <UsageMeter label="Episodes" used={usage?.episodes.used ?? 0} total={usage?.episodes.limit ?? tierInfo.episodesPerMonth} unit="ep" color="bg-gradient-to-r from-amber-400 to-amber-500" />
+            <UsageMeter label="Audio Hours" used={usage?.audioHours.used ?? 0} total={usage?.audioHours.limit ?? tierInfo.audioHoursPerMonth} unit="hrs" color="bg-gradient-to-r from-amber-400 to-amber-500" />
             <UsageMeter label="Shows" used={usage?.shows.used ?? 0} total={usage?.shows.limit ?? tierInfo.shows} unit="shows" color="bg-gradient-to-r from-sky-400 to-sky-500" />
-            <UsageMeter label="API Calls" used={0} total={tier === 'free' ? 100 : tier === 'pro' ? 5000 : 10000} unit="calls" color="bg-gradient-to-r from-emerald-400 to-emerald-500" />
           </div>
         )}
       </div>

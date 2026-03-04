@@ -1,53 +1,45 @@
 import { createClient } from './supabase/server'
 
 export interface TierLimits {
-  episodesPerMonth: number
+  audioHoursPerMonth: number
   maxShows: number
   teamSeats: number
   features: {
     advancedAssets: boolean
-    buzzsproutIntegration: boolean
-    customTemplates: boolean
-    whiteLabel: boolean
-    apiAccess: boolean
   }
 }
 
 const TIER_LIMITS: Record<string, TierLimits> = {
   free: {
-    episodesPerMonth: 3,
+    audioHoursPerMonth: 1,
     maxShows: 1,
     teamSeats: 1,
     features: {
       advancedAssets: false,
-      buzzsproutIntegration: false,
-      customTemplates: false,
-      whiteLabel: false,
-      apiAccess: false,
     },
   },
   pro: {
-    episodesPerMonth: 50,
-    maxShows: 5,
+    audioHoursPerMonth: 10,
+    maxShows: 3,
     teamSeats: 1,
     features: {
       advancedAssets: true,
-      buzzsproutIntegration: true,
-      customTemplates: true,
-      whiteLabel: false,
-      apiAccess: false,
+    },
+  },
+  creator: {
+    audioHoursPerMonth: 25,
+    maxShows: 10,
+    teamSeats: 3,
+    features: {
+      advancedAssets: true,
     },
   },
   agency: {
-    episodesPerMonth: 200,
+    audioHoursPerMonth: 100,
     maxShows: 999,
-    teamSeats: 5,
+    teamSeats: 10,
     features: {
       advancedAssets: true,
-      buzzsproutIntegration: true,
-      customTemplates: true,
-      whiteLabel: true,
-      apiAccess: true,
     },
   },
 }
@@ -71,7 +63,7 @@ export const CORE_ASSET_TYPES = new Set([
 
 /**
  * Check if a user's tier allows generating a specific asset type.
- * Core assets are available to all tiers. Advanced assets require Pro or Agency.
+ * Core assets are available to all tiers. Advanced assets require a paid plan.
  */
 export function canGenerateAssetType(tier: string, assetType: string): boolean {
   if (CORE_ASSET_TYPES.has(assetType)) return true
@@ -121,23 +113,31 @@ export async function getBillingPeriod(userId: string): Promise<{ start: Date; e
 }
 
 /**
- * Count episodes created in the current billing period
+ * Get total audio hours used in the current billing period.
+ * Sums audio_duration_seconds from all episodes belonging to the user's shows.
  */
-export async function getEpisodeCount(userId: string): Promise<number> {
+export async function getAudioHoursUsed(userId: string): Promise<number> {
   const supabase = await createClient()
   const { start } = await getBillingPeriod(userId)
 
-  const { count, error } = await supabase
+  const { data, error } = await supabase
     .from('episodes')
-    .select('id, shows!inner(user_id)', { count: 'exact', head: true })
+    .select('audio_duration_seconds, shows!inner(user_id)')
     .eq('shows.user_id', userId)
     .gte('created_at', start.toISOString())
 
   if (error) {
-    console.error('Error counting episodes:', error)
+    console.error('Error summing audio hours:', error)
     return 0
   }
-  return count || 0
+
+  const totalSeconds = (data || []).reduce(
+    (sum, ep) => sum + (ep.audio_duration_seconds || 0),
+    0
+  )
+
+  // Return hours rounded to 2 decimal places
+  return Math.round((totalSeconds / 3600) * 100) / 100
 }
 
 /**
@@ -158,27 +158,48 @@ export async function getShowCount(userId: string): Promise<number> {
 }
 
 /**
- * Check if user can create a new episode
+ * Check if user can process a new episode based on audio hours used.
+ * Optionally accepts estimatedDurationSeconds to check if adding this episode would exceed the limit.
  */
-export async function canCreateEpisode(userId: string): Promise<{
+export async function canProcessEpisode(
+  userId: string,
+  estimatedDurationSeconds?: number
+): Promise<{
   allowed: boolean
   reason?: string
-  current: number
-  limit: number
+  hoursUsed: number
+  hoursLimit: number
 }> {
   const tier = await getUserTier(userId)
   const limits = getTierLimits(tier)
-  const current = await getEpisodeCount(userId)
+  const hoursUsed = await getAudioHoursUsed(userId)
+  const hoursLimit = limits.audioHoursPerMonth
 
-  if (current >= limits.episodesPerMonth) {
+  // If already at or over limit
+  if (hoursUsed >= hoursLimit) {
     return {
       allowed: false,
-      reason: `You've reached your ${limits.episodesPerMonth} episodes/month limit on the ${tier} plan. Upgrade to process more episodes.`,
-      current,
-      limit: limits.episodesPerMonth,
+      reason: `You've used all ${hoursLimit} audio hours this month on the ${tier} plan. Upgrade for more audio processing time.`,
+      hoursUsed,
+      hoursLimit,
     }
   }
-  return { allowed: true, current, limit: limits.episodesPerMonth }
+
+  // If adding this episode would exceed the limit
+  if (estimatedDurationSeconds) {
+    const estimatedHours = estimatedDurationSeconds / 3600
+    if (hoursUsed + estimatedHours > hoursLimit) {
+      const remaining = Math.round((hoursLimit - hoursUsed) * 100) / 100
+      return {
+        allowed: false,
+        reason: `This episode (~${Math.round(estimatedHours * 10) / 10} hrs) would exceed your ${hoursLimit} hour/month limit. You have ${remaining} hours remaining. Upgrade for more audio processing time.`,
+        hoursUsed,
+        hoursLimit,
+      }
+    }
+  }
+
+  return { allowed: true, hoursUsed, hoursLimit }
 }
 
 /**

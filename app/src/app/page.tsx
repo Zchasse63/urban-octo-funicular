@@ -335,38 +335,40 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="mt-16 grid gap-8 sm:grid-cols-3">
+            <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
               {(
                 [
                   {
                     tier: PRICING_TIERS.free,
                     cta: "Get Started Free",
                     href: "/register",
-                    highlighted: false,
                   },
                   {
                     tier: PRICING_TIERS.pro,
                     cta: "Start Pro Trial",
                     href: "/register?plan=pro",
-                    highlighted: true,
+                  },
+                  {
+                    tier: PRICING_TIERS.creator,
+                    cta: "Start Creator Trial",
+                    href: "/register?plan=creator",
                   },
                   {
                     tier: PRICING_TIERS.agency,
                     cta: "Contact Sales",
                     href: "/register?plan=agency",
-                    highlighted: false,
                   },
                 ] as const
-              ).map(({ tier, cta, href, highlighted }) => (
+              ).map(({ tier, cta, href }) => (
                 <div
                   key={tier.tier}
                   className={`relative flex flex-col rounded-xl border p-6 transition-all sm:p-8 ${
-                    highlighted
+                    tier.highlighted
                       ? "border-[#2563EB] shadow-lg shadow-[#2563EB]/10 dark:border-[#3B82F6] dark:shadow-[#3B82F6]/10"
                       : "border-border bg-card"
                   }`}
                 >
-                  {highlighted && (
+                  {tier.highlighted && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                       <span className="inline-flex items-center rounded-full bg-[#2563EB] px-3 py-1 text-xs font-semibold text-white dark:bg-[#3B82F6]">
                         Most Popular
@@ -388,8 +390,13 @@ export default function LandingPage() {
                         </span>
                       )}
                     </div>
+                    {tier.priceAnnual > 0 && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        or ${tier.priceAnnual}/yr (2 months free)
+                      </p>
+                    )}
                     <p className="mt-2 text-sm text-muted-foreground">
-                      {tier.episodesPerMonth} episodes/mo &middot;{" "}
+                      {tier.audioHoursPerMonth} {tier.audioHoursPerMonth === 1 ? 'hour' : 'hours'}/mo &middot;{" "}
                       {tier.shows >= 999
                         ? "Unlimited shows"
                         : `${tier.shows} show${tier.shows > 1 ? "s" : ""}`}
@@ -411,7 +418,7 @@ export default function LandingPage() {
                   <Link
                     href={href}
                     className={`inline-flex h-11 items-center justify-center rounded-lg text-sm font-semibold transition-all ${
-                      highlighted
+                      tier.highlighted
                         ? "bg-[#2563EB] text-white shadow-sm hover:bg-[#1D4ED8] dark:bg-[#3B82F6] dark:hover:bg-[#2563EB]"
                         : "border border-border bg-background text-foreground shadow-sm hover:bg-accent"
                     }`}

@@ -3,7 +3,7 @@ import { requireAuth } from '@/lib/auth'
 import {
   getUserTier,
   getTierLimits,
-  getEpisodeCount,
+  getAudioHoursUsed,
   getShowCount,
   getBillingPeriod,
 } from '@/lib/tier-limits'
@@ -15,7 +15,7 @@ interface UsageData {
     start: string
     end: string
   }
-  episodes: {
+  audioHours: {
     used: number
     limit: number
     percentage: number
@@ -31,9 +31,9 @@ export async function GET() {
   try {
     const { userId } = await requireAuth()
 
-    const [tier, episodeCount, showCount, billingPeriod] = await Promise.all([
+    const [tier, audioHoursUsed, showCount, billingPeriod] = await Promise.all([
       getUserTier(userId),
-      getEpisodeCount(userId),
+      getAudioHoursUsed(userId),
       getShowCount(userId),
       getBillingPeriod(userId),
     ])
@@ -46,10 +46,10 @@ export async function GET() {
         start: billingPeriod.start.toISOString(),
         end: billingPeriod.end.toISOString(),
       },
-      episodes: {
-        used: episodeCount,
-        limit: limits.episodesPerMonth,
-        percentage: Math.round((episodeCount / limits.episodesPerMonth) * 100),
+      audioHours: {
+        used: audioHoursUsed,
+        limit: limits.audioHoursPerMonth,
+        percentage: Math.round((audioHoursUsed / limits.audioHoursPerMonth) * 100),
       },
       shows: {
         used: showCount,

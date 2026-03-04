@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react'
 interface UsageData {
   tier: string
   billingPeriod: { start: string; end: string }
-  episodes: { used: number; limit: number; percentage: number }
+  audioHours: { used: number; limit: number; percentage: number }
   shows: { used: number; limit: number; percentage: number }
 }
 

@@ -78,8 +78,8 @@ describe('PROCESSING', () => {
     expect(PROCESSING.maxFileSize).toBe(500 * 1024 * 1024)
   })
 
-  it('has target cost per episode of $0.15', () => {
-    expect(PROCESSING.targetCostPerEpisode).toBe(0.15)
+  it('has target cost per episode of $0.25', () => {
+    expect(PROCESSING.targetCostPerEpisode).toBe(0.25)
   })
 })
 
@@ -103,8 +103,8 @@ describe('SUBSCRIPTION_TIERS', () => {
       expect(SUBSCRIPTION_TIERS.free.name).toBe('Free')
     })
 
-    it('allows 3 episodes per month', () => {
-      expect(SUBSCRIPTION_TIERS.free.episodesPerMonth).toBe(3)
+    it('allows 1 audio hour per month', () => {
+      expect(SUBSCRIPTION_TIERS.free.audioHoursPerMonth).toBe(1)
     })
 
     it('allows 1 show', () => {
@@ -115,8 +115,9 @@ describe('SUBSCRIPTION_TIERS', () => {
       expect(SUBSCRIPTION_TIERS.free.teamSeats).toBe(1)
     })
 
-    it('costs $0', () => {
+    it('costs $0/mo', () => {
       expect(SUBSCRIPTION_TIERS.free.priceMonthly).toBe(0)
+      expect(SUBSCRIPTION_TIERS.free.priceAnnual).toBe(0)
     })
   })
 
@@ -125,20 +126,44 @@ describe('SUBSCRIPTION_TIERS', () => {
       expect(SUBSCRIPTION_TIERS.pro.name).toBe('Pro')
     })
 
-    it('allows 50 episodes per month', () => {
-      expect(SUBSCRIPTION_TIERS.pro.episodesPerMonth).toBe(50)
+    it('allows 10 audio hours per month', () => {
+      expect(SUBSCRIPTION_TIERS.pro.audioHoursPerMonth).toBe(10)
     })
 
-    it('allows 5 shows', () => {
-      expect(SUBSCRIPTION_TIERS.pro.maxShows).toBe(5)
+    it('allows 3 shows', () => {
+      expect(SUBSCRIPTION_TIERS.pro.maxShows).toBe(3)
     })
 
     it('allows 1 team seat', () => {
       expect(SUBSCRIPTION_TIERS.pro.teamSeats).toBe(1)
     })
 
-    it('costs $19', () => {
-      expect(SUBSCRIPTION_TIERS.pro.priceMonthly).toBe(19)
+    it('costs $29/mo or $232/yr', () => {
+      expect(SUBSCRIPTION_TIERS.pro.priceMonthly).toBe(29)
+      expect(SUBSCRIPTION_TIERS.pro.priceAnnual).toBe(232)
+    })
+  })
+
+  describe('creator tier', () => {
+    it('has correct name', () => {
+      expect(SUBSCRIPTION_TIERS.creator.name).toBe('Creator')
+    })
+
+    it('allows 25 audio hours per month', () => {
+      expect(SUBSCRIPTION_TIERS.creator.audioHoursPerMonth).toBe(25)
+    })
+
+    it('allows 10 shows', () => {
+      expect(SUBSCRIPTION_TIERS.creator.maxShows).toBe(10)
+    })
+
+    it('allows 3 team seats', () => {
+      expect(SUBSCRIPTION_TIERS.creator.teamSeats).toBe(3)
+    })
+
+    it('costs $59/mo or $472/yr', () => {
+      expect(SUBSCRIPTION_TIERS.creator.priceMonthly).toBe(59)
+      expect(SUBSCRIPTION_TIERS.creator.priceAnnual).toBe(472)
     })
   })
 
@@ -147,26 +172,36 @@ describe('SUBSCRIPTION_TIERS', () => {
       expect(SUBSCRIPTION_TIERS.agency.name).toBe('Agency')
     })
 
-    it('allows 200 episodes per month', () => {
-      expect(SUBSCRIPTION_TIERS.agency.episodesPerMonth).toBe(200)
+    it('allows 100 audio hours per month', () => {
+      expect(SUBSCRIPTION_TIERS.agency.audioHoursPerMonth).toBe(100)
     })
 
     it('allows 999 shows', () => {
       expect(SUBSCRIPTION_TIERS.agency.maxShows).toBe(999)
     })
 
-    it('allows 5 team seats', () => {
-      expect(SUBSCRIPTION_TIERS.agency.teamSeats).toBe(5)
+    it('allows 10 team seats', () => {
+      expect(SUBSCRIPTION_TIERS.agency.teamSeats).toBe(10)
     })
 
-    it('costs $49', () => {
-      expect(SUBSCRIPTION_TIERS.agency.priceMonthly).toBe(49)
+    it('costs $149/mo or $1192/yr', () => {
+      expect(SUBSCRIPTION_TIERS.agency.priceMonthly).toBe(149)
+      expect(SUBSCRIPTION_TIERS.agency.priceAnnual).toBe(1192)
     })
   })
 
   it('tier prices increase with features', () => {
     expect(SUBSCRIPTION_TIERS.free.priceMonthly).toBeLessThan(SUBSCRIPTION_TIERS.pro.priceMonthly)
-    expect(SUBSCRIPTION_TIERS.pro.priceMonthly).toBeLessThan(SUBSCRIPTION_TIERS.agency.priceMonthly)
+    expect(SUBSCRIPTION_TIERS.pro.priceMonthly).toBeLessThan(SUBSCRIPTION_TIERS.creator.priceMonthly)
+    expect(SUBSCRIPTION_TIERS.creator.priceMonthly).toBeLessThan(SUBSCRIPTION_TIERS.agency.priceMonthly)
+  })
+
+  it('annual pricing gives 2 months free', () => {
+    // Annual = monthly * 10 (i.e., pay for 10 months, get 12)
+    // Rounding may apply, so check within $1
+    expect(SUBSCRIPTION_TIERS.pro.priceAnnual).toBeLessThan(SUBSCRIPTION_TIERS.pro.priceMonthly * 12)
+    expect(SUBSCRIPTION_TIERS.creator.priceAnnual).toBeLessThan(SUBSCRIPTION_TIERS.creator.priceMonthly * 12)
+    expect(SUBSCRIPTION_TIERS.agency.priceAnnual).toBeLessThan(SUBSCRIPTION_TIERS.agency.priceMonthly * 12)
   })
 })
 

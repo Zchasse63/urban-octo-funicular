@@ -1,142 +1,75 @@
-# Risk Register: Taddy API Integration
+# Risk Register: PodBrain Pricing Structure
 
-**Date:** 2026-02-26
-**Source:** Cross-synthesis from all 7 scrutiny agent reports
-
----
-
-## Risk Summary
-
-| ID | Risk | Probability | Impact | Overall | Owner |
-|----|------|-------------|--------|---------|-------|
-| R1 | Persons field coverage too low for expert discovery | High | High | Critical | Architecture |
-| R2 | Transcript credit exhaustion on Pro plan | Very High | High | Critical | Product/Infra |
-| R3 | Taddy integration delays launch by 4-7 weeks | High | High | Critical | Product |
-| R4 | Pre-interview as sync route times out in production | Certain | High | Critical | Architecture |
-| R5 | Taddy API outage breaks expert discovery (no fallback) | Medium | High | High | Architecture |
-| R6 | False positive rate in text-based guest search | High | Medium | High | Architecture |
-| R7 | Taddy company instability (pricing change, outage, shutdown) | Low-Medium | Medium | Medium | Product |
-| R8 | DB schema migration debt when auth ships | High | Medium | Medium | Engineering |
-| R9 | Guest name collision (same name, different people) | High | Medium | Medium | Architecture |
-| R10 | Rate limit exhaustion from heavy API users | Low | Medium | Medium | Infra |
-| R11 | Taddy tables missing RLS before auth ships | Medium | High | High | Engineering |
-| R12 | Scope underestimation delays all surrounding roadmap items | High | High | Critical | Product |
-| R13 | GraphQL partial response mishandled | Medium | Low | Low | Engineering |
-| R14 | Data moat story doesn't materialize at launch scale | High | Low | Low | Product |
-| R15 | Podchaser has better guest credits coverage than Taddy | Medium | Medium | Medium | Product |
+**Date:** 2026-03-01
 
 ---
 
-## Critical Risks — Must Address Before Implementation Begins
+## Risk Matrix
 
-### R1: Persons Field Coverage Too Low
-
-**Description:** Taddy's `persons` field (Podcasting 2.0 `<podcast:person>` tag) is the primary mechanism for the Expert Discovery rewrite. Mainstream podcast adoption of this tag is estimated at <15%. The majority of topic searches will return episodes with no persons data.
-
-**Current mitigation in plan:** "Fall back to text search + AI extraction from descriptions" — mentioned but not designed.
-
-**Required action:**
-1. Test Taddy API with 10 representative topics before building T2
-2. If persons coverage is <30% of results: redesign T2 to make description-based extraction the primary path, not the fallback
-3. If persons coverage is adequate (>50%): proceed with plan as written
-
-**Timeline:** Before T1 even begins. This is a validation gate.
-
----
-
-### R2: Transcript Credit Exhaustion on Pro Plan
-
-**Description:** Pre-interview intelligence uses 10-20 transcript credits per request. Pro plan: 100/month = ~6-7 uses per month total. Any meaningful user adoption exhausts the budget in the first days of the month.
-
-**Current mitigation in plan:** "Only fetch transcripts for top appearances, check if transcript exists before requesting" — reduces consumption per request but doesn't address monthly ceiling.
-
-**Required action:**
-1. Implement Redis counter for transcript credits consumed this month
-2. Define per-user credit quotas (e.g., Pro users: 10 credits/month, Agency: 50 credits/month)
-3. Design graceful degradation: show appearance history without transcript analysis when credits exhausted
-4. Make explicit business decision: Business plan ($150/mo, 2,000 credits) if T3 is a launch feature
-
-**Timeline:** Must be designed before T3 is built.
+| ID | Risk | Probability | Impact | Severity | Mitigation |
+|----|------|------------|--------|----------|------------|
+| R1 | Agency long-form content makes tier loss-making | Medium | Critical | **CRITICAL** | Add audio-hour cap or monitoring |
+| R2 | Price anchoring: impossible to raise prices post-launch | High | High | **CRITICAL** | Set correct prices before first subscriber |
+| R3 | Agency tier underpriced — excluded from professional evaluation | High | High | **HIGH** | Raise to $149 before launch |
+| R4 | Free tier re-registration abuse | Medium | Medium | **MEDIUM** | Require email verification |
+| R5 | Stripe not provisioned — no actual revenue possible | High | Critical | **CRITICAL** | Provisioning task (non-code, immediate) |
+| R6 | Three pricing sources drift — displayed price wrong | Medium | Medium | **MEDIUM** | Consolidate to single source |
+| R7 | Team seat enforcement missing — free users add unlimited members | Medium | Medium | **MEDIUM** | Add canAddTeamMember() guard |
+| R8 | All 45 assets auto-generated — cost 3-5x assumed | Low | Medium | **MEDIUM** | Confirm on-demand generation |
+| R9 | Taddy quota exhausted by free users — feature breaks for all | Medium | Medium | **MEDIUM** | Gate Taddy features behind Pro |
+| R10 | Competitor launches full-featured free trial — evaluation lost | High | Medium | **MEDIUM** | Add 14-day Pro trial option |
+| R11 | No annual pricing — lower LTV certainty vs. competitors | High | Low | **LOW** | Add annual Stripe prices |
+| R12 | "Too cheap to trust" perception — low agency adoption | High | High | **HIGH** | Raise Agency to $149 |
+| R13 | Show limit forces premature Agency upgrade — churn | Medium | Medium | **MEDIUM** | Raise Pro show limit or add Creator tier |
 
 ---
 
-### R3: Integration Delays Launch
+## Critical Risks (Act Before Launch)
 
-**Description:** Realistic estimate for T1-T4 is 22-35 development days. The existing launch roadmap estimates 6-8 weeks to launch with existing backlog. Adding Taddy pre-launch extends timeline proportionally.
+### R1 — Agency Long-Form Cost Exposure
+**Description:** An Agency user processing 200 episodes at 3+ hours each incurs $100+ in variable costs against $49 revenue (or $149 at recommended price — still a loss at extreme usage).
+**Trigger:** Any Agency user managing long-form content (true crime, documentary, interview podcasts)
+**Financial impact at current pricing:** -$30 to -$82 per affected user per month
+**Financial impact at recommended $149:** -$0 to -$28 per affected user per month (better but not solved)
+**Mitigation:** Add audio-hour monitoring in Sentry. Consider hard cap at 150 audio hours/month for Agency, or overage billing at $1/hr beyond cap.
+**Deadline:** Before any Agency user is onboarded
 
-**Current mitigation in plan:** No acknowledgment of this risk.
-
-**Required action:**
-1. Explicit capacity planning: how many dev days are available before target launch date?
-2. If <20 days available: defer all Taddy work to post-launch
-3. If 20-35 days available: T1 foundation only pre-launch, T2-T4 post-launch
-4. The 10 critical bugs (Phase 0) must ship before any Taddy work begins
-
-**Timeline:** Strategic decision required immediately.
-
----
-
-### R4: Pre-Interview as Synchronous Route Times Out
-
-**Description:** T3's API route (`/api/episodes/[id]/pre-interview`) will take 3-10 minutes to execute. Next.js API routes default timeout: 60 seconds.
-
-**Current mitigation in plan:** None — the route is described as a standard API endpoint.
-
-**Required action:** T3 must be implemented as a Trigger.dev background job from the start:
-1. Route receives guest name, creates Trigger.dev job, returns job ID
-2. UI polls job status (same pattern as episode processing)
-3. When job completes, results are in `pre_interview_cache` and displayed in UI
-4. This adds scope to T3 but is architecturally non-negotiable
-
-**Timeline:** Must be in T3 design before implementation begins.
+### R2/R5 — Price Anchoring + Stripe Provisioning
+**Description:** R2: Every day at old prices anchors user expectations. R5: No Stripe products exist yet.
+**Combined mitigation:** Create Stripe products at the NEW recommended prices ($29 Pro, $149 Agency) — do not create at $19/$49. This solves both: set correct prices before any subscriber exists.
+**Deadline:** Immediate (blocking all revenue)
 
 ---
 
-## High Risks — Address Before Launch of Affected Feature
+## High Risks (Act Within 2 Weeks)
 
-### R5: Taddy Outage Breaks Expert Discovery
-
-After T2 ships, Grok is demoted to enrichment only. If Taddy is unavailable:
-- Expert discovery returns errors (no Grok fallback for the discovery query)
-- Resolution: preserve Grok discovery path as circuit breaker fallback; serve 7-day stale cache during outages
-
-### R11: Taddy Tables Missing RLS
-
-If `guest_appearances` and `pre_interview_cache` are added without RLS, they'll expose all users' data when auth ships. Resolution: add RLS policies to migration file at creation time using the future-ready pattern.
+### R3/R12 — Agency Tier Mispricing and Perception
+**Description:** $49 signals consumer-grade to agency buyers. Agencies filter out tools below $100 from professional evaluation.
+**Impact:** Entire agency market segment effectively excluded from consideration at $49.
+**Mitigation:** Raise Agency to $149. Add priority support and onboarding language to justify price.
+**Deadline:** Before any agency-targeted marketing or outreach
 
 ---
 
-## Medium Risks — Monitor and Address During Implementation
+## Medium Risks (Act Within 30 Days Post-Launch)
 
-### R6: False Positive Rate in Guest Search
+### R4 — Free Tier Abuse
+Enable Supabase Auth email confirmation. Configuration toggle in Supabase Dashboard.
 
-Text-based search returns episodes that mention a guest, not just episodes where they appeared. Mitigation: heuristic pre-filters (title contains "interview with", "feat.", etc.) before AI validation. Cap AI validation to top 20 results only.
+### R6 — Pricing Source Drift
+Create `src/lib/pricing.ts` as single source of truth. Other files import from it.
 
-### R7: Taddy Company Instability
+### R7 — Team Seat Not Enforced
+Implement `canAddTeamMember()` in `tier-limits.ts`, call from `POST /api/team`.
 
-Mitigated by: all Taddy data cached locally (Taddy explicitly allows this). At worst, cached data can be served for weeks after any outage. Actual service shutdown: fallback to Grok (R5 mitigation), cached data continues to serve. Moderate risk, acceptable with caching.
+### R8 — Asset Auto-Generation Cost
+Audit `generate-assets.ts`. Confirm assets are on-demand. If auto-generating all 45: restrict default to core 9.
 
-### R8: Auth Migration Debt
+### R9 — Taddy Quota for Free Users
+Gate `/api/taddy/search` and `/api/shows/[id]/experts` behind Pro tier check.
 
-Every user-scoped table added in single-user mode is another migration target when auth ships. Mitigation: use the future-ready RLS pattern from day one. Acceptable cost given the phased auth approach.
+### R10 — No Free Trial Option
+Add 14-day Pro trial on sign-up. Let users experience full product; then revert to free tier.
 
-### R9: Guest Name Collision
-
-Different people with the same name will be merged in the guest_appearances table. Mitigation: always display podcast context with guest appearances; filter by genre/niche; document the limitation.
-
-### R15: Podchaser Better for Guest Credits
-
-If Podchaser has materially better guest credits coverage than Taddy's persons field, the competitive analysis supports using Podchaser for T2 and Taddy for T3 transcripts only. Validation required before T1 build begins.
-
----
-
-## Low Risks — Accept or Monitor
-
-### R10: Rate Limit Exhaustion
-Apply per-user daily limits using existing Redis infrastructure. Low probability of exhaustion at launch scale.
-
-### R13: GraphQL Partial Response
-Handle in client.ts implementation. Standard engineering problem with known solution.
-
-### R14: Data Moat Doesn't Materialize at Launch Scale
-Accepted. The data moat is a long-term narrative, not a launch deliverable.
+### R13 — Show Limit Churn Trigger
+Raise Pro show limit from 5 to 10, or add Creator tier at $59 with 15 shows.

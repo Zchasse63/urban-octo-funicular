@@ -1,191 +1,148 @@
-# Technical Feasibility Agent Report
+# Technical Feasibility Analysis: PodBrain Pricing Structure
 
 **Agent:** technical-feasibility
-**Plan:** PodBrain Launch Roadmap — Full 8-Phase Analysis
-**Complexity Class:** MAJOR
-**Analysis Depth:** Extended (Deep+)
-**Date:** 2026-02-26
+**Complexity Class:** SIGNIFICANT
+**Date:** 2026-03-01
 
 ---
 
 ## Agent Verdict
 
-**MODIFY** — The plan is technically executable but contains three material feasibility gaps that must be addressed before timeline estimates are trustworthy: (1) the Trigger.dev 30-minute timeout blocks the Phase 0 success criteria for real-world audio, yet the fix isn't until Phase 5; (2) the `grok-beta` model identifier is an instability bomb sitting across 7+ production call sites with no migration plan to a specific stable model; (3) the Taddy pre-interview intelligence feature will fail as a synchronous API route due to 3-10 minute execution times. The Phase 0 bug fixes are credible and the core architecture is sound. The path to launch is real. These specific gaps require explicit resolution before implementation.
+**MODIFY**
+
+The pricing structure is technically implementable as designed, but contains a structural flaw: the Agency tier at max usage is loss-making with no technical safeguard to prevent it. The Stripe integration is not yet live. No cost circuit-breaker exists at the tier level. These are not theoretical concerns — they are confirmed gaps in the codebase.
 
 ---
 
-## 1. Phase 0 Bug Fixes — Feasibility
+## 1. Is the Pricing Technically Enforceable?
 
-**Verdict: CREDIBLE with one caveat**
+### Episode Count Limits
+**Status: Implemented and working.**
+`src/lib/tier-limits.ts` enforces hard caps per tier. `canCreateEpisode()` queries the DB and returns 401 with an upgrade prompt if the limit is exceeded. `getBillingPeriod()` correctly handles subscription-aligned vs. calendar-month windows.
 
-The 10 bugs are correctly identified and fix complexity estimates are largely accurate:
+**Gap identified:** The billing period logic for free tier uses calendar month, but for paid tiers it uses the Stripe subscription anchor date. This is correct behavior, but it means a Pro user who subscribes on the 15th gets 50 episodes between the 15th and 14th of next month — not calendar-based. This is industry-standard but could confuse users if the UI does not show the next reset date.
 
-- B1 (signedUrl field), B3, B4, B6, B9, B10: All 1-3 line fixes. Credible.
-- B5 (SEO hook): 3 lines. Credible.
-- B2 (status polling): "~20 lines" is right, but requires understanding Trigger.dev v4's actual run status enum values. Not zero-research. Budget 2-3 hours for B2 alone.
-- B7 (uncomment xAI call): The uncomment is trivial. But the first real end-to-end run will surface issues: Does the API key have credits? Are the prompt formats still correct for the current Grok model? Does the response parsing still match? This requires at least one full test run with real data.
-- B8 (Stripe price IDs on client): "Move to API-side resolution" is 15-30 lines of refactoring plus a new API endpoint or server action. Not a trivial fix.
+### Show Count Limits
+**Status: Implemented.**
+`canCreateShow()` enforces the 1/5/999 limits. The Agency limit is set to 999 (not "unlimited" as marketed). This is functionally unlimited but technically a cap.
 
-**Revised Phase 0 estimate: 1 full day (not 2-4 hours). Budget 1.5 days for safety.**
+### Asset Type Gating
+**Status: Implemented.**
+`canGenerateAssetType()` with `CORE_ASSET_TYPES` set correctly gates the 6 free assets. Free users who try to generate advanced assets should be blocked.
 
----
+**Gap identified:** The code in `tier-limits.ts` gates generation, but the UI (episode workspace, 7-tab interface) likely renders all 45 asset types in the tab regardless of tier. Users on free tier may see UI for assets they cannot generate, creating frustration. This needs a UI-level check to show upgrade prompts rather than errors after attempted generation.
 
-## 2. CRITICAL: Trigger.dev 30-Minute Timeout
+### Team Seat Limits
+**Status: Partially implemented.**
+`teamSeats` is stored in tier config but the `team/` API routes need to enforce this. The `tier-limits.ts` file shows `teamSeats: 5` for Agency but `canCreateTeamMember()` is not implemented in the file — only `canCreateEpisode()` and `canCreateShow()` have guard functions.
 
-**Verdict: UNRESOLVED CRITICAL GAP**
-
-CRIT-04 from the audit: Trigger.dev jobs have a 30-minute timeout. The podcast transcription pipeline uses AssemblyAI which can take 2x the audio duration. A 2-hour podcast = ~4-hour audio duration potential → transcription exceeds timeout.
-
-**The sequencing problem:**
-- Phase 0 milestone: "Upload episode → processing completes → real AI output"
-- Phase 5 fix: "Restructure AssemblyAI transcription to use webhook callbacks"
-- If Phase 0 testing uses a podcast episode > 25 minutes, the Phase 0 milestone silently fails
-
-**The webhook fix complexity:** AssemblyAI webhook callbacks require:
-1. A publicly accessible HTTPS endpoint that AssemblyAI can POST to
-2. Trigger.dev job restructured to wait on the webhook (not poll)
-3. State machine between job initiation and callback receipt
-4. This is a 2-3 day architectural change, not a minor fix
-
-**Immediate recommendation:** Phase 0 must explicitly specify "test with audio < 20 minutes." Add this constraint to the Phase 0 milestone definition. Flag that the product cannot serve its core use case (long-form podcasts) until Phase 5 completes.
+**This is a real gap:** Agency users could theoretically add unlimited team members if the API route doesn't check tier limits.
 
 ---
 
-## 3. `grok-beta` Model Identifier
+## 2. Stripe Readiness
 
-**Verdict: HIGH RISK, SIMPLE FIX DEFERRED TOO LONG**
+### Current State
+Stripe products are defined in `src/lib/stripe/products.ts` with `priceId: null` for both Pro and Agency (comment: "Resolved server-side via getServerPriceId()"). The `MEMORY.md` confirms: "Create Stripe products (Pro $19/mo, Agency $49/mo) + get Price IDs" is still a pending infrastructure task.
 
-`grok-beta` is used in 7+ locations. xAI's production-stable model identifiers are versioned (e.g., `grok-2-1212`, `grok-3-beta`). If xAI deprecates or removes `grok-beta`:
-- All AI generation breaks simultaneously across every feature
-- Zero warning before failure (no deprecation header in responses)
+**This means the pricing plan cannot go live until:**
+1. Stripe products are created in Stripe Dashboard
+2. Price IDs are set as env vars
+3. Stripe webhook endpoint is configured
 
-The plan addresses this in Phase 1 ("Pin xAI model to stable identifier"). This is correct phasing. However, the plan does not specify WHICH stable model to use. At time of writing, `grok-2-1212` or `grok-3-beta` may be appropriate — this must be verified against xAI's current model catalog.
+**Known Stripe bugs from prior audit:**
+- B8: Stripe `priceId` reads server-only env vars on client — upgrade buttons broken
+- B9: Checkout success URL points to `/settings/billing` (non-existent) — post-checkout 404
 
-**Additional risk:** If the model capabilities differ between `grok-beta` and the replacement, prompt formats written for `grok-beta` may produce degraded output with a newer model. The plan should include explicit output quality validation after model pin.
-
----
-
-## 4. Supabase Auth Migration (Phase 2)
-
-**Verdict: FEASIBLE BUT EFFORT IS UNDERSTATED**
-
-Phase 2 lists "Replace DEFAULT_USER_ID with auth.uid() in all route handlers" as a single checklist item. In reality this is:
-- 26 route files to update
-- Each requires extracting auth from the request context
-- Each requires updating Supabase client instantiation to use the user's session
-- RLS policy updates on every table (currently `USING (true)`)
-- Testing that no route breaks after the change
-
-The existing schema has tables prepared for multi-user (user_id columns present) but the DEFAULT_USER_ID pattern is pervasive. This is genuinely a 3-5 day migration task. Planning as a single checklist item will cause schedule slip.
-
-**Additionally:** The middleware.ts referenced in Phase 2 doesn't currently exist. Creating it to protect 26 routes including webhook exclusions requires careful testing — Stripe webhooks must NOT be protected by auth middleware.
+Both are confirmed 1-line fixes but neither is yet fixed. Any user who clicks "Upgrade" today will hit a broken flow.
 
 ---
 
-## 5. Transcription Webhook Architecture (Phase 5)
+## 3. The Cost Circuit-Breaker Problem
 
-**Verdict: NECESSARY, SCOPED CORRECTLY**
+### The Structural Risk
+Agency tier: $49/mo revenue, up to $82 variable cost at max usage (200 episodes × $0.41/episode).
 
-Phase 5 correctly identifies the need to switch from polling to webhook callbacks for AssemblyAI. This is the right fix for the Trigger.dev timeout problem.
+**There is no cost protection in the codebase.** Specifically:
+- Rate limiting exists at the API level (10 req/min for processing) but does NOT enforce a monthly episode cap on cost-per-episode basis
+- The `canCreateEpisode()` function enforces the 200-episode count limit but does NOT differentiate between a 5-minute episode ($0.02) and a 4-hour episode ($1.64)
+- A single Agency user with 200 episodes of 4-hour podcasts would cost: 200 × $1.64 = **$328** in variable costs alone, against $49 revenue
 
-**Technical considerations for implementation:**
-- The webhook endpoint must be behind its own authentication (AssemblyAI HMAC signature verification), not the user auth middleware from Phase 2
-- The Trigger.dev job must support a "wait for webhook" pattern — Trigger.dev v4 has `triggerAndWait` but this requires a different job structure than polling
-- The endpoint URL must be configured in AssemblyAI at job submission time, which requires the production URL to be known
+**This is not a pricing strategy question — it is a technical gap that makes the current pricing unacceptable for agencies with long-form content.**
 
-**Correctly placed in Phase 5. This is non-trivial but well-understood architecture.**
+### Recommended Technical Fix
+Two options:
+1. **Hour-based cap:** Convert episode limits to audio-hour limits. 200 episodes × 45 min = 150 hours. Cap Agency at 150 audio hours/month. Implementation requires storing audio duration and checking it against the monthly budget. Moderate complexity (2-3 days).
+2. **Minimum cost floor with overage billing:** Allow unlimited but charge per-episode beyond the cap. Stripe supports metered billing. Higher complexity (1 week+).
 
----
-
-## 6. Taddy Pre-Interview Intelligence — Architectural Gap
-
-**Verdict: CRITICAL ARCHITECTURAL FLAW IN THE PLAN**
-
-The plan places pre-interview intelligence at `app/api/episodes/[id]/pre-interview/route.ts` — a Next.js API route. The expected execution flow:
-1. Search Taddy (multiple paginated calls)
-2. Fetch 10-20 transcripts (10 seconds each per hour of audio)
-3. 10-20 Grok analysis calls (1-5 seconds each)
-4. Synthesis call to Grok
-
-**Expected total duration: 3-10 minutes minimum.**
-
-Next.js API routes on Vercel/Netlify have a 60-second timeout. Even on Vercel Pro with extended timeouts, blocking the user's request for 3-10 minutes is unacceptable UX.
-
-**The fix:** Pre-interview intelligence must be a Trigger.dev background job, following the same pattern as episode processing. The API route creates the job and returns immediately. The UI polls for completion.
-
-This adds scope to Phase 7 but is architecturally necessary.
+**The current episode-count-only enforcement is technically unsafe for the Agency tier.**
 
 ---
 
-## 7. Podcasting 2.0 Tag Generation — Technical Assessment
+## 4. AssemblyAI Cost Variance
 
-**Verdict: TECHNICALLY SOUND, BEST-EXECUTED PART OF PHASE 7**
+The plan cites "$0.17-0.39/hr" but this is a wide range. The variance matters:
+- Universal-2 model (higher quality, speaker diarization): $0.17/hr
+- Standard model: ~$0.39/hr
 
-The data mapping in the Podcasting 2.0 strategy is technically correct:
+The codebase uses Universal-2 with speaker diarization enabled (confirmed in `lib/assemblyai/` config). So the realistic cost is closer to the LOW end ($0.17/hr), which is good news for margins. At $0.17/hr:
+- Agency (200 eps × 45 min = 150 hrs): $25.50 AssemblyAI + ~$3-6 Grok = ~$28.50-31.50 variable
+- At $49 revenue: gross margin is +37-42% at average usage
 
-- `viral_moments[]` → `<podcast:soundbite>`: Data model maps directly. Near-zero implementation complexity.
-- AssemblyAI transcript → VTT format: Well-documented conversion, low complexity. VTT files are small (~50KB per hour).
-- Show notes sections → chapters JSON: More complex than implied. Requires AI chapter detection to produce timestamps, not just section titles. Need to verify the chapter detection pipeline works.
-- `<podcast:person>` basic tags: Requires `guest_name` to be populated on episodes. The upload wizard currently has no guest name field (to be added in Phase 1). Basic person tags won't be populated until users start entering guest names.
-
-**The flywheel claim is real but slow.** PodBrain generates tags → Podcast Index/Taddy indexes them. Taddy's indexing frequency for non-popular feeds is unknown. The flywheel could take 12-18 months to show measurable effect. This is an investment in long-term positioning, not a near-term business driver.
-
----
-
-## 8. Missing RPC Function
-
-**Verdict: SILENT FAILURE RISK**
-
-`find_similar_sections` RPC function is referenced in the codebase but was never created in any migration. Cross-episode similarity code will fail silently. The plan places this in Phase 8 (post-launch), which means it will cause errors in production for any user who triggers the cross-episode linking feature.
-
-**Minimum fix:** Add a database migration to create a stub `find_similar_sections` function that returns an empty array (prevents crashes), to be replaced with the real implementation in Phase 8.
+But at 4-hour episodes (200 × 4 hrs = 800 hrs): $136 AssemblyAI alone exceeds the $49 price. **The hour dimension is the real cost driver, not episode count.**
 
 ---
 
-## 9. Rate Limiting Not Applied
+## 5. Taddy API Cost at Scale
 
-**Verdict: HIGH PRIORITY, CORRECTLY IN PHASE 1**
+Taddy Pro: $75/mo flat for 100,000 requests.
 
-Rate limiting code exists but is applied to 0 routes. An AI processing call costs ~$0.15. A free user (or attacker) can trigger unlimited processing runs at no cost to them. Phase 1 correctly includes "Apply rate limiting to processing and asset generation routes."
+The plan assumes this is sufficient for "early growth." But:
+- Each expert discovery search likely makes 2-5 Taddy API calls (search + episode lookup + caching)
+- Pre-interview intelligence may make 5-10 calls per guest
+- If the free tier has access to Taddy-powered search (it does — the `/api/taddy/search` route has only rate limiting, not tier gating), free users consume Taddy quota
 
-However: Phase 1 does not mention applying rate limiting to Taddy routes. The Taddy pre-interview route consumes transcript credits ($10-12 effective cost per credit-consuming request). This route must have rate limiting applied from day one of Phase 7, not after.
+**Gap:** The Taddy search API route (`/api/taddy/search`) is not gated behind a paid tier in the current code. Free users can use Taddy-powered expert discovery at the same $75/mo fixed cost. At 1,000 free users making 5 searches each = 5,000 Taddy calls. At 10,000 free users = 50,000 calls (within Pro limit). But at 30,000 free users, the Taddy quota is exceeded and the feature breaks for all users.
 
----
-
-## 10. Redis Double-Serialization (B10)
-
-**Verdict: CORRECTLY IDENTIFIED, FIX REQUIRED BEFORE ANY CACHING RELIES ON REDIS**
-
-B10 (double JSON.stringify) means cached data stored as `"\"stringified\"" ` instead of `"stringified"`. This affects deserialization — `JSON.parse(cache)` will return a string, not an object. Any feature that relies on cached Redis data is silently broken until this is fixed.
-
-B10 is in Phase 0. This is correct. Without this fix, the Taddy caching strategy (which plans to use Redis as L1 cache) would silently corrupt cached Taddy responses.
+**Recommendation:** Gate Taddy-powered features (pre-interview intelligence, expert discovery beyond basic) behind Pro tier in the code.
 
 ---
 
-## Technical Risk Register
+## 6. xAI Cost Growth with Asset Count
 
-| Risk | Severity | Phase Addressed | Action Required |
-|------|----------|-----------------|-----------------|
-| Trigger.dev 30-min timeout | CRITICAL | Phase 5 | Phase 0 must restrict to short audio |
-| Pre-interview route as sync API | CRITICAL | Phase 7 (unmentioned) | Must use Trigger.dev background job |
-| `grok-beta` identifier | HIGH | Phase 1 | Specify target model ID before implementation |
-| Auth migration effort (26 routes) | HIGH | Phase 2 | Budget 3-5 days, not 1 checklist item |
-| Transcript truncation (8000 chars) | HIGH | Phase 5 | Quality degradation visible pre-Phase 5 |
-| B7 uncomment untested | MEDIUM | Phase 0 | Budget full day, include end-to-end test run |
-| `persons` field 0% mainstream coverage | MEDIUM | Phase 7 | Design fallback strategy explicitly |
-| 100 transcript credits/month (Pro) | MEDIUM | Phase 7 | Business plan required for T3; or per-use gating |
-| No Sentry until Phase 5 | MEDIUM | Phase 5 | Consider moving to Phase 2 |
-| `find_similar_sections` missing | LOW | Phase 8 | Add stub migration to prevent crashes |
-| `hosting_connections` schema conflict | LOW | Unaddressed | Add to migrations plan |
+The plan says "9 API calls" for Grok at $0.01-0.03/episode. This is based on the default asset set. But:
+- Pro and Agency tiers get all 45 asset types
+- If all 45 assets are generated per episode, this is potentially 45 separate Grok calls
+- At $0.50/M output tokens, generating 45 detailed assets (avg 500 tokens each) = 22,500 tokens × $0.50/M = $0.011 in output costs per episode
+
+The plan's $0.01-0.03 estimate appears to assume a subset of assets are generated (the 9 default ones), not all 45. If users trigger generation of all 45 assets on every episode, the Grok cost per episode could reach $0.05-0.10, which is 3-5x the assumed cost.
+
+**This is within acceptable margins but should be verified against actual usage patterns.**
 
 ---
 
-## Feasibility Conclusion
+## 7. Infrastructure Cost at Scale
 
-The plan is **technically executable** by a skilled full-stack developer. The core architecture is sound and most of the "broken" items are genuinely simple fixes. The revised recommendation: execute the plan with these modifications:
+The $135/mo fixed cost baseline creates a minimum revenue threshold:
+- Break-even on fixed costs alone requires: $135 ÷ $19 = ~7.1 Pro subscribers
+- Or: $135 ÷ $49 = ~2.8 Agency subscribers
 
-1. Phase 0: Restrict test audio to < 20 minutes; budget 1.5 days not 2-4 hours
-2. Phase 1: Move `grok-beta` fix to Phase 0 or early Phase 1; specify the target model ID
-3. Phase 2: Budget 3-5 days for auth migration; include stub for missing RPC function
-4. Phase 5: Consider moving Sentry to Phase 2-3
-5. Phase 7: Pre-interview intelligence must be Trigger.dev background job, not sync API route
+This is a very low bar to clear. The fixed cost structure is appropriate for a pre-launch SaaS.
+
+**However:** Supabase Pro ($25/mo) includes 8GB database and 100GB storage. pgvector embeddings for episodes grow quickly. At 1,000 episodes with transcript segments, each ~1KB per segment × 50 segments = 50MB. At 10,000 episodes: 500MB. Storage is manageable but the embedding search (`find_similar_sections` RPC) may become expensive at scale and will require Supabase compute add-ons.
+
+---
+
+## Summary of Technical Findings
+
+| Finding | Severity | Action Required |
+|---------|----------|----------------|
+| No hour-based cost cap for Agency | CRITICAL | Add audio-hour tracking and cap |
+| Team seat limit not enforced in API | HIGH | Add `canCreateTeamMember()` guard |
+| Stripe not yet provisioned | HIGH | Provisioning task (non-code) |
+| Taddy search ungated from free tier | MEDIUM | Add Pro tier gate |
+| xAI cost may be underestimated for full 45-asset generation | MEDIUM | Monitor and benchmark |
+| UI shows all assets regardless of tier | MEDIUM | Add tier-aware UI gating |
+| Billing period reset date not shown in UI | LOW | UX enhancement |
+
+**Bottom line:** The pricing is technically implementable but the Agency tier as designed has a cost exposure that is technically unbounded relative to its revenue. Episode count alone is the wrong enforcement unit when audio duration varies from 5 minutes to 4 hours.

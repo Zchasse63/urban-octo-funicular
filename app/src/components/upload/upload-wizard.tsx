@@ -869,9 +869,9 @@ export const UploadWizard = ({
   const removeItem = useCallback((localId: string) => {
     setLocalQueue(prev => prev.filter(i => i.localId !== localId));
   }, []);
-  const episodeLimitReached = usage ? usage.episodes.percentage >= 100 : false;
-  const episodeLimitApproaching = usage ? usage.episodes.percentage >= 80 && usage.episodes.percentage < 100 : false;
-  const canProceed = localQueue.length > 0 && !episodeLimitReached;
+  const audioLimitReached = usage ? usage.audioHours.percentage >= 100 : false;
+  const audioLimitApproaching = usage ? usage.audioHours.percentage >= 80 && usage.audioHours.percentage < 100 : false;
+  const canProceed = localQueue.length > 0 && !audioLimitReached;
   const handleFinish = useCallback(async () => {
     if (localQueue.length === 0 || isSubmitting) return;
     setIsSubmitting(true);
@@ -1016,27 +1016,27 @@ export const UploadWizard = ({
           ease: 'easeOut'
         }}>
             {currentStep === 1 && <>
-              {episodeLimitReached && (
+              {audioLimitReached && (
                 <UpgradePrompt
-                  title="Episode limit reached"
-                  description="Upgrade your plan to continue uploading episodes."
-                  currentUsage={usage!.episodes.used}
-                  limit={usage!.episodes.limit}
+                  title="Audio hours limit reached"
+                  description="Upgrade your plan to continue processing episodes."
+                  currentUsage={usage!.audioHours.used}
+                  limit={usage!.audioHours.limit}
                   variant="banner"
                   className="mb-4"
                 />
               )}
-              {episodeLimitApproaching && (
+              {audioLimitApproaching && (
                 <UpgradePrompt
-                  title="Approaching episode limit"
-                  description={`You've used ${usage!.episodes.used} of ${usage!.episodes.limit} episodes this period.`}
-                  currentUsage={usage!.episodes.used}
-                  limit={usage!.episodes.limit}
+                  title="Approaching audio hours limit"
+                  description={`You've used ${usage!.audioHours.used} of ${usage!.audioHours.limit} audio hours this period.`}
+                  currentUsage={usage!.audioHours.used}
+                  limit={usage!.audioHours.limit}
                   variant="banner"
                   className="mb-4"
                 />
               )}
-              <Step1 queue={localQueue} onAddFile={episodeLimitReached ? () => {} : addFile} onAddUrl={episodeLimitReached ? () => {} : addUrl} onRemove={removeItem} />
+              <Step1 queue={localQueue} onAddFile={audioLimitReached ? () => {} : addFile} onAddUrl={audioLimitReached ? () => {} : addUrl} onRemove={removeItem} />
             </>}
             {currentStep === 2 && <Step2 context={expertContext} onChange={setExpertContext} />}
             {currentStep === 3 && <Step3 style={styleSelection} onChange={setStyleSelection} />}
@@ -1081,8 +1081,8 @@ export const UploadWizard = ({
 
         {currentStep === 1 && !canProceed && (
           <p className="text-center font-sans text-[11px] text-muted-foreground mt-2.5">
-            {episodeLimitReached
-              ? 'Upgrade your plan to upload more episodes'
+            {audioLimitReached
+              ? 'Upgrade your plan to process more audio'
               : 'Select a file or import a URL to continue'}
           </p>
         )}

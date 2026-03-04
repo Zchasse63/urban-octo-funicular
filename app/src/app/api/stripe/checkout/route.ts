@@ -4,9 +4,9 @@ import { createClient } from '@/lib/supabase/server';
 import { requireAuth } from '@/lib/auth';
 import { APP_URL } from '@/lib/constants';
 import { getServerPriceId } from '@/lib/stripe/products.server';
-import type { PricingTier } from '@/lib/stripe/products';
+import type { PricingTier, BillingInterval } from '@/lib/stripe/products';
 
-const VALID_TIERS: PricingTier[] = ['pro', 'agency'];
+const VALID_TIERS: PricingTier[] = ['pro', 'creator', 'agency'];
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,16 +15,17 @@ export async function POST(request: NextRequest) {
 
     // Accept either tier name or price_id for backwards compatibility
     let priceId: string | null = null;
+    const interval: BillingInterval = body.interval === 'annual' ? 'annual' : 'monthly';
 
     if (body.tier && VALID_TIERS.includes(body.tier)) {
-      priceId = getServerPriceId(body.tier);
+      priceId = getServerPriceId(body.tier, interval);
     } else if (body.price_id && typeof body.price_id === 'string') {
       priceId = body.price_id;
     }
 
     if (!priceId) {
       return NextResponse.json(
-        { error: 'Invalid tier or price_id. Valid tiers: pro, agency' },
+        { error: 'Invalid tier or price_id. Valid tiers: pro, creator, agency' },
         { status: 400 }
       );
     }

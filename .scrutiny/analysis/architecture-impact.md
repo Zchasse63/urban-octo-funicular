@@ -1,208 +1,236 @@
-# Architecture Impact Agent Report
+# Architecture Impact Analysis: PodBrain Pricing Structure
 
 **Agent:** architecture-impact
-**Plan:** PodBrain Launch Roadmap — Full 8-Phase Analysis
-**Complexity Class:** MAJOR
-**Analysis Depth:** Extended (Deep+)
-**Date:** 2026-02-26
+**Complexity Class:** SIGNIFICANT
+**Date:** 2026-03-01
 
 ---
 
 ## Agent Verdict
 
-**MODIFY** — The existing architecture is fundamentally sound. The Swiss Broadcast UI design system is implemented. The service layer pattern (`lib/xai-client.ts`, `lib/assemblyai/`, `lib/buzzsprout/`) is consistent and extensible. The Trigger.dev + Supabase + Next.js App Router stack is well-chosen for the use case. The plan's proposed changes are architecturally coherent. However, four specific architectural concerns require remediation: (1) the pre-interview intelligence pipeline (Phase 7) must use Trigger.dev background jobs, not synchronous Next.js API routes — a 3-10 minute operation will always time out on Vercel/Netlify; (2) three separate xAI client implementations create an inconsistency that will compound during Phase 7 when more Grok calls are added; (3) the `hosting_connections` table has a dual schema conflict that needs explicit migration resolution before Phase 2 auth work begins; (4) middleware.ts doesn't exist yet but is the critical control point for auth, rate limiting, and tier enforcement — its design must be planned before Phase 1 is complete.
+**MODIFY**
+
+The pricing plan has direct architectural consequences that are not currently implemented. The most serious: the episode-count enforcement unit creates an unbounded cost exposure for audio-heavy Agency users, and the Stripe integration is not yet provisioned. Several pricing decisions (adding a 4th tier, switching to hourly pricing) have non-trivial architectural implications that should be evaluated before committing to a direction.
 
 ---
 
-## 1. Overall Architecture Assessment
+## 1. Current Architecture State for Pricing Enforcement
 
-**What's good:**
-- Service layer pattern is consistent across integrations (xAI, AssemblyAI, Buzzsprout, Stripe, Resend)
-- Next.js App Router with TypeScript is appropriate for the feature set
-- Supabase pgvector for vocabulary embeddings is the right technology
-- Trigger.dev v4 for background jobs is the right pattern for long-running AI operations
-- Schema has user_id columns on all tables (auth-ready without structure changes)
-- Component architecture (ui/, layout/, episodes/, upload/) is well-organized
+### What Is Built and Working
 
-**What needs fixing:**
-- Three xAI client implementations (architectural inconsistency)
-- No middleware.ts (critical missing control point)
-- RLS policies at `USING (true)` (security-deferred but must be resolved in Phase 2)
-- `find_similar_sections` RPC never created (silent failure in production)
-- `hosting_connections` dual schema conflict
+**Tier configuration** (3 locations, must stay in sync):
+1. `src/lib/constants.ts` — `SUBSCRIPTION_TIERS` object
+2. `src/lib/tier-limits.ts` — `TIER_LIMITS` with feature flags + guard functions
+3. `src/lib/stripe/products.ts` — `PRICING_TIERS` with Stripe price IDs
 
----
+These three sources of truth can drift. If the Pro price is updated in Stripe but `SUBSCRIPTION_TIERS.pro.priceMonthly` is not updated in constants.ts, the displayed price is wrong. This is a maintenance liability.
 
-## 2. The Three xAI Client Implementations
+**Recommendation:** Consolidate to single source of truth. `tier-limits.ts` (or a new `pricing.ts`) should own all tier data. The other files should import from it.
 
-**Finding:** The audit identifies 3 separate xAI Grok client implementations. This creates maintenance risk:
+### What Is Not Built
 
-- When `grok-beta` is replaced with a stable model ID, the replacement must happen in 3 places
-- When Grok API changes (auth headers, endpoint URL, response format), 3 files must be updated
-- When rate limiting is applied to Grok calls, it must be applied in 3 places (or missed)
-
-**Impact on Phase 7:** Phase 7 adds more Grok calls (expert enrichment, transcript analysis, pre-interview synthesis). If these new calls use a 4th implementation pattern, the inconsistency compounds.
-
-**Recommended fix (Phase 1):** Consolidate to a single `lib/xai-client.ts` with typed methods for each use case (generateShowNotes, generateAssets, analyzeTranscript, enrichExpert). All Phase 7 Grok calls should use this unified client.
+1. **Audio-hour tracking:** No database column for audio duration budgets. Episodes have `duration_seconds` but there is no monthly aggregate query or enforcement.
+2. **Team seat enforcement:** `canCreateTeamMember()` function does not exist. Tier config shows `teamSeats: 5` for Agency but there is no guard at the API level.
+3. **Stripe provisioning:** Price IDs are null in code. Stripe products don't exist yet in the dashboard.
+4. **Metered billing:** No metered billing configured. All tiers are flat-rate subscriptions.
+5. **Usage dashboard:** `GET /api/usage` exists but needs to be wired to the UI's upgrade prompts.
 
 ---
 
-## 3. middleware.ts — Critical Missing Control Point
+## 2. Architectural Implications of Each Pricing Decision
 
-**Finding:** No `middleware.ts` exists. This is the location where all cross-cutting concerns should be enforced:
-- Authentication (Phase 2): Verify user session before allowing access to protected routes
-- Rate limiting (Phase 1): Check Redis-based rate limit counters before processing requests
-- Tier enforcement (Phase 3): Verify user's subscription tier before allowing premium features
-- CORS (if needed): Allow or deny cross-origin requests
+### Decision 1: Keep Current Episode-Count Pricing (No Change)
 
-**The current state:** Without middleware.ts, each of these concerns must be implemented in every individual route handler. This is the source of the "rate limiting applied to 0 routes" problem — there's no central enforcement point.
+**Architectural impact:** Minimal. Current enforcement is built.
 
-**Architecture recommendation:** Design middleware.ts before Phase 2 work begins. The middleware should:
-1. Identify public routes (landing page, auth pages, webhook endpoints)
-2. For protected routes: extract and verify Supabase session
-3. For AI-cost routes (processing, asset generation): check rate limits
-4. For premium feature routes: check subscription tier
+**Hidden risk:** `duration_seconds` is stored in the episodes table (from AssemblyAI). A future switch to hour-based billing requires this column and the data has been accumulating from day one. No schema migration needed — the data is already there.
 
-This is not a single file — it's the architectural spine of the security model. Budget 2-3 days to design and test it properly.
+**Action required for safety:** Add a soft warning system. When a user's episodes in the current month sum to >X audio hours, log a monitoring alert (Sentry custom event). This costs 10 minutes to implement and gives visibility into cost exposure before it becomes a problem.
 
----
+### Decision 2: Switch to Hour-Based Pricing
 
-## 4. Pre-Interview Intelligence Must Use Trigger.dev
-
-**Finding:** The Phase 7 plan places pre-interview intelligence at `app/api/episodes/[id]/pre-interview/route.ts` — a standard Next.js API route.
-
-**The execution flow would be:**
-1. Search Taddy: 5-10 API calls with pagination (~5-15 seconds)
-2. Fetch 10-20 transcripts: 10 seconds each for 1-hour episodes (~100-200 seconds minimum)
-3. Send 10-20 transcripts to Grok for analysis (~20-100 seconds)
-4. Synthesis call (~5-10 seconds)
-5. Cache results in database
-
-**Total: 130-330 seconds (2-5.5 minutes) minimum.**
-
-Next.js API routes on Vercel (and Netlify functions): 60-second default timeout. Even on Vercel Pro with configurable timeouts, blocking a user's HTTP request for 2-5+ minutes is an unacceptable UX pattern.
-
-**The fix:** Follow the same pattern used for episode processing:
-1. `POST /api/episodes/[id]/pre-interview` → creates Trigger.dev job, returns `{jobId}`
-2. Trigger.dev job `generatePreInterviewIntelligence` executes the full pipeline
-3. UI polls `GET /api/episodes/[id]/pre-interview/status` with job ID
-4. When complete, results are in `pre_interview_cache`
-5. UI fetches results
-
-This is architecturally consistent with the existing processing pattern and handles the execution time correctly.
-
----
-
-## 5. Dual Schema Conflict in `hosting_connections`
-
-**Finding:** The `hosting_connections` table has columns from two different schema versions (Phase 1 schema + Phase 7 schema) that conflict. This was identified in the audit but is not explicitly addressed in any phase of the new roadmap.
-
-**Impact:** If Phase 2 auth work involves touching `hosting_connections` (it does — RLS policies must be applied), the conflicting schema creates migration complexity. Attempting to add `USING (user_id = auth.uid())` to a table with schema conflicts may fail or produce unexpected results.
-
-**Recommendation:** Add a migration cleanup as a Phase 1 or early Phase 2 task: resolve the `hosting_connections` dual schema conflict before the auth migration touches this table.
-
----
-
-## 6. Database Schema — Phase 7 Additions
-
-**New tables proposed:**
-- `taddy_podcast_cache` — shared cache, no user_id (correct)
-- `taddy_episode_cache` — shared cache, no user_id (correct)
-- `guest_appearances` — user-scoped, uses DEFAULT_USER_ID
-- `pre_interview_cache` — user-scoped, uses DEFAULT_USER_ID
-
-**Schema design concerns:**
-
-**`pre_interview_cache` episode coupling:** The schema ties pre-interview intelligence to a specific `episode_id`. But pre-interview research for a guest is reusable — the same guest can appear on multiple episodes. The correct design caches by guest_name (per user), with a separate join table for episode associations. This avoids re-running expensive research when the same guest appears on multiple episodes.
-
-**Foreign key gaps in `guest_appearances`:** The `episode_taddy_uuid` and `podcast_taddy_uuid` fields are TEXT with no FK constraint to the cache tables. A guest appearance can be inserted referencing a Taddy UUID that has no corresponding cache entry, causing silent null joins in the UI.
-
-**RLS at creation time:** The new tables should include RLS policies in their migration, not as a follow-up. Include:
+**Database impact:**
 ```sql
-ALTER TABLE guest_appearances ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users see own guest appearances" ON guest_appearances
-  FOR ALL USING (user_id = auth.uid() OR user_id = '00000000-0000-0000-0000-000000000001');
+-- New query needed for hour-based enforcement:
+SELECT SUM(duration_seconds) / 3600 AS total_hours
+FROM episodes
+JOIN shows ON episodes.show_id = shows.id
+WHERE shows.user_id = $1
+  AND episodes.created_at >= $billing_start
+  AND episodes.status = 'completed'
+```
+This query is straightforward. An index on `(shows.user_id, episodes.created_at)` is likely needed for performance.
+
+**Tier limits change:**
+```typescript
+// tier-limits.ts would change from:
+episodesPerMonth: 50
+// to:
+audioHoursPerMonth: 37.5  // 50 eps × 45 min avg
 ```
 
-The second clause allows single-user mode to work during development while being ready for multi-user auth.
+**API impact:** `canCreateEpisode()` becomes `canProcessAudio(userId, durationSeconds)`. The check must happen BEFORE AssemblyAI is called (since that's when cost is incurred), which means the upload step must record the audio duration before processing begins.
+
+**Problem:** Audio duration is not known until AssemblyAI processes the file (or until ffprobe analyzes the upload). This creates a chicken-and-egg problem: you need duration to enforce limits, but you only know duration after processing. Workaround: allow the upload and check a soft limit, or require duration metadata from the client.
+
+**Estimated architectural complexity:** 1.5-2 weeks including schema work, API changes, UI changes, Stripe reconfiguration.
+
+**Verdict:** Feasible but non-trivial. Do not switch pre-launch unless the financial case for it is compelling enough to delay launch by 2 weeks.
+
+### Decision 3: Add a 4th Tier (Starter at ~$9/mo)
+
+**Database impact:** None — the `subscription_tier` column in the `users` table is a text field. A new value 'starter' simply needs to be handled everywhere tier is checked.
+
+**Code impact — files that need changes:**
+1. `src/lib/constants.ts` — Add `SUBSCRIPTION_TIERS.starter`
+2. `src/lib/tier-limits.ts` — Add `TIER_LIMITS.starter` with new limits + `canGenerateAssetType()` update
+3. `src/lib/stripe/products.ts` — Add `PRICING_TIERS.starter` with Stripe price ID
+4. `src/lib/stripe/products.server.ts` — Add price ID env var handling
+5. Landing page pricing component — Add Starter column
+6. Upgrade prompt components — Add Starter as an option
+
+**Stripe impact:** New Stripe product + price must be created. Existing webhook handler must handle 'starter' tier.
+
+**Estimated complexity:** 2-3 days. Manageable.
+
+**Risk:** Complicates the pricing page. A 4-tier pricing page is harder to communicate than 3 tiers, especially for a new product. Good pricing pages should tell a simple story.
+
+### Decision 4: Raise Prices (No New Tiers)
+
+**Architectural impact:** Essentially zero. Change numbers in `products.ts`, update Stripe, update marketing copy. This is the lowest-complexity pricing change available.
+
+**Risk:** None architecturally. Business risk (conversion) is the only concern.
+
+### Decision 5: Metered/Overage Billing
+
+**Architectural impact:** High.
+
+Stripe supports metered billing (`usage_type: 'metered'` in price configuration). This requires:
+1. New Stripe price type (recurring + metered)
+2. Usage reporting to Stripe after each episode processed
+3. Stripe webhook handling for usage-based invoices
+4. UI to show estimated vs. actual bill
+
+This is a 2-3 week architectural addition. Not recommended pre-launch.
 
 ---
 
-## 7. Caching Architecture (Redis vs. Supabase)
+## 3. The Three-Source-of-Truth Problem
 
-**Current pattern:** Upstash Redis is used for rate limiting and caching.
+Pricing data currently lives in 3 separate files that must be kept in sync:
 
-**Phase 7 proposal:** Supabase tables for Taddy data caching.
+```
+constants.ts        → SUBSCRIPTION_TIERS (priceMonthly, episodesPerMonth, maxShows, teamSeats)
+tier-limits.ts      → TIER_LIMITS (same data + feature flags + guard functions)
+stripe/products.ts  → PRICING_TIERS (same data + Stripe price IDs + features array for UI)
+```
 
-**The tension:** Redis is fast (sub-millisecond) but ephemeral. Supabase is slower (~5-20ms) but persistent and queryable with SQL.
+If Pro changes from $19 to $39:
+- Update `constants.ts` line 63
+- Update `stripe/products.ts` line 32
+- Update Stripe Dashboard (external)
+- Update landing page copy (separate component)
+- Update any hardcoded references in email templates
 
-**Why the split is actually correct:**
-- Taddy cache data (podcast metadata, episode metadata, guest appearances) needs to be: persistent (survives server restarts), queryable (SQL joins, search), and shareable across users
-- Redis is appropriate for: ephemeral rate limit counters, short-lived session data, high-frequency key-value lookups
+This is brittle. A pricing change in Stripe that doesn't propagate to `constants.ts` means the app displays the wrong price.
 
-**What should go in Redis (not Supabase) for Taddy:**
-- Rate limit counters (Taddy API calls per day)
-- Transcript credit counter (monthly)
-- Short-lived search result sets (5-minute TTL for the most recent topic search)
+**Recommended architectural fix (2-3 hours):**
+Create `src/lib/pricing.ts` as the single canonical source. All other files import from it. The Stripe price IDs remain server-side only (in `products.server.ts`). This reduces future pricing changes to 2 file edits + Stripe.
 
-**What should go in Supabase:**
-- All persistent cache data (podcast metadata, episode metadata, guest appearances, pre-interview results)
-
-This split is correct architecture. The plan's `cache.ts` should be explicit about which data goes to which storage layer.
-
----
-
-## 8. Circuit Breaker Pattern (Phase 5)
-
-**The plan adds circuit breaker to xAI API calls in Phase 5.** This is correctly prioritized.
-
-**What a circuit breaker requires architecturally:**
-- State tracking: CLOSED (normal), OPEN (circuit tripped), HALF-OPEN (testing recovery)
-- State storage: Redis is appropriate here (fast, doesn't need persistence across restarts)
-- The circuit breaker must be part of the unified xAI client (Finding 2 above) — another reason to consolidate implementations in Phase 1
-
-**Additionally:** A circuit breaker should also be added to Taddy API calls in Phase 7. Taddy is a startup; downtime is plausible. When Taddy is down, expert discovery should gracefully fall back to cached data or the existing Grok-based approach.
+```typescript
+// src/lib/pricing.ts — single source of truth
+export const TIERS = {
+  free:   { price: 0,  episodes: 3,   shows: 1,    seats: 1 },
+  pro:    { price: 39, episodes: 50,  shows: 5,    seats: 1 },  // raised from $19
+  agency: { price: 149, episodes: 200, shows: 999, seats: 5 },  // raised from $49
+} as const
+```
 
 ---
 
-## 9. Webhooks Architecture
+## 4. Stripe Integration Architecture Gaps
 
-**Stripe webhooks:** Currently implemented, but:
-- No signature verification mentioned in the plan (CRITICAL security gap — without this, anyone can send fake webhook events)
-- The Phase 2 auth middleware must explicitly EXCLUDE the Stripe webhook endpoint
+### Current State
+The Stripe checkout, portal, and webhook handler are implemented in code. But:
+- `STRIPE_PUBLISHABLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` are not set in production env
+- `STRIPE_PRO_PRICE_ID` and `STRIPE_AGENCY_PRICE_ID` do not exist (Stripe products not created)
+- Post-checkout redirect goes to `/settings/billing` (404 — should be `/settings?tab=billing`)
 
-**AssemblyAI webhook (Phase 5):**
-- Requires a public HTTPS endpoint that AssemblyAI can POST to
-- Must NOT be protected by auth middleware (external service, not user session)
-- Should have HMAC signature verification (AssemblyAI provides this)
+### What Happens When a User Tries to Upgrade Today
+1. They click "Upgrade to Pro"
+2. Client-side code reads `STRIPE_PUBLISHABLE_KEY` from env — which is undefined
+3. Stripe.js fails to initialize
+4. Or: the checkout session API call fails because `STRIPE_SECRET_KEY` is undefined
+5. User sees an error
 
-**Middleware exclusion list for Phase 2:** `/api/stripe/webhook`, `/api/assemblyai/webhook` (Phase 5). This must be designed into middleware.ts from the start.
+This is a pre-launch blocker, not a pricing strategy question. But it's relevant because **the pricing plan cannot be validated until users can actually pay.**
 
----
+### Stripe Architecture Checklist Before Any Pricing Decision Is Final
+- [ ] Create Stripe products and prices for Pro and Agency
+- [ ] Set `STRIPE_PRO_PRICE_ID` and `STRIPE_AGENCY_PRICE_ID` env vars
+- [ ] Fix success URL redirect (B9 from prior audit)
+- [ ] Set Stripe webhook endpoint in Stripe Dashboard
+- [ ] Verify webhook signature validation works
+- [ ] Test checkout flow end-to-end with Stripe test mode
 
-## Architectural Impact Summary
-
-| Impact Area | Severity | Phase | Recommendation |
-|------------|----------|-------|---------------|
-| Pre-interview as sync route | CRITICAL | Phase 7 | Must use Trigger.dev background job |
-| No middleware.ts | HIGH | Phase 2 | Design before Phase 2 begins |
-| 3 xAI client implementations | HIGH | Phase 1 | Consolidate to single client |
-| `hosting_connections` conflict | HIGH | Phase 1/2 | Add migration to resolve before auth work |
-| `pre_interview_cache` episode coupling | MEDIUM | Phase 7 | Guest-centric schema redesign |
-| Guest appearances FK gaps | MEDIUM | Phase 7 | Add FK constraints in migration |
-| Taddy tables missing RLS | MEDIUM | Phase 7 | Include RLS at table creation time |
-| Stripe webhook verification | MEDIUM | Phase 3 | Add signature verification (may already exist) |
-| Redis vs. Supabase for Taddy | LOW | Phase 7 | Split is correct; document in cache.ts |
-| GraphQL types (manual vs. codegen) | LOW | Phase 7 | Acceptable at launch; design for replacement |
+If prices are to be raised (recommended), do it NOW in Stripe before these products are created. Changing a Stripe price after customers are subscribed requires migration or grandfathering.
 
 ---
 
-## Architectural Conclusion
+## 5. Tier Enforcement Architecture for Team Seats
 
-The PodBrain architecture is well-structured and the service layer pattern is a good foundation for Phase 7. The critical corrections needed are:
-1. Design `middleware.ts` as a Phase 1/2 priority (the control plane for the entire security model)
-2. Consolidate 3 xAI clients to 1 in Phase 1
-3. Pre-interview intelligence must be a Trigger.dev job in Phase 7
-4. Resolve `hosting_connections` schema conflict before Phase 2 auth migration
+The Agency tier includes 5 team seats. This feature is listed in the tier config but the enforcement guard doesn't exist.
 
-These changes strengthen the architecture rather than change its direction.
+**Current code in `tier-limits.ts`:**
+```typescript
+agency: {
+  episodesPerMonth: 200,
+  maxShows: 999,
+  teamSeats: 5,  // defined but never enforced
+  ...
+}
+```
+
+**What needs to be added:**
+```typescript
+export async function canAddTeamMember(userId: string): Promise<{
+  allowed: boolean;
+  reason?: string;
+  current: number;
+  limit: number;
+}> {
+  const tier = await getUserTier(userId);
+  const limits = getTierLimits(tier);
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from('team_members')
+    .select('id', { count: 'exact', head: true })
+    .eq('owner_id', userId);
+
+  if ((count || 0) >= limits.teamSeats) {
+    return { allowed: false, reason: `Team seat limit reached`, current: count || 0, limit: limits.teamSeats };
+  }
+  return { allowed: true, current: count || 0, limit: limits.teamSeats };
+}
+```
+
+This guard needs to be called in `POST /api/team`. Without it, any user (including free) can add unlimited team members.
+
+**Estimated fix:** 30 minutes.
+
+---
+
+## 6. Architecture Summary
+
+| Change | Complexity | Priority |
+|--------|-----------|----------|
+| Fix three-source-of-truth pricing data | 2-3 hrs | HIGH |
+| Add audio-hour monitoring (alerting only) | 30 min | HIGH |
+| Add `canAddTeamMember()` guard | 30 min | HIGH |
+| Provision Stripe products + set env vars | 1 hr (non-code) | CRITICAL |
+| Fix Stripe success URL redirect | 5 min | HIGH |
+| Add Starter tier (if decided) | 2-3 days | MEDIUM |
+| Switch to hour-based enforcement | 1.5-2 weeks | LOW (post-launch) |
+| Metered/overage billing | 2-3 weeks | LOW (post-launch) |
+
+**The most important architectural action:** Raise prices before Stripe products are created. A price change in Stripe before any subscribers exist costs nothing. A price change after 100 users are subscribed at $19 requires grandfathering, communications, and accepts churn risk.

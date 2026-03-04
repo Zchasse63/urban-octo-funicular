@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireAuth } from '@/lib/auth'
-import { canCreateEpisode } from '@/lib/tier-limits'
+import { canProcessEpisode } from '@/lib/tier-limits'
 import { PAGINATION } from '@/lib/constants'
 import type { EpisodeListItem, ApiResponse, PaginatedResponse, Episode } from '@/types/database'
 
@@ -119,11 +119,11 @@ export async function POST(request: NextRequest) {
   try {
     const { userId } = await requireAuth()
 
-    // Tier enforcement: check episode limit
-    const episodeCheck = await canCreateEpisode(userId)
-    if (!episodeCheck.allowed) {
+    // Tier enforcement: check audio hours limit
+    const hoursCheck = await canProcessEpisode(userId)
+    if (!hoursCheck.allowed) {
       return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: episodeCheck.reason || 'Episode limit reached' },
+        { data: null, error: hoursCheck.reason || 'Audio hours limit reached' },
         { status: 403 }
       )
     }

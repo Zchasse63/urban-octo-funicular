@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth, isValidUUID } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rate-limit';
-import { canCreateEpisode, getTierLimits, getUserTier, getEpisodeCount } from '@/lib/tier-limits';
+import { canProcessEpisode, getTierLimits, getUserTier, getAudioHoursUsed } from '@/lib/tier-limits';
 import { parseRSSFeed } from '@/lib/rss/parser';
 import type { ApiResponse } from '@/types/database';
 
@@ -90,17 +90,17 @@ export async function POST(
       );
     }
 
-    // Check episode tier limits before importing
+    // Check audio hours tier limits before importing
     const tier = await getUserTier(userId);
     const limits = getTierLimits(tier);
-    const currentCount = await getEpisodeCount(userId);
-    const remainingQuota = Math.max(0, limits.episodesPerMonth - currentCount);
+    const hoursUsed = await getAudioHoursUsed(userId);
+    const remainingHours = Math.max(0, limits.audioHoursPerMonth - hoursUsed);
 
-    if (remainingQuota === 0) {
+    if (remainingHours <= 0) {
       return NextResponse.json<ApiResponse<null>>(
         {
           data: null,
-          error: `You've reached your ${limits.episodesPerMonth} episodes/month limit on the ${tier} plan. Upgrade to import more episodes.`,
+          error: `You've used all ${limits.audioHoursPerMonth} audio hours this month on the ${tier} plan. Upgrade to import more episodes.`,
         },
         { status: 403 }
       );
@@ -127,8 +127,10 @@ export async function POST(
       });
     }
 
-    // Limit episodes to both the max import limit AND remaining tier quota
-    const maxEpisodes = Math.min(MAX_IMPORT_EPISODES, remainingQuota);
+    // Limit episodes to the max import limit
+    // Note: Audio hours are checked per-episode at processing time, not at import.
+    // Import just creates pending records — processing is what consumes hours.
+    const maxEpisodes = MAX_IMPORT_EPISODES;
     const episodesToProcess = feed.episodes.slice(0, maxEpisodes);
 
     // Fetch existing episodes for this show to detect duplicates

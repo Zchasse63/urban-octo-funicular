@@ -980,7 +980,7 @@ describe('useUsage', () => {
           data: {
             tier: 'free',
             billingPeriod: { start: '2025-01-01', end: '2025-02-01' },
-            episodes: { used: 0, limit: 3, percentage: 0 },
+            audioHours: { used: 0, limit: 1, percentage: 0 },
             shows: { used: 0, limit: 1, percentage: 0 },
           },
         }),
@@ -997,7 +997,7 @@ describe('useUsage', () => {
     const mockUsage = {
       tier: 'pro',
       billingPeriod: { start: '2025-01-01', end: '2025-02-01' },
-      episodes: { used: 10, limit: 50, percentage: 20 },
+      audioHours: { used: 4, limit: 10, percentage: 40 },
       shows: { used: 2, limit: 5, percentage: 40 },
     }
 
@@ -1064,7 +1064,7 @@ describe('useUsage', () => {
     const initialUsage = {
       tier: 'free',
       billingPeriod: { start: '2025-01-01', end: '2025-02-01' },
-      episodes: { used: 1, limit: 3, percentage: 33 },
+      audioHours: { used: 0.5, limit: 1, percentage: 50 },
       shows: { used: 1, limit: 1, percentage: 100 },
     }
 
@@ -1079,11 +1079,11 @@ describe('useUsage', () => {
       expect(result.current.isLoading).toBe(false)
     })
 
-    expect(result.current.usage?.episodes.used).toBe(1)
+    expect(result.current.usage?.audioHours.used).toBe(0.5)
 
     const updatedUsage = {
       ...initialUsage,
-      episodes: { used: 2, limit: 3, percentage: 66 },
+      audioHours: { used: 0.8, limit: 1, percentage: 80 },
     }
 
     mockFetch.mockResolvedValueOnce({
@@ -1096,7 +1096,7 @@ describe('useUsage', () => {
     })
 
     await waitFor(() => {
-      expect(result.current.usage?.episodes.used).toBe(2)
+      expect(result.current.usage?.audioHours.used).toBe(0.8)
     })
   })
 })

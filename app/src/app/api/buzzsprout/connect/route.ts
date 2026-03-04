@@ -3,22 +3,13 @@ import { createClient } from '@/lib/supabase/server';
 import { BuzzsproutClient } from '@/lib/buzzsprout/client';
 import { encryptCredentials } from '@/lib/buzzsprout/encryption';
 import { requireAuth } from '@/lib/auth';
-import { getUserTier, getTierLimits } from '@/lib/tier-limits';
 
 export async function POST(request: NextRequest) {
 
   try {
     const { userId } = await requireAuth();
 
-    // ── Tier gate: Buzzsprout integration requires Pro or Agency ──
-    const tier = await getUserTier(userId);
-    const limits = getTierLimits(tier);
-    if (!limits.features.buzzsproutIntegration) {
-      return NextResponse.json(
-        { error: 'Buzzsprout integration requires a Pro or Agency plan. Upgrade to connect hosting platforms.' },
-        { status: 403 }
-      );
-    }
+    // Buzzsprout integration is available on all tiers
 
     const { api_token, show_id } = await request.json();
 

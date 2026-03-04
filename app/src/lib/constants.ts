@@ -39,8 +39,8 @@ export const PROCESSING = {
   maxAudioDuration: 4 * 60 * 60,
   // Maximum file size in bytes (500MB)
   maxFileSize: 500 * 1024 * 1024,
-  // Target cost per episode in dollars
-  targetCostPerEpisode: 0.15,
+  // Target cost per episode in dollars (actual avg is $0.25 for 45-min episode)
+  targetCostPerEpisode: 0.25,
 } as const
 
 // Pagination Defaults
@@ -49,28 +49,39 @@ export const PAGINATION = {
   maxPageSize: 100,
 } as const
 
-// Subscription Tiers — aligned with stripe/products.ts (source of truth)
+// Subscription Tiers — hours-based pricing aligned with stripe/products.ts
 export const SUBSCRIPTION_TIERS = {
   free: {
     name: 'Free',
-    episodesPerMonth: 3,
+    audioHoursPerMonth: 1,
     maxShows: 1,
     teamSeats: 1,
     priceMonthly: 0,
+    priceAnnual: 0,
   },
   pro: {
     name: 'Pro',
-    episodesPerMonth: 50,
-    maxShows: 5,
+    audioHoursPerMonth: 10,
+    maxShows: 3,
     teamSeats: 1,
-    priceMonthly: 19,
+    priceMonthly: 29,
+    priceAnnual: 232,
+  },
+  creator: {
+    name: 'Creator',
+    audioHoursPerMonth: 25,
+    maxShows: 10,
+    teamSeats: 3,
+    priceMonthly: 59,
+    priceAnnual: 472,
   },
   agency: {
     name: 'Agency',
-    episodesPerMonth: 200,
+    audioHoursPerMonth: 100,
     maxShows: 999,
-    teamSeats: 5,
-    priceMonthly: 49,
+    teamSeats: 10,
+    priceMonthly: 149,
+    priceAnnual: 1192,
   },
 } as const
 

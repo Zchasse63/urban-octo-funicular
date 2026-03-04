@@ -50,7 +50,7 @@ const mockUseUsage = vi.fn().mockReturnValue({
   usage: {
     tier: 'free',
     billingPeriod: { start: '2026-02-01', end: '2026-03-01' },
-    episodes: { used: 1, limit: 3, percentage: 33 },
+    audioHours: { used: 0.5, limit: 1, percentage: 50 },
     shows: { used: 1, limit: 1, percentage: 100 },
   },
   isLoading: false,
@@ -87,7 +87,7 @@ describe('UploadWizard', () => {
       usage: {
         tier: 'free',
         billingPeriod: { start: '2026-02-01', end: '2026-03-01' },
-        episodes: { used: 1, limit: 3, percentage: 33 },
+        audioHours: { used: 0.5, limit: 1, percentage: 50 },
         shows: { used: 1, limit: 1, percentage: 100 },
       },
       isLoading: false,
@@ -132,12 +132,12 @@ describe('UploadWizard', () => {
   })
 
   describe('tier enforcement', () => {
-    it('shows upgrade prompt when episode limit reached', () => {
+    it('shows upgrade prompt when audio hours limit reached', () => {
       mockUseUsage.mockReturnValue({
         usage: {
           tier: 'free',
           billingPeriod: { start: '2026-02-01', end: '2026-03-01' },
-          episodes: { used: 3, limit: 3, percentage: 100 },
+          audioHours: { used: 1, limit: 1, percentage: 100 },
           shows: { used: 1, limit: 1, percentage: 100 },
         },
         isLoading: false,

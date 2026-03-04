@@ -1,13 +1,18 @@
-export type PricingTier = 'free' | 'pro' | 'agency';
+export type PricingTier = 'free' | 'pro' | 'creator' | 'agency';
+
+export type BillingInterval = 'monthly' | 'annual';
 
 export interface TierFeatures {
   tier: PricingTier;
   name: string;
   price: number;
+  priceAnnual: number;
   priceId: string | null;
   features: string[];
-  episodesPerMonth: number;
+  audioHoursPerMonth: number;
   shows: number;
+  teamSeats: number;
+  highlighted?: boolean;
 }
 
 // Client-safe pricing data — priceIds are resolved server-side only
@@ -16,48 +21,71 @@ export const PRICING_TIERS: Record<PricingTier, TierFeatures> = {
     tier: 'free',
     name: 'Free',
     price: 0,
+    priceAnnual: 0,
     priceId: null,
-    episodesPerMonth: 3,
+    audioHoursPerMonth: 1,
     shows: 1,
+    teamSeats: 1,
     features: [
-      '3 episodes per month',
+      '1 hour of audio/month',
       '1 podcast show',
-      'Basic AI show notes',
-      'Community support',
+      '6 core content assets',
+      'Guest packages',
+      'Hosting integrations',
+      'Podcasting 2.0 tags',
     ],
   },
   pro: {
     tier: 'pro',
     name: 'Pro',
-    price: 19,
+    price: 29,
+    priceAnnual: 232,
     priceId: null, // Resolved server-side via getServerPriceId()
-    episodesPerMonth: 50,
-    shows: 5,
+    audioHoursPerMonth: 10,
+    shows: 3,
+    teamSeats: 1,
+    highlighted: true,
     features: [
-      '50 episodes per month',
-      'Up to 5 podcast shows',
-      'Advanced AI content',
-      'Priority support',
-      'Buzzsprout integration',
-      'Custom templates',
+      '10 hours of audio/month',
+      '3 podcast shows',
+      'All 45 content assets',
+      'Vocabulary learning',
+      'SEO analysis',
+      'Expert discovery',
+    ],
+  },
+  creator: {
+    tier: 'creator',
+    name: 'Creator',
+    price: 59,
+    priceAnnual: 472,
+    priceId: null, // Resolved server-side via getServerPriceId()
+    audioHoursPerMonth: 25,
+    shows: 10,
+    teamSeats: 3,
+    features: [
+      '25 hours of audio/month',
+      '10 podcast shows',
+      '3 team seats',
+      'All 45 content assets',
+      'Everything in Pro',
     ],
   },
   agency: {
     tier: 'agency',
     name: 'Agency',
-    price: 49,
+    price: 149,
+    priceAnnual: 1192,
     priceId: null, // Resolved server-side via getServerPriceId()
-    episodesPerMonth: 200,
+    audioHoursPerMonth: 100,
     shows: 999,
+    teamSeats: 10,
     features: [
-      '200 episodes per month',
+      '100 hours of audio/month',
       'Unlimited podcast shows',
-      'Premium AI features',
-      'Dedicated support',
-      'All integrations',
-      'White-label options',
-      'Team collaboration',
-      'API access',
+      '10 team seats',
+      'All 45 content assets',
+      'Everything in Creator',
     ],
   },
 };

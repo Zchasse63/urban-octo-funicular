@@ -1,140 +1,116 @@
-# Verdict: PodBrain Launch Roadmap — Full 8-Phase Analysis
+# Verdict: PodBrain Pricing & Subscription Structure
 
-**Synthesis Date:** 2026-02-26
+**Synthesis Date:** 2026-03-01
 **Reports Synthesized:** 7 (technical-feasibility, scope-complexity, user-value, cost-benefit, architecture-impact, edge-cases, competitive-context)
-**Complexity Class:** MAJOR
-**Mode:** Deep+
+**Complexity Class:** SIGNIFICANT
+**Mode:** Deep (all 7 agents)
 
 ---
 
-## Overall Verdict: MODIFY
+## Verdict: MODIFY
 
-**Confidence:** High
-
-**In one sentence:** The plan is structurally correct and technically executable, but requires three modifications before implementation begins: (1) the timeline should be recalibrated to 15-22 weeks (not 8-11), (2) several Phase 1 items should be moved to Phase 0 to prevent trust erosion and cost exposure, and (3) Phase 7 scope and architecture need material corrections before any Taddy/PC2.0 work starts.
+The pricing plan should not launch as-is. It is not a GO because it misprices both the individual and agency segments, carries an unmitigated structural cost risk in the Agency tier, and misses the pre-launch window — the only moment when prices can be set correctly at zero cost. It is not a NO-GO because the product is viable, the cost structure is manageable, and the changes required are straightforward.
 
 ---
 
-## Verdict Reasoning
+## Agent Verdicts Summary
 
-All 7 agents returned MODIFY. No agent returned NO-GO. The plan's core logic is sound:
-- The existing architecture is solid
-- The 10 Phase 0 bugs are real, correctly identified, and fixable quickly
-- The phase ordering (bugs → polish → auth → billing → marketing → performance → testing → differentiation) is correct
-- The Taddy and Podcasting 2.0 strategy is directionally right
+| Agent | Verdict | Primary Concern |
+|-------|---------|----------------|
+| technical-feasibility | MODIFY | Agency tier has no audio-hour cost cap; Stripe not provisioned |
+| scope-complexity | MODIFY | Agency at $49 is wrong market positioning; Pro limit creates no upgrade urgency |
+| user-value | MODIFY | Agency price signals consumer-grade to professional buyers; aha moment weak on free |
+| cost-benefit | MODIFY | Pro underpriced by ~50%; Agency underpriced by ~200-300% vs. market WTP |
+| architecture-impact | MODIFY | Three sources of pricing truth; team seat enforcement missing; Stripe provisioning critical |
+| edge-cases | MODIFY | Long-form Agency content causes loss; free tier has no abuse prevention; no annual pricing |
+| competitive-context | MODIFY | $19 Pro cannot compete on narrative with Castmagic; $49 Agency is invisible to real agencies |
 
-The modifications required are about **calibration and sequencing**, not fundamental restructuring.
-
-**Four convergent problems across agents:**
-
-1. **Timeline compression** (scope-complexity, all agents): 8-11 weeks is achievable only if every item is as trivial as its checklist appearance suggests. The auth migration alone (26 routes, RLS policies, middleware design) is 3-5 days. The AssemblyAI webhook migration (Phase 5) is 2-4 days of architectural work. Phase 7 Taddy integration is 25-39 days, not 10-15.
-
-2. **Critical items deferred too long** (edge-cases, user-value): Fake settings integrations (trust erosion), rate limiting exposure (cost risk), and `grok-beta` instability all exist right now and can be fixed in Phase 0 or early Phase 1 with minimal effort. Deferring them creates unnecessary risk.
-
-3. **Phase 7 architectural gap** (technical-feasibility, architecture-impact): The pre-interview intelligence pipeline will time out as a synchronous API route. It requires Trigger.dev background job architecture — an omission in the plan that adds scope to Phase 7.
-
-4. **Timeline vs. competitive window** (competitive-context, cost-benefit): At 15-22 weeks, the launch lands in mid-2026. The Podcasting 2.0 "first mover" positioning is real but time-limited — competitors can ship PC2.0 tag generation in days once they notice the opportunity. PC2.0 Batch 1 should be shipped as early as possible, not held for Phase 7 terminus.
+**Unanimous verdict: MODIFY.** No agent recommended GO. No agent recommended NO-GO or DEFER.
 
 ---
 
-## Modified Plan: Key Changes by Phase
+## The Three Core Issues
 
-### Phase 0 Additions (from Phase 1)
-Add these to Phase 0 — they're trivial but high-impact:
-- Remove/gray out non-functional integrations in settings (Spotify, Apple, YouTube, Slack) — 15 minutes, prevents trust erosion from day 1
-- Add episode title field to upload wizard — 1 hour, prevents embarrassing "Untitled Episode" demo
-- Move rate limiting application to Phase 0 cost protection items
-- Fix `grok-beta` to a specific stable model identifier — verify before running any Phase 0 tests
+### Issue 1: Agency Tier Is Financially Unsafe at Max Usage
 
-**Phase 0 revised scope:** 12-14 items instead of 10. Still 1-2 days.
+At 200 episodes of long-form content (2-4 hours/episode), variable costs exceed $49 revenue by $30-82. There is no code-level protection (no audio-hour cap, no cost circuit-breaker). This is not a theoretical risk — agencies with true-crime, documentary, or interview-format podcasts routinely produce 2-4 hour episodes.
 
-### Phase 1 Scope Adjustment
-Remove items moved to Phase 0. Keep the remaining 10 items. **Budget 2-3 weeks** (not 1-2) for the remaining items, particularly the show notes editor which is 3-4 days of work.
+**Required fix before launch:** Add audio-hour monitoring/alerting. Consider adding a soft cap at 150 audio hours/month for Agency tier.
 
-### Phase 2 Scope Adjustment
-**Budget 3 weeks** (not 1-2 weeks) explicitly for:
-- Middleware.ts design and implementation (2-3 days — this is the auth control plane, not a quick file)
-- 26 route handler updates (2-3 days mechanical work)
-- RLS policy migration and testing (1-2 days)
-- Login/auth UI (1-2 days)
-- `hosting_connections` schema conflict resolution (add migration to Phase 2)
-- Add Sentry here (not Phase 5) for production visibility from first real users
+### Issue 2: Prices Are Set Against Cost, Not Against Value
 
-### Phase 5 Scope Adjustment
-**Budget 2-3 weeks** (not 1 week) for:
-- AssemblyAI webhook migration is a 2-4 day architectural change
-- All other Phase 5 items remain
+The plan correctly identifies that PodBrain's cost per episode is $0.16-0.41. It then sets prices just above cost ("$19/mo for 50 episodes — even at max usage we're profitable!"). This is cost-plus pricing, the least optimal pricing strategy for SaaS.
 
-### Phase 7 Structural Changes
-1. **PC2.0 Batch 1 timing:** Move to a parallel track during Phases 5-6. It has no dependencies on auth or billing and can be built while other work is in progress. Ship it at or near launch, not as Phase 7 terminus.
+The market data in the plan contradicts itself: Castmagic charges $5.80/hr, the market norm is $5-6/hr, and podcasters are saving 6-9 hours per episode. The correct price is derived from value delivered to the buyer, not from the seller's API costs.
 
-2. **Taddy sequence inversion:** Build T3 (pre-interview intelligence) before T2 (expert discovery rewrite). Pre-interview is the highest-value feature; expert discovery is an improvement to a feature that currently has no workflow completion.
+**The current prices leave 40-60% of capturable revenue on the table.**
 
-3. **Pre-interview must use Trigger.dev:** Add `generatePreInterviewJob` to the Trigger.dev job registry. The synchronous API route approach will always time out.
+### Issue 3: Pre-Launch Is the Only Costless Moment to Change Prices
 
-4. **`pre_interview_cache` schema redesign:** Guest-centric (not episode-centric) to enable reuse across episodes for the same guest.
+Every day the product runs at $19 Pro and $49 Agency with paying customers is a day it becomes harder to raise prices. Grandfathering, communications, and churn risk accompany every post-launch price increase.
 
-5. **Taddy API tier:** If T3 ships at launch, start on Business plan ($150/month). If T3 is post-launch, start on Pro ($75/month).
+Right now, with zero subscribers, a price change is:
+- One Stripe configuration update
+- One landing page copy change
+- Zero customer emails required
+- Zero churn risk
 
-6. **Grok fallback in T2:** When rewriting expert discovery to use Taddy, preserve (don't delete) the Grok-based path as a named fallback for Taddy outage scenarios.
+**This window closes the moment the first paying subscriber signs up.**
 
 ---
 
-## Revised Timeline Estimate
+## Recommended Pricing Structure
 
-| Phase | Original | Revised |
-|-------|----------|---------|
-| 0 | 1-2 days | 1.5-2 days |
-| 1 | 1-2 weeks | 2-3 weeks |
-| 2 | 1-2 weeks | 2.5-3.5 weeks |
-| 3 | 1 week | 1.5-2 weeks |
-| 4 | 1 week | 1.5-2 weeks |
-| 5 | 1 week | 2-3 weeks |
-| 6 | 1 week | 1.5-2 weeks |
-| 7 (Taddy + PC2.0) | 2-3 weeks | 4-6 weeks |
-| **Total** | **8-11 weeks** | **15-22 weeks** |
+### Recommended vs. Current
 
----
+| Tier | Current | Recommended | Rationale |
+|------|---------|-------------|-----------|
+| Free | $0, 3 eps, 6 assets | $0, 3 eps, 6 assets + 14-day Pro trial on sign-up | Current free is right; add trial to improve aha moment |
+| Pro | $19/mo, 50 eps | **$29/mo**, 50 eps | Matches Castmagic Hobby price; enables "same price, 10x features" narrative |
+| Creator (new) | — | **$59/mo**, 100 eps, 15 shows | Serves multi-show creators currently mis-placed in Agency |
+| Agency | $49/mo, 200 eps | **$149/mo**, 200 eps, 150 audio hrs | Right-prices for professional buyers; adds audio-hour cap |
 
-## What Must NOT Change
+**Note:** The "Creator" tier is optional for launch. If simplicity is preferred, simply raise Pro to $29 and Agency to $149. The 3-tier structure is clean and sufficient.
 
-- Phase ordering (0→1→2→3→4→5→6→7): Correct
-- Service layer architecture pattern (`lib/taddy/` following `lib/xai-client.ts` pattern): Correct
-- Taddy as the chosen API for T3 transcript access: Correct (only option)
-- PC2.0 Batch 1 as a near-zero-cost differentiation move: Correct
-- Post-launch positioning of T5 (Podcast Search & Discovery): Correct
-- The 10 core Phase 0 bug fixes: All correct and correctly sequenced
+### Annual Pricing (Add Before First Subscriber)
+- Pro annual: $232/yr ($19.33/mo effective — "2 months free")
+- Agency annual: $1,192/yr ($99.33/mo effective)
+
+This is a 2-3 hour implementation in Stripe and adds annual pricing that every competitor offers.
 
 ---
 
-## Minimum Viable Launch (If Timeline Must Be Shorter)
+## Key Numbers
 
-If 15-22 weeks is too long, a defensible MVP launches at Phase 4 completion (~8-11 weeks):
-
-**MVP launch scope:**
-- Phase 0: Product works end-to-end
-- Phase 1: Product is usable with real content editing
-- Phase 2: Product is multi-user and secure
-- Phase 3: Billing and tier enforcement works
-- Phase 4: Landing page, legal pages, onboarding
-
-**Post-launch roadmap:**
-- Phase 5: Performance and reliability (shipped to all users as updates)
-- Phase 6: Testing and CI/CD (developer-facing improvements)
-- Phase 7: PC2.0 Batch 1 + Taddy foundation + pre-interview intelligence
-
-This is the most competitively sound strategy: ship earlier, get real users, validate product-market fit, then invest in the differentiation features that Phase 7 provides.
+| Metric | Current Structure | Recommended Structure |
+|--------|-----------------|----------------------|
+| Pro monthly revenue per user | $19 | $29 |
+| Agency monthly revenue per user | $49 | $149 |
+| Pro gross margin at avg usage (15 eps) | 84% | 90% |
+| Agency gross margin at avg usage (80 eps) | 67% | 89% |
+| Agency gross margin at max 200 eps × avg 45 min | +35% | +52% |
+| Agency gross margin at max 200 eps × 3 hrs | **-120%** | **-17%** (with audio-hour cap: +6%) |
+| Break-even paying users (fixed costs only) | 8 Pro | 5 Pro |
+| LTV (Pro, 18-month retention) | $342 | $522 |
+| LTV (Agency, 24-month retention) | $1,176 | $3,576 |
 
 ---
 
-## Top 5 Assumptions to Validate Before Phase 7
+## What Must Be Done Before Launch (Pricing-Related)
 
-1. **Taddy `persons` field coverage is adequate for expert discovery in the target niche.** Run 10 representative topic searches before writing a line of T2 code.
+### Critical (blocking)
+1. Provision Stripe products at the new prices (not the old ones) before any subscriber exists
+2. Fix Stripe success URL redirect (B9 from prior audit: `/settings/billing` → `/settings?tab=billing`)
+3. Add audio-hour monitoring/alerting for Agency tier cost visibility
+4. Add email verification requirement before episode processing
 
-2. **Pre-interview intelligence resonates with real users.** Show the concept to 5-10 actual podcasters before building it. The 2-5 hour time savings claim needs validation.
+### High Priority (week 1 post-decision)
+5. Consolidate three-source-of-truth pricing data into single `src/lib/pricing.ts`
+6. Add `canAddTeamMember()` enforcement guard to the team API route
+7. Add annual Stripe pricing options
+8. Implement 14-day Pro trial on sign-up (or decide on free-tier-only approach)
 
-3. **Podcasters understand Podcasting 2.0 enough to value it.** The "Apple Podcasts transcripts" angle is clear. "Podcasting 2.0 tags" may need simpler marketing framing.
-
-4. **$19/month Pro pricing is competitive.** Castmagic charges $39-99/month for similar (and less) functionality. PodBrain may be leaving $10/month on the table.
-
-5. **The Taddy API is production-reliable.** Before committing Phase 7 scope, run the integration for 2 weeks with real API calls and observe rate limit behavior, uptime, and data quality.
+### Medium Priority (before first 100 users)
+9. Make "39 locked assets" visible to free-tier users (upgrade prompts in the UI)
+10. Add audio-hour cap enforcement for Agency tier (not just episode count)
+11. Confirm asset generation is on-demand, not auto-generating all 45 for every episode

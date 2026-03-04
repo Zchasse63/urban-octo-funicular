@@ -1,241 +1,184 @@
-# Edge Cases Agent Report
+# Edge Cases Analysis: PodBrain Pricing Structure
 
 **Agent:** edge-cases
-**Plan:** PodBrain Launch Roadmap — Full 8-Phase Analysis
-**Complexity Class:** MAJOR
-**Analysis Depth:** Extended (Deep+)
-**Date:** 2026-02-26
+**Complexity Class:** SIGNIFICANT
+**Date:** 2026-03-01
 
 ---
 
 ## Agent Verdict
 
-**MODIFY** — The plan identifies risks but does not specify failure behaviors. This analysis surfaces 14 distinct failure scenarios across the 8-phase plan. The three most severe unmitigated scenarios are: (1) long-form podcast processing silently fails until Phase 5 because the Trigger.dev timeout problem is unresolved during Phases 0-4; (2) rate limiting is applied to 0 routes through Phase 0 and most of Phase 1, leaving AI processing endpoints as unlimited cost exposure; (3) the Taddy transcript credit pool (100/month on Pro) can be exhausted by a handful of users with no graceful degradation path. Several scenarios represent trust-destroying UX failures that are worse than "not having the feature" — specifically the fake integrations in settings (Spotify, Apple, etc.) and the decorative vocabulary sparklines with no real data.
+**MODIFY**
+
+The pricing plan has several failure modes that are not addressed: the Agency tier is financially catastrophic under specific (not merely theoretical) usage patterns, the free tier has no abuse prevention, and the billing period logic creates exploitable edge cases. These are not corner cases — they are the predictable behaviors of motivated users encountering the system.
 
 ---
 
-## Failure Scenario 1: Long-Form Podcast Timeout (UNMITIGATED UNTIL PHASE 5)
+## 1. The Long-Form Content Catastrophe
 
-**Trigger:** User uploads an episode longer than 25 minutes during Phases 0-4
+### Scenario
+An Agency user manages 5 true-crime podcasts, each publishing weekly 3-hour episodes.
+- 5 shows × 4 episodes/month × 3 hours = 60 episodes, 180 audio hours/month
+- AssemblyAI at $0.17/hr: 180 × $0.17 = **$30.60 AssemblyAI cost**
+- Grok API: 60 episodes × 9 calls × ~$0.003 = **$1.62 Grok cost**
+- Total variable: **~$32.22** against Revenue: **$49** — margin: +34% (barely acceptable)
 
-**Behavior:** AssemblyAI transcription takes 1-4x audio duration. Trigger.dev job has 30-minute maximum execution time. For a 60-minute podcast (90-minute transcription), the job times out at 30 minutes. The episode status gets stuck in a "processing" state with no completion, no error message to the user.
+But now the same agency also generates all 45 assets per episode:
+- Additional Grok calls: 60 episodes × 36 more assets × $0.003 = **$6.48 more**
+- Total variable: **~$38.70** — margin: +20% (dangerously thin before fixed cost allocation)
 
-**User experience:** Upload appears to succeed. Progress shows some percentage. Processing stops at an unknown point. No notification. User refreshes the page, episode is still "processing." Contacts support.
+Now scale to 200 episodes at 3 hours each:
+- AssemblyAI: 200 × 3 × $0.17 = **$102**
+- Grok (9 default calls): **$6**
+- Total variable: **$108** against Revenue: **$49** — Net loss: **-$59 per user per month**
 
-**Phase 0 milestone says:** "Upload episode → processing completes." This only holds for short audio.
+**This is not a theoretical edge case.** Long-form agencies (true crime, documentary, interview podcasts) routinely produce 2-4 hour episodes. Any Agency-tier user with this content type loses PodBrain money every month.
 
-**Required mitigation (before Phase 5):**
-1. Add explicit constraint to Phase 0: "Test with audio < 20 minutes"
-2. Add a UI warning when audio > 20 minutes is uploaded: "Note: Processing for long episodes may take 30-60 minutes"
-3. Set Trigger.dev job timeout to maximum allowed value (even before webhook fix)
-4. Add a job failure handler that marks the episode as "processing_failed" with a user-facing message
-
----
-
-## Failure Scenario 2: Rate Limiting Cost Exposure (UNMITIGATED THROUGH EARLY PHASE 1)
-
-**Trigger:** Any user or automated caller triggers repeated AI processing during Phases 0-1
-
-**Behavior:** The `/api/episodes/[id]/process` endpoint has no rate limiting. Each processing call costs ~$0.10-0.15 in AI fees. A single user (or script) can trigger 100 processing calls per hour, costing $10-15/hour with no ceiling.
-
-**Context:** Rate limiting code exists but is applied to 0 routes. Phase 1 includes "Apply rate limiting to processing and asset generation routes" — but this is item 14 of 14 in the phase.
-
-**Required mitigation:**
-1. Move rate limiting application to the FIRST item in Phase 1 (not last)
-2. Or better: include applying rate limiting in Phase 0 bug fixes — it's 2-5 lines per route and can be done alongside bug B1-B10
+**Mitigation options:**
+1. Cap audio hours (Agency = 150 hrs/month, not 200 episodes of unlimited length)
+2. Add overage billing ($1/hour beyond base allocation)
+3. Clearly disclaim in marketing: "optimized for episodes under 90 minutes"
 
 ---
 
-## Failure Scenario 3: Transcript Credit Exhaustion — No Graceful Degradation (PHASE 7)
+## 2. Free Tier Abuse via Re-Registration
 
-**Trigger:** 7+ users use pre-interview intelligence in the same month on Taddy Pro plan (100 credits)
+### Scenario
+A podcaster uses 3 free episodes in January, finds the tool valuable, and instead of upgrading:
+1. Creates a new Gmail (using period trick: j.ohn@gmail.com vs john@gmail.com)
+2. Re-registers for a new free PodBrain account
+3. Gets 3 more free episodes
+4. Repeats indefinitely
 
-**Behavior:** Taddy returns an error when transcript credit is zero. The pre-interview route (if it remains synchronous — see architecture-impact report) throws an error. The UI shows a generic error state.
+**Current code has no mitigation.** The `users` table is keyed on Supabase Auth user ID. No device fingerprinting, no payment method verification, no IP-based limits exist.
 
-**User experience:** "Pre-interview intelligence failed" — no explanation of why, no indication of when it will be available again, no degraded alternative (e.g., appearance history without transcript analysis).
+**Cost per abusive block:** ~$0.65 in variable costs for 3 episodes. At $0 revenue, each block is a loss. At 100 users doing this over 12 months: ~$780 wasted variable costs + accumulated Supabase storage with no cleanup mechanism.
 
-**Required mitigation:**
-1. Redis counter tracking transcript credits remaining
-2. Check counter before every transcript fetch
-3. When credits run low (<20): show warning in UI
-4. When credits are zero: degrade gracefully — show appearance history without AI analysis, with message: "AI transcript analysis is at its monthly limit. Appearance history and links are available below. Full analysis resets on [date]."
-5. Per-user credit allocation to prevent one user from consuming the pool
-
----
-
-## Failure Scenario 4: `grok-beta` Deprecation (UNMITIGATED UNTIL PHASE 1)
-
-**Trigger:** xAI removes or renames the `grok-beta` model identifier (which is an unstable development identifier, not a production one)
-
-**Behavior:** All 7+ locations that use `grok-beta` start returning API errors simultaneously. Show notes generation fails. Asset generation fails. Vocabulary processing fails. SEO analysis fails. Guest package generation fails.
-
-**User experience:** The entire product stops working for AI features. No degraded mode.
-
-**Required mitigation (should be Phase 0 or Phase 1 item 1):**
-1. Identify the correct stable xAI model identifier before any other work
-2. Replace `grok-beta` in all 7+ locations before running Phase 0 end-to-end tests
-3. Store model identifier in environment variable: `XAI_MODEL_ID=grok-2-1212`
+**Recommended minimum mitigation:** Require email verification before any episode processing. Supabase Auth supports this natively — it's a configuration toggle, not a code change.
 
 ---
 
-## Failure Scenario 5: Stripe Webhook Without Signature Verification
+## 3. Billing Period Timing Exploitation
 
-**Trigger:** Attacker sends fake Stripe webhook events (subscription.updated, payment_intent.succeeded)
+### Scenario
+The free tier resets on the 1st of each calendar month. A user who knows this:
+1. Registers on January 31st
+2. Processes 3 episodes that day
+3. On February 1st, processes 3 more
 
-**Behavior:** Without signature verification, the webhook endpoint accepts any POST request as a real Stripe event. An attacker can: upgrade their account to Pro for free, add fake subscription data for any user ID, trigger refund processes.
+Result: 6 episodes in ~48 hours, all on the free tier. This is not rule-breaking but the conversion model assumes 3 episodes/month, not 6 in 2 days.
 
-**The plan's Phase 3 includes "Add Stripe webhook idempotency"** — but does not explicitly mention signature verification. If signature verification is already implemented, this is not a risk. If it's not, it's a critical security gap.
-
-**Required verification:** Confirm `stripe.webhooks.constructEvent(body, sig, secret)` is already in the Stripe webhook handler. If not, add it to Phase 3.
-
----
-
-## Failure Scenario 6: Fake Integrations Trust Erosion
-
-**Trigger:** Any user visits the Settings page
-
-**Behavior:** Settings shows Spotify, Apple Podcasts, YouTube, and Slack as available integrations. None have backends. Users who click "Connect" get no feedback or a generic error.
-
-**User experience:** "Oh, PodBrain claims integrations it doesn't actually have." Immediate trust erosion. Makes users question what else the product claims but doesn't deliver.
-
-**This is not a future risk — it's happening to every user right now.**
-
-**Required mitigation (Phase 0 or first item Phase 1):**
-Remove or gray out non-functional integrations. 15 minutes of UI work. Should not be deferred to Phase 1 item 9 of 14.
+**Impact:** Low. Most users won't exploit this deliberately. But the conversion funnel math — "a weekly podcaster hits the cap in month 1 and upgrades" — is undermined if savvy users can get a month's worth of value in 2 days.
 
 ---
 
-## Failure Scenario 7: RLS Disabled — All Data World-Readable
+## 4. The Show Limit Forcing Agency Upgrade
 
-**Trigger:** Database is publicly accessible via Supabase anon key (which is public/front-end accessible)
+### Scenario
+A dedicated independent podcaster runs 6 shows (main show + 5 spinoffs/collaborations). They publish:
+- 6 shows × 4 episodes each = 24 episodes/month
+- Well within Pro's 50-episode limit
+- But exceeds Pro's 5-show limit
 
-**Behavior:** With `USING (true)` RLS, any caller with the Supabase anon key can read ALL data in ALL tables — episodes, transcripts, show notes, guest packages, vocabulary terms — for ALL users. The anon key is exposed in the frontend JavaScript (it's meant to be, with proper RLS).
+They must upgrade to Agency ($49/mo) purely for the extra show, even though they use only 24 of their 200 episode allowance and don't need team seats or white-label.
 
-**Current risk level:** HIGH. In single-user mode, this is less critical. Once multiple users exist, this becomes a data breach scenario.
+**User experience:** "I'm paying 2.5× more ($49 vs $19) for the same amount of content because I have one extra show. That's wrong."
 
-**Phase 2 correctly addresses this.** The risk is that there's a window between "first paying user exists" (Phase 3) and "RLS is properly configured" (Phase 2). The phase ordering (auth before billing) is correct and prevents this gap — IF Phase 2 completes before any real users are onboarded.
+This is a legitimate complaint and a churn trigger. The show limit is the wrong forcing function for this user's growth pattern.
 
-**Required mitigation:** Ensure no real users are onboarded before Phase 2 completes. Keep the beta test invitation-only until RLS is in place.
-
----
-
-## Failure Scenario 8: Upload Wizard No Episode Title
-
-**Trigger:** User uploads audio in the current wizard (before Phase 1)
-
-**Behavior:** All episodes are created as "Untitled Episode." When a user processes 5 episodes without naming them, the episode list shows 5 identical "Untitled Episode" rows with no way to distinguish them.
-
-**Phase 0 milestone:** Does not include adding an episode title field. Phase 1 includes it as item 1.
-
-**Required mitigation:** Add episode title field to upload wizard in Phase 0 (5-minute UI change). This is embarrassing if anyone sees the product before Phase 1.
+**Options:**
+- Raise Pro show limit from 5 to 10
+- Offer "additional shows" as a $5/show/month add-on
+- Create an intermediate tier at $39-49 with 10 shows but no team features
 
 ---
 
-## Failure Scenario 9: AssemblyAI Webhook URL Not Set for Production
+## 5. Agency Team Seat Lifecycle Gaps
 
-**Trigger:** Phase 5 webhook migration deployed to production without the correct webhook URL configured in AssemblyAI
+### Scenario
+An agency buys the Agency tier for 5 team seats. They add 5 members. One employee leaves. They remove that person and try to add a replacement.
 
-**Behavior:** AssemblyAI sends transcription completion callbacks to the wrong URL (or no URL). Processing jobs wait indefinitely for callbacks that never arrive. All episode processing hangs.
+**Undefined behaviors:**
+- Does the departing team member's active session get invalidated?
+- Who owns episodes/assets the departing member created?
+- Is there a seat reassignment or "transfer" flow?
+- What if the owner account is deleted?
 
-**Required mitigation:**
-1. Document that `ASSEMBLYAI_WEBHOOK_URL` must be set in production environment before Phase 5 deploys
-2. Add a startup check that verifies the webhook URL is configured
-3. Add to Phase 5 checklist: "Verify webhook URL is set in production before deploying"
+None of this is implemented. Team features are Phase 2.3 additions and lifecycle edge cases are unaddressed.
 
----
-
-## Failure Scenario 10: Auth Migration Data Loss
-
-**Trigger:** Phase 2 auth implementation converts DEFAULT_USER_ID rows to real user_id without a proper migration strategy
-
-**Behavior:** When the first real user signs up, their user_id is different from `DEFAULT_USER_ID`. Any data created during development/testing under `DEFAULT_USER_ID` is not associated with the new user. Or worse: if RLS is applied before data is migrated, the first user sees no episodes/shows (they're associated with the DEFAULT_USER_ID, not their real user_id).
-
-**Required mitigation:**
-1. Explicitly decide: is development data kept or wiped at auth launch?
-2. If kept: create a migration that reassigns DEFAULT_USER_ID rows to the first real user
-3. Add a Phase 2 checklist item: "Test that existing show/episode data is accessible after auth migration"
+**Pricing implication:** Selling "5 team seats" as a feature requires those seats to work reliably through normal employee turnover. If team management is broken, Agency-tier marketing is misleading.
 
 ---
 
-## Failure Scenario 11: Decorative Vocabulary Sparklines
+## 6. Vocabulary Learning Cross-Tier Behavior
 
-**Trigger:** Any user visits the Vocabulary page
+### Scenario
+A user on the free tier adds 50 vocabulary terms for their niche podcast over 3 months, then upgrades to Pro. Their accumulated vocabulary should immediately improve processing — and it does, because vocabulary is stored per-show and used at processing time regardless of tier.
 
-**Behavior:** The UI shows vocabulary term usage trends and accuracy boost metrics that have no real data behind them — they're decorative visualizations. A user who relies on these metrics to understand which vocabulary terms are helping transcription accuracy is working with fictional data.
+**Good design:** This creates genuine switching cost. The vocabulary investment is tied to the PodBrain account.
 
-**User experience:** "This feature seems to be tracking my vocabulary learning over time!" → later: "Why aren't the stats changing?" → "These must be fake."
+**But the edge case:** A Pro user who downgrades to free still has their vocabulary. Free-tier episodes still benefit from Pro-era vocabulary accumulation. This is arguably a free service extension, but it's also a retention feature — the user's investment in vocabulary makes them reluctant to cancel.
 
-**Phase 8 addresses this** — but it's visible to all users in all phases. This should be addressed in Phase 1 (simplest fix: remove the sparklines until real data exists) rather than showing false data.
-
----
-
-## Failure Scenario 12: Test Routes Exposed in Production
-
-**Trigger:** Production environment has `/api/test-*` and `/api/seed` routes accessible
-
-**Behavior:** `/api/seed` likely creates test data. `/api/test-*` routes likely test specific features. These should not be accessible in production — they can corrupt real user data.
-
-**The plan correctly identifies this in Phase 6** ("Remove or gate test routes behind dev guard"). But these routes are currently accessible in whatever production environment exists.
-
-**Required mitigation:** Add to Phase 0 or Phase 1: gate test routes behind an environment check:
-```typescript
-if (process.env.NODE_ENV !== 'development') {
-  return NextResponse.json({ error: 'Not found' }, { status: 404 });
-}
-```
+**No action required** — this behavior should be intentional and highlighted in retention messaging. "Your vocabulary AI gets smarter with every episode — and it stays yours."
 
 ---
 
-## Failure Scenario 13: Redis Cache Corruption (B10 — Already in Phase 0)
+## 7. The Competitor Free Trial Comparison Problem
 
-**Trigger:** Any feature that reads from Redis cache before B10 is fixed
+### Scenario
+A user evaluates PodBrain vs. Castmagic. Both have free tiers. Castmagic's free trial gives access to all features for a limited period. PodBrain's free tier gives access to 6 of 45 assets indefinitely.
 
-**Behavior:** Double JSON.stringify means cached data is `"\"object\""` instead of `{object}`. `JSON.parse(cachedValue)` returns a string, not an object. Features that rely on cached data either crash or silently use incorrect data.
+**User's mental comparison:** "Castmagic free trial lets me try everything. PodBrain free only lets me use 6 features."
 
-**Phase 0 correctly includes this fix.** The risk is that B10 is item 10 of 10 — if the developer fixes B1-B9 and tests the product before fixing B10, cached behavior will be incorrect.
+Result: Castmagic wins the evaluation even though PodBrain's paid product is vastly better value — the user never experienced PodBrain's full capability.
 
-**Required mitigation:** Fix B10 first (or simultaneously with B1). It's a 1-line fix.
+**Risk:** High. This is a predictable evaluation pattern for any user comparison-shopping.
 
----
-
-## Failure Scenario 14: Buzzsprout Push Notes Breaks After Auth Migration
-
-**Trigger:** Phase 2 auth is implemented, and a user tries to push show notes to Buzzsprout
-
-**Behavior:** Buzzsprout integration stores connection data (API token, show ID) likely associated with DEFAULT_USER_ID. After auth, the lookup for the user's Buzzsprout connection may fail because the user_id changed.
-
-**Required mitigation:** Include Buzzsprout integration in the Phase 2 auth migration testing checklist. Verify that connection data migrates correctly to real user IDs.
+**Mitigation:** Offer a 14-day Pro trial on sign-up in addition to (or instead of) the perpetual restricted free tier. Let users taste all 45 assets. The conversion data will tell you whether this improves paid conversion.
 
 ---
 
-## Edge Case Priority Matrix
+## 8. The "200 Episodes × All 45 Assets" Max Stress Case
 
-| Scenario | Severity | Phase Risk | Action |
-|----------|----------|------------|--------|
-| Long-form timeout | CRITICAL | Phases 0-4 | Add explicit constraint to Phase 0 |
-| Rate limiting exposure | HIGH | Phase 0 + early Phase 1 | Move to Phase 0 |
-| grok-beta deprecation | HIGH | Phase 0-1 | Move to Phase 0 |
-| Fake integrations | HIGH | NOW | Fix in Phase 0 (15 min) |
-| Stripe webhook without signature verification | HIGH | Phase 3 | Verify/add in Phase 3 |
-| Transcript credit exhaustion | HIGH | Phase 7 | Design graceful degradation |
-| No episode title | MEDIUM | Phase 0-1 | Add to Phase 0 |
-| Auth migration data loss | MEDIUM | Phase 2 | Add migration strategy |
-| AssemblyAI webhook URL | MEDIUM | Phase 5 | Add to deployment checklist |
-| RLS window during beta | MEDIUM | Phases 2-3 | Keep beta invite-only until Phase 2 done |
-| Decorative sparklines | MEDIUM | Phase 1-8 | Remove in Phase 1 |
-| Test routes in production | MEDIUM | Phases 0+ | Gate in Phase 1 |
-| Redis corruption order | LOW | Phase 0 | Fix B10 first |
-| Buzzsprout auth migration | LOW | Phase 2 | Add to Phase 2 checklist |
+### Scenario
+A power Agency user, possibly using the API, triggers full 45-asset generation for all 200 episodes in a billing period.
+
+- 200 episodes × 45 assets = 9,000 Grok API calls
+- At $0.003/call average: **$27 in Grok costs**
+- Plus AssemblyAI at avg 45 min: **$25.50**
+- Total variable: **$52.50** against **$49 revenue** — **Net loss: -$3.50**
+
+This is the "moderate" version of the catastrophe — even at average episode length and all assets, the Agency tier barely breaks even. At 3-hour episodes, it's a -$59 loss.
+
+**The current code likely prevents this partially** — asset generation is rate-limited at 30 req/min, and assets may be generated on-demand rather than automatically for all episodes. Confirm that the generate-assets endpoint takes specific asset types rather than auto-generating all 45 per episode.
 
 ---
 
-## Edge Case Conclusion
+## 9. No Annual Pricing Option
 
-The plan has 14 identifiable edge cases, 4 of which are present right now (long-form timeout risk, rate limiting exposure, grok-beta risk, fake integrations). The most important near-term actions are:
+The plan discusses only monthly pricing. Annual pricing is a standard SaaS mechanism that:
+- Collects 10-12 months of revenue upfront (improves cash flow)
+- Reduces monthly churn (annual subscribers cancel 40-60% less often)
+- Increases LTV certainty
+- Creates a price anchor ("$19/mo billed annually vs. $23/mo monthly")
 
-1. Move fake integrations removal to Phase 0 (15 minutes, prevents trust erosion)
-2. Move rate limiting application to Phase 0 (cost protection)
-3. Fix grok-beta before end-to-end testing (prevents test failures from wrong model)
-4. Explicitly constrain Phase 0 milestone to short audio only
+**Implementation cost:** 2-3 hours — create annual Stripe prices at a discount (e.g., Pro annual: $190/yr = $15.83/mo effective, vs $19/mo monthly).
 
-These don't add to the scope — they reprioritize existing items.
+**Not offering annual pricing at launch is a missed opportunity** that costs nothing to add and meaningfully improves unit economics.
+
+---
+
+## Summary
+
+| Edge Case | Severity | Probability |
+|-----------|----------|-------------|
+| Long-form Agency user loses money per month | CRITICAL | Medium |
+| Free tier re-registration abuse | HIGH | Medium |
+| Show limit forcing Agency upgrade prematurely | MEDIUM | Medium |
+| Competitor free trial beats restricted free tier in evaluation | HIGH | High |
+| All-assets Agency stress case barely breaks even | HIGH | Medium |
+| No annual pricing option | MEDIUM | High (most SaaS buyers check for this) |
+| Billing period gaming | LOW | Low |
+| Team seat lifecycle gaps | MEDIUM | Low at launch |
+
+**Bottom line:** Three edge cases need immediate action before launch: (1) add audio-hour monitoring for Agency-tier cost exposure, (2) add email verification to prevent free tier abuse, (3) confirm assets are generated on-demand not automatically. Annual pricing is a high-value addition with low implementation cost and should be added before the first paying subscriber.
