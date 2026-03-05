@@ -14,20 +14,22 @@ export async function POST(request: NextRequest) {
     const { userId } = await requireAuth();
     const body = await request.json();
 
-    // Accept either tier name or price_id for backwards compatibility
-    let priceId: string | null = null;
+    // Only accept tier name — price_id is resolved server-side to prevent injection
     const interval: BillingInterval = body.interval === 'annual' ? 'annual' : 'monthly';
 
-    if (body.tier && VALID_TIERS.includes(body.tier)) {
-      priceId = getServerPriceId(body.tier, interval);
-    } else if (body.price_id && typeof body.price_id === 'string') {
-      priceId = body.price_id;
+    if (!body.tier || !VALID_TIERS.includes(body.tier)) {
+      return NextResponse.json(
+        { error: 'Invalid tier. Valid tiers: pro, creator, agency' },
+        { status: 400 }
+      );
     }
 
+    const priceId = getServerPriceId(body.tier, interval);
     if (!priceId) {
+      console.error('Price ID not configured for tier:', body.tier, interval);
       return NextResponse.json(
-        { error: 'Invalid tier or price_id. Valid tiers: pro, creator, agency' },
-        { status: 400 }
+        { error: 'Pricing not configured for this tier' },
+        { status: 500 }
       );
     }
 
