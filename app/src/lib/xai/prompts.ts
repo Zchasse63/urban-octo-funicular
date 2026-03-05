@@ -1,3 +1,5 @@
+import { sanitizeForAI } from '@/lib/sanitize';
+
 export function buildShowNotesPrompt(
   transcript: string,
   options: {
@@ -6,7 +8,9 @@ export function buildShowNotesPrompt(
     targetKeywords?: string[];
   }
 ): string {
-  const { episodeTitle, guestName, targetKeywords } = options;
+  const episodeTitle = options.episodeTitle ? sanitizeForAI(options.episodeTitle) : undefined;
+  const guestName = options.guestName ? sanitizeForAI(options.guestName) : undefined;
+  const targetKeywords = options.targetKeywords?.map(k => sanitizeForAI(k));
 
   const prompt = `Generate comprehensive podcast show notes from the following transcript.
 

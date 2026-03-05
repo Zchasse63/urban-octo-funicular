@@ -6,6 +6,7 @@
 import type { AssetType, Episode, GeneratedAsset } from '@/types/database';
 import { getAssetPrompt, type AssetContext } from './asset-prompts';
 import { logger } from '@/lib/logger';
+import { sanitizeForAI } from '@/lib/sanitize';
 
 const XAI_API_URL = 'https://api.x.ai/v1/chat/completions';
 const DEFAULT_MODEL = process.env.XAI_MODEL || 'grok-4-1-fast';
@@ -177,10 +178,10 @@ export function buildAssetContext(
 ): AssetContext {
   return {
     transcript: episode.transcript || '',
-    episodeTitle: episode.title || 'Untitled Episode',
-    showName,
-    guestName: episode.guest_name || undefined,
-    guestBio: episode.guest_bio || undefined,
+    episodeTitle: sanitizeForAI(episode.title || 'Untitled Episode'),
+    showName: sanitizeForAI(showName),
+    guestName: episode.guest_name ? sanitizeForAI(episode.guest_name) : undefined,
+    guestBio: episode.guest_bio ? sanitizeForAI(episode.guest_bio) : undefined,
     viralMoments: episode.viral_moments?.map(m => ({
       text: m.text,
       score: m.score,

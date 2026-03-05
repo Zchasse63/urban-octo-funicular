@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { requireAuth, verifyEpisodeOwnership, isValidUUID } from '@/lib/auth';
 import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { sanitizeForAI } from '@/lib/sanitize';
 import { searchGuestAppearances } from '@/lib/taddy/search';
 import { createChatCompletion } from '@/lib/xai-client';
 
@@ -218,7 +219,10 @@ async function generatePreInterviewIntelligence(input: {
     datePublished: string | null;
   }>;
 }): Promise<PreInterviewData> {
-  const { guestName, guestBio, topics, appearances } = input;
+  const { guestBio, topics, appearances } = input;
+  const guestName = sanitizeForAI(input.guestName);
+  const safeBio = guestBio ? sanitizeForAI(guestBio) : undefined;
+  const safeTopics = topics?.map(t => sanitizeForAI(t));
 
   const appearanceList =
     appearances.length > 0
@@ -262,8 +266,8 @@ Guidelines:
 - Keep the guest summary to 2-3 sentences`;
 
   const userPrompt = `Guest Name: ${guestName}
-${guestBio ? `\nGuest Bio: ${guestBio}` : ''}
-${topics && topics.length > 0 ? `\nEpisode Topics: ${topics.join(', ')}` : ''}
+${safeBio ? `\nGuest Bio: ${safeBio}` : ''}
+${safeTopics && safeTopics.length > 0 ? `\nEpisode Topics: ${safeTopics.join(', ')}` : ''}
 
 Previous Podcast Appearances (${appearances.length} found):
 ${appearanceList}
