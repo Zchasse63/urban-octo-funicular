@@ -55,9 +55,11 @@ export function parsePagination(searchParams: URLSearchParams): {
   perPage: number
   offset: number
 } {
-  const page = parseInt(searchParams.get('page') || '1', 10)
+  const rawPage = parseInt(searchParams.get('page') || '1', 10)
+  const page = Math.max(1, isNaN(rawPage) ? 1 : rawPage)
+  const rawPerPage = parseInt(searchParams.get('per_page') || String(PAGINATION.defaultPageSize), 10)
   const perPage = Math.min(
-    parseInt(searchParams.get('per_page') || String(PAGINATION.defaultPageSize), 10),
+    isNaN(rawPerPage) ? PAGINATION.defaultPageSize : rawPerPage,
     PAGINATION.maxPageSize
   )
   const offset = (page - 1) * perPage
