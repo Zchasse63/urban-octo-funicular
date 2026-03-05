@@ -2,9 +2,9 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireAuth, isValidUUID } from '@/lib/auth'
 import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers'
-import type { VocabularyTerm } from '@/types/database'
+import { checkRateLimit } from '@/lib/rate-limit'
 import { CreateVocabularyTermSchema, parseBody } from '@/lib/validation-schemas'
-import type { VocabularyTerm, ApiResponse } from '@/types/database'
+import type { VocabularyTerm } from '@/types/database'
 
 // Omit the large embedding vector from API responses
 type VocabularyTermResponse = Omit<VocabularyTerm, 'embedding'>
@@ -57,6 +57,15 @@ export async function POST(
 ) {
   try {
     const { userId } = await requireAuth()
+
+    const rl = await checkRateLimit(`create-vocab:${userId}`, 30)
+    if (!rl.success) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Rate limit exceeded. Please try again shortly.' },
+        { status: 429 }
+      )
+    }
+
     const supabase = await createClient()
     const { id: showId } = await params
     const body = await request.json()

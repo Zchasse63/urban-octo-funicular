@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAuth } from '@/lib/auth'
 import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers'
 import { getUserTier, getTierLimits } from '@/lib/tier-limits'
+import { checkRateLimit } from '@/lib/rate-limit'
 import { InviteTeamMemberSchema, parseBody } from '@/lib/validation-schemas'
 
 export interface TeamMember {
@@ -65,6 +66,15 @@ return errorResponse('Internal server error', 500)
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await requireAuth()
+
+    const rl = await checkRateLimit(`invite-team:${userId}`, 10)
+    if (!rl.success) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Rate limit exceeded. Please try again shortly.' },
+        { status: 429 }
+      )
+    }
+
     const supabase = await createClient()
 
     // Check tier allows team seats

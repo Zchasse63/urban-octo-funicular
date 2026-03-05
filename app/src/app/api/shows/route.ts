@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAuth } from '@/lib/auth'
 import { errorResponse, successResponse, handleApiError, parsePagination } from '@/lib/api/helpers'
 import { canCreateShow } from '@/lib/tier-limits'
+import { checkRateLimit } from '@/lib/rate-limit'
 import type { Show, PaginatedResponse } from '@/types/database'
 import { CreateShowSchema, parseBody } from '@/lib/validation-schemas'
 import type { Show, ApiResponse, PaginatedResponse } from '@/types/database'
@@ -64,6 +65,14 @@ return errorResponse('Internal server error', 500)
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await requireAuth()
+
+    const rl = await checkRateLimit(`create-show:${userId}`, 20)
+    if (!rl.success) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Rate limit exceeded. Please try again shortly.' },
+        { status: 429 }
+      )
+    }
 
     // Tier enforcement: check show limit
     const showCheck = await canCreateShow(userId)

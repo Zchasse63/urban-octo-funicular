@@ -5,11 +5,21 @@ import { requireAuth } from '@/lib/auth';
 import { handleApiError } from '@/lib/api/helpers';
 import { APP_URL } from '@/lib/constants';
 import { getServerPriceId } from '@/lib/stripe/products.server';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { CheckoutSchema, parseBody } from '@/lib/validation-schemas';
 
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await requireAuth();
+
+    const rl = await checkRateLimit(`checkout:${userId}`, 5);
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please try again shortly.' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
 
     const parsed = parseBody(body, CheckoutSchema);

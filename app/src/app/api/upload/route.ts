@@ -1,13 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
-return errorResponse('Internal server error', 500)
+import { requireAuth } from '@/lib/auth';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { SUPPORTED_AUDIO_FORMATS, PROCESSING } from '@/lib/constants';
 
 const EPISODES_BUCKET = 'episodes';
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAuth();
+    const { userId } = await requireAuth();
+
+    const rl = await checkRateLimit(`upload:${userId}`, 10);
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please try again shortly.' },
+        { status: 429 }
+      );
+    }
 
     const formData = await request.formData();
     const file = formData.get('file') as File;

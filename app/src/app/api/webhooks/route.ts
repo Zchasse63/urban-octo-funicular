@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { requireAuth, isValidUUID } from '@/lib/auth';
 import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers';
 import { encryptString } from '@/lib/buzzsprout/encryption';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { CreateWebhookSchema, parseBody } from '@/lib/validation-schemas';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -81,6 +82,15 @@ return errorResponse('Internal server error', 500)
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await requireAuth();
+
+    const rl = await checkRateLimit(`create-webhook:${userId}`, 10);
+    if (!rl.success) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Rate limit exceeded. Please try again shortly.' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
 
     const parsed = parseBody(body, CreateWebhookSchema);

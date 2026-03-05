@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAuth } from '@/lib/auth'
 import { errorResponse, successResponse, handleApiError, parsePagination } from '@/lib/api/helpers'
 import { canProcessEpisode } from '@/lib/tier-limits'
+import { checkRateLimit } from '@/lib/rate-limit'
 import type { EpisodeListItem, PaginatedResponse } from '@/types/database'
 import { CreateEpisodeSchema, parseBody } from '@/lib/validation-schemas'
 import type { EpisodeListItem, ApiResponse, PaginatedResponse, Episode } from '@/types/database'
@@ -101,6 +102,14 @@ return errorResponse('Internal server error', 500)
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await requireAuth()
+
+    const rl = await checkRateLimit(`create-episode:${userId}`, 20)
+    if (!rl.success) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Rate limit exceeded. Please try again shortly.' },
+        { status: 429 }
+      )
+    }
 
     // Tier enforcement: check audio hours limit
     const hoursCheck = await canProcessEpisode(userId)
