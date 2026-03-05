@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { findSimilarSections, groupByEpisode } from '@/lib/cross-episode/similarity';
-import { requireAuth, verifyEpisodeOwnership } from '@/lib/auth';
+import { requireAuth, verifyEpisodeOwnership, isValidUUID } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rate-limit';
-import { validateUUID } from '@/lib/validation';
 
 export async function GET(
   request: NextRequest,
@@ -18,7 +17,7 @@ export async function GET(
 
     const { id: episodeId } = await params;
 
-    if (!validateUUID(episodeId)) {
+    if (!isValidUUID(episodeId)) {
       return NextResponse.json({ error: 'Invalid episode ID format' }, { status: 400 });
     }
 

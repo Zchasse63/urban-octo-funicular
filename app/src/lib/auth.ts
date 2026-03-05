@@ -72,10 +72,5 @@ export async function verifyShowOwnership(
   return !!data
 }
 
-/**
- * Validate UUID format for path parameters
- */
-export function isValidUUID(str: string): boolean {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-  return uuidRegex.test(str)
-}
+// Re-export from canonical location so existing callers don't break
+export { isValidUUID } from './validation'

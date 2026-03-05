@@ -24,12 +24,10 @@ describe('validateUUID', () => {
       expect(validateUUID('6ba7b810-9dad-11d1-80b4-00c04fd430c8')).toBe(true)
     })
 
-    // Note: The default user ID doesn't pass strict UUID validation
-    // because it's a placeholder format, not a real UUID v1-5
-    it('rejects the default user ID (placeholder format)', () => {
-      // 00000000-0000-0000-0000-000000000001 is not a valid v1-5 UUID
-      // The third section must start with 1-5 for version
-      expect(validateUUID('00000000-0000-0000-0000-000000000001')).toBe(false)
+    // Permissive validation: accepts any hex in version/variant positions
+    // because Supabase-generated UUIDs don't always match strict RFC 4122
+    it('accepts the default user ID (permissive hex validation)', () => {
+      expect(validateUUID('00000000-0000-0000-0000-000000000001')).toBe(true)
     })
   })
 

@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { findSimilarSections, groupByEpisode } from '@/lib/cross-episode/similarity';
 import { createClient } from '@/lib/supabase/server';
-import { requireAuth, verifyShowOwnership } from '@/lib/auth';
+import { requireAuth, verifyShowOwnership, isValidUUID } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rate-limit';
-import { validateUUID } from '@/lib/validation';
 
 export async function GET(
   request: NextRequest,
@@ -19,7 +18,7 @@ export async function GET(
 
     const { id: showId } = await params;
 
-    if (!validateUUID(showId)) {
+    if (!isValidUUID(showId)) {
       return NextResponse.json({ error: 'Invalid show ID format' }, { status: 400 });
     }
 

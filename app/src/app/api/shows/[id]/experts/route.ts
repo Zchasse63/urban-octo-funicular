@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { discoverExperts } from '@/lib/experts/discovery';
-import { requireAuth, verifyShowOwnership } from '@/lib/auth';
+import { requireAuth, verifyShowOwnership, isValidUUID } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rate-limit';
-import { validateUUID } from '@/lib/validation';
 import type { ExpertSource } from '@/lib/experts/types';
 
 export async function GET(
@@ -19,7 +18,7 @@ export async function GET(
 
     const { id: showId } = await params;
 
-    if (!validateUUID(showId)) {
+    if (!isValidUUID(showId)) {
       return NextResponse.json({ error: 'Invalid show ID format' }, { status: 400 });
     }
 

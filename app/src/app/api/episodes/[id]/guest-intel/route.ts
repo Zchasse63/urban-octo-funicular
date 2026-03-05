@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { aggregateGuestIntel } from '@/lib/guest-intel/service';
 import { createClient } from '@/lib/supabase/server';
-import { requireAuth, verifyEpisodeOwnership } from '@/lib/auth';
+import { requireAuth, verifyEpisodeOwnership, isValidUUID } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rate-limit';
-import { validateUUID } from '@/lib/validation';
 
 export async function GET(
   request: NextRequest,
@@ -19,7 +18,7 @@ export async function GET(
 
     const { id: episodeId } = await params;
 
-    if (!validateUUID(episodeId)) {
+    if (!isValidUUID(episodeId)) {
       return NextResponse.json({ error: 'Invalid episode ID format' }, { status: 400 });
     }
 
