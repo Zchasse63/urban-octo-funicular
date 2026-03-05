@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth, isValidUUID } from '@/lib/auth';
 import { errorResponse, handleApiError } from '@/lib/api/helpers';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { getTransistorClient } from '@/lib/transistor/helpers';
 import DOMPurify from 'isomorphic-dompurify';
 
@@ -27,6 +28,14 @@ export async function POST(
 ) {
   try {
     const { userId } = await requireAuth();
+
+    const rl = await checkRateLimit(`transistor-inject:${userId}`, 10);
+    if (!rl.success) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Rate limit exceeded. Please try again shortly.' },
+        { status: 429 }
+      );
+    }
     const { id: episodeId } = await params;
 
     if (!isValidUUID(episodeId)) {

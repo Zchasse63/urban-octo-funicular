@@ -3,6 +3,9 @@ import { createClient } from '@/lib/supabase/server';
 import { requireAuth, isValidUUID } from '@/lib/auth';
 import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers';
 import type { Episode } from '@/types/database';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { sanitizeForAI } from '@/lib/sanitize';
+import type { ApiResponse, Episode } from '@/types/database';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -106,6 +109,15 @@ export async function POST(
 ) {
   try {
     const { userId } = await requireAuth();
+
+    const rl = await checkRateLimit(`ab-test:${userId}`, 20);
+    if (!rl.success) {
+      return NextResponse.json<ApiResponse<null>>(
+        { data: null, error: 'Rate limit exceeded. Please try again shortly.' },
+        { status: 429 }
+      );
+    }
+
     const { id: episodeId } = await params;
 
     if (!isValidUUID(episodeId)) {
@@ -142,6 +154,11 @@ export async function POST(
     const currentValue = field === 'title' ? ep.title : ep.description;
     const showName = Array.isArray(ep.shows) ? ep.shows[0]?.name : ep.shows?.name;
 
+    // Sanitize user-controlled metadata before AI prompt interpolation
+    const safeShowName = showName ? sanitizeForAI(showName) : 'Unknown Show';
+    const safeCurrentValue = currentValue ? sanitizeForAI(currentValue) : '(none)';
+    const safeGuestName = ep.guest_name ? sanitizeForAI(ep.guest_name) : undefined;
+
     // Build the AI prompt
     const systemPrompt = `You are a podcast content optimization expert. Generate ${clampedCount} alternative ${field} variants for a podcast episode.
 
@@ -158,11 +175,11 @@ Respond ONLY with valid JSON in this format:
   ]
 }`;
 
-    const userPrompt = `Podcast: ${showName || 'Unknown Show'}
-Current ${field}: ${currentValue || '(none)'}
-${ep.description && field === 'title' ? `Description: ${ep.description}` : ''}
+    const userPrompt = `Podcast: ${safeShowName}
+Current ${field}: ${safeCurrentValue}
+${ep.description && field === 'title' ? `Description: ${sanitizeForAI(ep.description)}` : ''}
 ${ep.show_notes ? `Show notes excerpt: ${ep.show_notes.slice(0, 500)}` : ''}
-${ep.guest_name ? `Guest: ${ep.guest_name}` : ''}
+${safeGuestName ? `Guest: ${safeGuestName}` : ''}
 
 Generate ${clampedCount} ${field} variants.`;
 
