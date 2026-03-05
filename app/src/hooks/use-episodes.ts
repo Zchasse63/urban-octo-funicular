@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { extractErrorMessage } from "@/lib/errors";
 import type { EpisodeListItem, PaginatedResponse } from "@/types/database";
 
 interface UseEpisodesOptions {
@@ -61,7 +62,7 @@ export default function useEpisodes(
       setEpisodes(filtered);
       setTotal(search ? filtered.length : result.total);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load episodes");
+      setError(extractErrorMessage(err, "Failed to load episodes"));
     } finally {
       setIsLoading(false);
     }

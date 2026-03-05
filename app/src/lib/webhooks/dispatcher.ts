@@ -59,8 +59,7 @@ function signPayload(payload: string, secret: string): string {
 export async function dispatchWebhooks(
   userId: string,
   payload: WebhookPayload,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  client?: SupabaseClient<any, any, any>
+  client?: SupabaseClient
 ): Promise<void> {
   try {
     const supabase = client ?? createAdminClient();

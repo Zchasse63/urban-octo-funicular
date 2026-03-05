@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { extractErrorMessage } from "@/lib/errors";
 import type { Expert, ExpertSource } from "@/lib/experts/types";
 
 interface UseExpertsOptions {
@@ -51,7 +52,7 @@ export default function useExperts(
         setExperts(result.experts || []);
         setSource(result.source || null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to search experts");
+        setError(extractErrorMessage(err, "Failed to search experts"));
         setExperts([]);
         setSource(null);
       } finally {

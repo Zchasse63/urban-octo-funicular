@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { extractErrorMessage } from "@/lib/errors";
 import type { SEOAnalysis } from "@/types/database";
 
 interface SEOData {
@@ -76,7 +77,7 @@ export default function useEpisodeSeo(
         setSeoData(null);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load SEO data");
+      setError(extractErrorMessage(err, "Failed to load SEO data"));
     } finally {
       setIsLoading(false);
     }

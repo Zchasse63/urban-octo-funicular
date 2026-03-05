@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from 'react'
+import { extractErrorMessage } from '@/lib/errors'
 import type { VocabularyTerm } from '@/types/database'
 
 interface UseVocabularyOptions {
@@ -34,7 +35,7 @@ export default function useVocabulary(
       const result = await res.json()
       setTerms(result.data || [])
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch vocabulary')
+      setError(extractErrorMessage(err, 'Failed to fetch vocabulary'))
     } finally {
       setIsLoading(false)
     }
@@ -46,35 +47,27 @@ export default function useVocabulary(
 
   const addTerm = useCallback(async (term: string, alternatives: string[] = []): Promise<VocabularyTerm | null> => {
     if (!showId) return null
-    try {
-      const res = await fetch(`/api/shows/${showId}/vocabulary`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ term, alternatives }),
-      })
-      if (!res.ok) throw new Error('Failed to add term')
-      const result = await res.json()
-      if (result.data) {
-        setTerms(prev => [result.data, ...prev])
-      }
-      return result.data
-    } catch (err) {
-      throw err
+    const res = await fetch(`/api/shows/${showId}/vocabulary`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ term, alternatives }),
+    })
+    if (!res.ok) throw new Error('Failed to add term')
+    const result = await res.json()
+    if (result.data) {
+      setTerms(prev => [result.data, ...prev])
     }
+    return result.data
   }, [showId])
 
   const deleteTerm = useCallback(async (termId: string): Promise<boolean> => {
     if (!showId) return false
-    try {
-      const res = await fetch(`/api/shows/${showId}/vocabulary?term_id=${termId}`, {
-        method: 'DELETE',
-      })
-      if (!res.ok) throw new Error('Failed to delete term')
-      setTerms(prev => prev.filter(t => t.id !== termId))
-      return true
-    } catch (err) {
-      throw err
-    }
+    const res = await fetch(`/api/shows/${showId}/vocabulary?term_id=${termId}`, {
+      method: 'DELETE',
+    })
+    if (!res.ok) throw new Error('Failed to delete term')
+    setTerms(prev => prev.filter(t => t.id !== termId))
+    return true
   }, [showId])
 
   return { terms, isLoading, error, refetch: fetchTerms, addTerm, deleteTerm }

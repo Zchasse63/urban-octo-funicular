@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback } from 'react';
+import { extractErrorMessage } from '@/lib/errors';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -70,7 +71,7 @@ export default function usePreInterview(episodeId?: string): UsePreInterviewRetu
       const json = await res.json();
       setData(json.data ?? json);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch pre-interview data');
+      setError(extractErrorMessage(err, 'Failed to fetch pre-interview data'));
     } finally {
       setIsLoading(false);
     }
@@ -101,7 +102,7 @@ export default function usePreInterview(episodeId?: string): UsePreInterviewRetu
         const json = await res.json();
         setData(json.data ?? json);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to generate pre-interview data');
+        setError(extractErrorMessage(err, 'Failed to generate pre-interview data'));
       } finally {
         setIsGenerating(false);
       }

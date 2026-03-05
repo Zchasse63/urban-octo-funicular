@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { Episode } from "@/types/database";
 import { createClient } from "@/lib/supabase/client";
 import { POLL_INTERVAL_MS } from "@/lib/constants";
+import { extractErrorMessage } from "@/lib/errors";
 
 interface UseEpisodeResult {
   episode: Episode | null;
@@ -39,9 +40,7 @@ export default function useEpisode(id: string): UseEpisodeResult {
       if (dbError) throw dbError;
       setEpisode(data as Episode);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load episode"
-      );
+      setError(extractErrorMessage(err, "Failed to load episode"));
     } finally {
       setIsLoading(false);
     }

@@ -52,6 +52,10 @@ export const PAGINATION = {
 // Polling Interval (used by usePolling, useEpisode for status checks)
 export const POLL_INTERVAL_MS = 3000
 
+// UI Timing Constants (used by hooks and components for feedback delays)
+export const COPY_FEEDBACK_MS = 1800
+export const DEBOUNCE_DEFAULT_MS = 500
+
 // Subscription Tiers — hours-based pricing aligned with stripe/products.ts
 export const SUBSCRIPTION_TIERS = {
   free: {

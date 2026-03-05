@@ -1263,8 +1263,7 @@ export const VocabularyPage = () => {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handleUndo, handleRedo]);
+  }, [handleUndo, handleRedo, filteredTerms, handleExport]);
 
   const categories: Array<TermCategory | 'All'> = ['All', 'Person', 'Brand', 'Technical', 'Acronym'];
   const hasSelection = selectedIds.size > 0;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { extractErrorMessage } from "@/lib/errors";
 import type { Episode, Show } from "@/types/database";
 
 interface SocialPostVariant {
@@ -64,9 +65,7 @@ export default function useGuestPackage(
       const result = await response.json();
       setGuestPackage(result.data || null);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load guest package"
-      );
+      setError(extractErrorMessage(err, "Failed to load guest package"));
     } finally {
       setIsLoading(false);
     }
@@ -95,9 +94,7 @@ export default function useGuestPackage(
 
         return true;
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Failed to send email"
-        );
+        setError(extractErrorMessage(err, "Failed to send email"));
         return false;
       } finally {
         setIsSending(false);

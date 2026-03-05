@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { extractErrorMessage } from '@/lib/errors'
 
 interface UsageData {
   tier: string
@@ -33,7 +34,7 @@ export function useUsage(): UseUsageReturn {
       }
       setUsage(json.data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch usage')
+      setError(extractErrorMessage(err, 'Failed to fetch usage'))
     } finally {
       setIsLoading(false)
     }

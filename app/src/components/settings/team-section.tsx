@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Users, Plus, Trash2, ChevronDown, Mail, Shield, Eye, Edit3, UserPlus, X, Check, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { extractErrorMessage } from '@/lib/errors'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -297,7 +298,7 @@ export default function TeamSection({ addToast }: TeamSectionProps) {
       await fetchTeam()
     } catch (err) {
       addToast(
-        err instanceof Error ? err.message : 'Failed to invite member',
+        extractErrorMessage(err, 'Failed to invite member'),
         'error',
         AlertCircle
       )

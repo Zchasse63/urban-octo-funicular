@@ -6,6 +6,7 @@ import { Rss, X, Loader2, CheckCircle2, AlertCircle, Download } from 'lucide-rea
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import { extractErrorMessage } from '@/lib/errors'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -120,7 +121,7 @@ export function ImportFeedDialog({ showId, onImportComplete }: ImportFeedDialogP
         setStep('done')
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch feed')
+      setError(extractErrorMessage(err, 'Failed to fetch feed'))
       setStep('error')
     } finally {
       setIsLoading(false)
@@ -152,7 +153,7 @@ export function ImportFeedDialog({ showId, onImportComplete }: ImportFeedDialogP
       setStep('done')
       onImportComplete?.()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Import failed')
+      setError(extractErrorMessage(err, 'Import failed'))
       setStep('error')
     }
   }, [feedUrl, showId, onImportComplete])

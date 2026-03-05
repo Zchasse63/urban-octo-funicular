@@ -215,9 +215,8 @@ export interface EpisodeListItem {
   published_at: string | null
   created_at: string
   updated_at: string
-  // Supabase !inner join returns array shape, but for many-to-one it's effectively a single object
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  shows: any
+  // Supabase !inner join — partial fields from select, single or array
+  shows: Partial<Show> | Partial<Show>[]
 }
 
 // API Response Types

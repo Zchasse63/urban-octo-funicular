@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Calendar, Clock, X, CheckCircle2, AlertCircle, Loader2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { extractErrorMessage } from '@/lib/errors';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -102,7 +103,7 @@ export default function ScheduleDialog({
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load schedule');
+          setError(extractErrorMessage(err, 'Failed to load schedule'));
         }
       } finally {
         if (!cancelled) {
@@ -137,7 +138,7 @@ export default function ScheduleDialog({
       setSuccess(true);
       onScheduled?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to schedule');
+      setError(extractErrorMessage(err, 'Failed to schedule'));
     } finally {
       setLoading(false);
     }
@@ -161,7 +162,7 @@ export default function ScheduleDialog({
       setSuccess(false);
       onScheduled?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to cancel');
+      setError(extractErrorMessage(err, 'Failed to cancel'));
     } finally {
       setCancelling(false);
     }

@@ -4,6 +4,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { UploadCloud, Link2, X, FileAudio, Music, Check, Mic2, Youtube, Rss, AlertCircle, ArrowRight, Plus, Trash2, FileText, Twitter, Linkedin, Mail, BookOpen, Volume2, Hash, AlignLeft, Zap, Package, Users, ChevronRight, Sparkles, Brain, Wand2, Target, Globe, ChevronDown, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { extractErrorMessage } from '@/lib/errors';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import useShows from '@/hooks/use-shows';
@@ -938,7 +939,7 @@ export const UploadWizard = ({
       if (onComplete) onComplete(episode.id);
       router.push(`/episodes/${episode.id}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Upload failed');
+      toast.error(extractErrorMessage(err, 'Upload failed'));
     } finally {
       setIsSubmitting(false);
     }

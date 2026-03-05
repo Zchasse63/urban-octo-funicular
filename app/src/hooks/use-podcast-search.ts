@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback } from 'react'
+import { extractErrorMessage } from '@/lib/errors'
 import type { TaddyPodcast, TaddyEpisode } from '@/lib/taddy/types'
 
 type SearchType = 'PODCASTSERIES' | 'PODCASTEPISODE'
@@ -78,7 +79,7 @@ export default function usePodcastSearch(): UsePodcastSearchReturn {
           results: [],
           resultCount: 0,
           isLoading: false,
-          error: err instanceof Error ? err.message : 'Search failed',
+          error: extractErrorMessage(err, 'Search failed'),
           hasSearched: true,
         }))
       }

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Webhook, Plus, Trash2, Check, X, Loader2, AlertCircle, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { extractErrorMessage } from '@/lib/errors';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -84,7 +85,7 @@ export const WebhooksSection: React.FC<WebhooksSectionProps> = ({ addToast }) =>
       setFormEvents([]);
       addToast?.('Webhook created', 'success', CheckCircle2);
     } catch (err) {
-      addToast?.(err instanceof Error ? err.message : 'Failed to create webhook', 'error', AlertCircle);
+      addToast?.(extractErrorMessage(err, 'Failed to create webhook'), 'error', AlertCircle);
     } finally {
       setIsSubmitting(false);
     }
@@ -98,7 +99,7 @@ export const WebhooksSection: React.FC<WebhooksSectionProps> = ({ addToast }) =>
       await fetchWebhooks();
       addToast?.('Webhook deleted', 'success', CheckCircle2);
     } catch (err) {
-      addToast?.(err instanceof Error ? err.message : 'Failed to delete webhook', 'error', AlertCircle);
+      addToast?.(extractErrorMessage(err, 'Failed to delete webhook'), 'error', AlertCircle);
     } finally {
       setDeletingId(null);
     }

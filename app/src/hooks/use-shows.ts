@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { extractErrorMessage } from "@/lib/errors";
 import type { Show } from "@/types/database";
 
 interface UseShowsResult {
@@ -38,7 +39,7 @@ export default function useShows(): UseShowsResult {
       setShows(Array.isArray(showsData) ? showsData : []);
       setTotal(Array.isArray(showsData) ? showsData.length : 0);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load shows");
+      setError(extractErrorMessage(err, "Failed to load shows"));
     } finally {
       setIsLoading(false);
     }
@@ -66,7 +67,7 @@ export default function useShows(): UseShowsResult {
         await fetchShows();
         return result.data || result;
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to create show");
+        setError(extractErrorMessage(err, "Failed to create show"));
         return null;
       }
     },

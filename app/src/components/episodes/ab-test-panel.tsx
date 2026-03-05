@@ -12,6 +12,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { extractErrorMessage } from "@/lib/errors";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -76,7 +77,7 @@ export default function ABTestPanel({
         setData(json.data);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate variants");
+      setError(extractErrorMessage(err, "Failed to generate variants"));
     } finally {
       setIsGenerating(false);
     }
@@ -114,7 +115,7 @@ export default function ABTestPanel({
       setApplied(true);
       onApply?.(field, variant.text);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to apply variant");
+      setError(extractErrorMessage(err, "Failed to apply variant"));
     } finally {
       setIsApplying(false);
     }

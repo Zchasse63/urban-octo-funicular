@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link2, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { extractErrorMessage } from '@/lib/errors';
 import Link from 'next/link';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -53,7 +54,7 @@ const RelatedEpisodes: React.FC<RelatedEpisodesProps> = ({ episodeId }) => {
       const data = await res.json();
       setRelatedEpisodes(data.relatedEpisodes || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load related episodes');
+      setError(extractErrorMessage(err, 'Failed to load related episodes'));
     } finally {
       setIsLoading(false);
     }

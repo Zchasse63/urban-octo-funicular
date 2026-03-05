@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { extractErrorMessage } from "@/lib/errors";
 import type { GeneratedAsset } from "@/types/database";
 
 interface UseEpisodeAssetsResult {
@@ -31,7 +32,7 @@ export default function useEpisodeAssets(
       const result = await response.json();
       setAssets(result.data?.assets || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load assets");
+      setError(extractErrorMessage(err, "Failed to load assets"));
     } finally {
       setIsLoading(false);
     }
@@ -49,9 +50,7 @@ export default function useEpisodeAssets(
         if (!response.ok) throw new Error("Failed to regenerate asset");
         await fetchAssets();
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Failed to regenerate asset"
-        );
+        setError(extractErrorMessage(err, "Failed to regenerate asset"));
       }
     },
     [episodeId, fetchAssets]

@@ -16,6 +16,7 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { cn, formatDuration } from '@/lib/utils'
+import { extractErrorMessage } from '@/lib/errors'
 import useShows from '@/hooks/use-shows'
 import type { Show } from '@/types/database'
 
@@ -282,7 +283,7 @@ export default function AnalyticsDashboard() {
       const json = await res.json()
       setOverview(json.data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load analytics')
+      setError(extractErrorMessage(err, 'Failed to load analytics'))
     } finally {
       setLoading(false)
     }

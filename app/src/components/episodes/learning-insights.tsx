@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Brain, Sparkles, BookOpen, CheckCircle2, TrendingUp, Layers, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { extractErrorMessage } from '@/lib/errors';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -86,7 +87,7 @@ export default function LearningInsights({ episodeId }: LearningInsightsProps) {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load');
+          setError(extractErrorMessage(err, 'Failed to load'));
         }
       } finally {
         if (!cancelled) {

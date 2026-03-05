@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { extractErrorMessage } from "@/lib/errors";
 import type { PricingTier } from "@/lib/stripe/products";
 
 interface SubscriptionData {
@@ -38,7 +39,7 @@ export default function useSubscription(): UseSubscriptionResult {
       const data = await response.json();
       setSubscription(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load subscription");
+      setError(extractErrorMessage(err, "Failed to load subscription"));
     } finally {
       setIsLoading(false);
     }
@@ -61,7 +62,7 @@ export default function useSubscription(): UseSubscriptionResult {
         window.location.href = url;
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Checkout failed");
+      setError(extractErrorMessage(err, "Checkout failed"));
     }
   }, []);
 
@@ -80,7 +81,7 @@ export default function useSubscription(): UseSubscriptionResult {
         window.location.href = url;
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to open portal");
+      setError(extractErrorMessage(err, "Failed to open portal"));
     }
   }, []);
 

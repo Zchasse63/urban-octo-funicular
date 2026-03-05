@@ -16,6 +16,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { extractErrorMessage } from "@/lib/errors";
 import type { PersonTag, SoundbiteTag, TranscriptTag, ChaptersTag, PodrollItem } from "@/lib/podcasting2/tag-generators";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -187,7 +188,7 @@ export default function RSSTagsPanel({ episodeId }: RSSTagsPanelProps) {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load RSS tags");
+          setError(extractErrorMessage(err, "Failed to load RSS tags"));
         }
       } finally {
         if (!cancelled) {
