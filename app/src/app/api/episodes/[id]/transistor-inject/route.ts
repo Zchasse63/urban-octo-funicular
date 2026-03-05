@@ -77,6 +77,6 @@ export async function POST(
     if (error instanceof Error && error.message === 'No Transistor connection found') {
       return errorResponse(error.message, 404);
     }
-    return handleApiError(error, 'Transistor inject');
+return errorResponse('Internal server error', 500)
   }
 }

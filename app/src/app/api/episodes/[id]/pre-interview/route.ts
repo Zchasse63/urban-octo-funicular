@@ -199,7 +199,8 @@ export async function POST(
 
     return successResponse<PreInterviewData>(intelligence);
   } catch (error) {
-    return handleApiError(error, 'generating pre-interview intelligence');
+    console.error('Pre-interview POST error:', error);
+return errorResponse('Internal server error', 500)
   }
 }
 

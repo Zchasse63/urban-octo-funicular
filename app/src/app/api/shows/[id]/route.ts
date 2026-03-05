@@ -84,7 +84,8 @@ export async function PATCH(
       .single()
 
     if (error) {
-      return errorResponse(error.message, 500)
+console.error('Error updating show:', error)
+return errorResponse('Internal server error', 500)
     }
 
     return successResponse(show)
@@ -122,7 +123,8 @@ export async function DELETE(
       .eq('user_id', userId)
 
     if (error) {
-      return errorResponse(error.message, 500)
+console.error('Error deleting show:', error)
+return errorResponse('Internal server error', 500)
     }
 
     return successResponse({ deleted: true })

@@ -172,7 +172,8 @@ export async function POST(
       message: "Episode processing has been triggered",
     });
   } catch (error) {
-    return handleApiError(error, "triggering episode processing");
+    console.error("Error triggering episode processing:", error);
+return errorResponse('Internal server error', 500)
   }
 }
 
@@ -256,7 +257,8 @@ export async function GET(
       error: runStatus.error,
     });
   } catch (error) {
-    return handleApiError(error, "getting processing status");
+    console.error("Error getting processing status:", error);
+return errorResponse('Internal server error', 500)
   }
 }
 
@@ -330,7 +332,8 @@ export async function DELETE(
 
     return successResponse({ cancelled: true });
   } catch (error) {
-    return handleApiError(error, "cancelling processing");
+    console.error("Error cancelling processing:", error);
+return errorResponse('Internal server error', 500)
   }
 }
 
@@ -411,6 +414,7 @@ export async function PUT(
       message: "Episode processing has been replayed",
     });
   } catch (error) {
-    return handleApiError(error, "replaying processing");
+    console.error("Error replaying processing:", error);
+return errorResponse('Internal server error', 500)
   }
 }

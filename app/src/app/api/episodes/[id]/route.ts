@@ -38,7 +38,8 @@ export async function GET(
 
     return successResponse(episode as unknown as Episode);
   } catch (error) {
-    return handleApiError(error, 'fetching episode');
+    console.error('Error fetching episode:', error);
+return errorResponse('Internal server error', 500)
   }
 }
 
@@ -110,11 +111,13 @@ export async function PUT(
       .single();
 
     if (updateError) {
-      return errorResponse(updateError.message, 500);
+console.error('Error updating episode:', updateError);
+return errorResponse('Internal server error', 500)
     }
 
     return successResponse(updated as unknown as Episode);
   } catch (error) {
-    return handleApiError(error, 'updating episode');
+    console.error('Error updating episode:', error);
+return errorResponse('Internal server error', 500)
   }
 }

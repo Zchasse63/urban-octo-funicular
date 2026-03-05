@@ -173,7 +173,7 @@ export async function POST(
 
     if (insertError) {
       console.error('RSS import insert error:', insertError);
-      return errorResponse(`Failed to import episodes: ${insertError.message}`, 500);
+return errorResponse('Internal server error', 500)
     }
 
     return successResponse({

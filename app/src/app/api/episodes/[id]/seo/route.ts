@@ -85,9 +85,8 @@ export async function GET(
       },
     };
 
-    return NextResponse.json(
-      { data: response, error: null },
-      { headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=120' } }
+    console.error('Error getting SEO analysis:', error);
+return errorResponse('Internal server error', 500)
     );
   } catch (error) {
     return handleApiError(error, 'getting SEO analysis');
@@ -156,7 +155,8 @@ export async function POST(
       .eq('id', episodeId);
 
     if (updateError) {
-      return errorResponse(updateError.message, 500);
+console.error('Error applying SEO fix:', updateError);
+return errorResponse('Internal server error', 500)
     }
 
     // Re-analyze SEO after fix
@@ -187,7 +187,8 @@ export async function POST(
       fixId: body.fixId,
     });
   } catch (error) {
-    return handleApiError(error, 'applying SEO fix');
+    console.error('Error applying SEO fix:', error);
+return errorResponse('Internal server error', 500)
   }
 }
 
@@ -258,7 +259,8 @@ export async function PUT(
       .eq('id', episodeId);
 
     if (updateError) {
-      return errorResponse(updateError.message, 500);
+console.error('Error updating SEO analysis:', updateError);
+return errorResponse('Internal server error', 500)
     }
 
     return successResponse<SEOResponse>({
@@ -272,6 +274,7 @@ export async function PUT(
       },
     });
   } catch (error) {
-    return handleApiError(error, 'regenerating SEO analysis');
+    console.error('Error regenerating SEO analysis:', error);
+return errorResponse('Internal server error', 500)
   }
 }

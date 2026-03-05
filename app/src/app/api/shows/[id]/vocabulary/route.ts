@@ -39,7 +39,8 @@ export async function GET(
       .order('created_at', { ascending: false })
 
     if (error) {
-      return errorResponse(error.message, 500)
+console.error('Error querying vocabulary:', error)
+return errorResponse('Internal server error', 500)
     }
 
     return successResponse(terms || [])
@@ -92,7 +93,8 @@ export async function POST(
       .single()
 
     if (error) {
-      return errorResponse(error.message, 500)
+console.error('Error creating vocabulary term:', error)
+return errorResponse('Internal server error', 500)
     }
 
     return successResponse(newTerm, 201)
@@ -139,7 +141,8 @@ export async function DELETE(
       .eq('show_id', showId)
 
     if (error) {
-      return errorResponse(error.message, 500)
+console.error('Error deleting vocabulary term:', error)
+return errorResponse('Internal server error', 500)
     }
 
     return successResponse({ deleted: true })

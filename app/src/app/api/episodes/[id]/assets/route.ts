@@ -71,12 +71,8 @@ export async function GET(
     const { data: assets, error: assetsError } = await query;
 
     if (assetsError) {
-      return errorResponse(assetsError.message, 500);
-    }
-
-    return NextResponse.json(
-      { data: { assets: assets || [], episodeId }, error: null },
-      { headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=120' } }
+console.error('Error fetching assets:', assetsError);
+return errorResponse('Internal server error', 500)
     );
   } catch (error) {
     return handleApiError(error, 'fetching assets');
@@ -200,12 +196,14 @@ export async function POST(
       .single();
 
     if (insertError) {
-      return errorResponse(insertError.message, 500);
+console.error('Error inserting asset:', insertError);
+return errorResponse('Internal server error', 500)
     }
 
     return successResponse(newAsset);
   } catch (error) {
-    return handleApiError(error, 'generating asset');
+    console.error('Error generating asset:', error);
+return errorResponse('Internal server error', 500)
   }
 }
 
@@ -265,11 +263,13 @@ export async function DELETE(
     const { error: deleteError } = await query;
 
     if (deleteError) {
-      return errorResponse(deleteError.message, 500);
+console.error('Error deleting asset:', deleteError);
+return errorResponse('Internal server error', 500)
     }
 
     return successResponse({ deleted: true });
   } catch (error) {
-    return handleApiError(error, 'deleting asset');
+    console.error('Error deleting asset:', error);
+return errorResponse('Internal server error', 500)
   }
 }

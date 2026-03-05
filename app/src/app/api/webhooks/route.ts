@@ -62,7 +62,8 @@ export async function GET() {
       .order('created_at', { ascending: false });
 
     if (error) {
-      return errorResponse(error.message, 500);
+console.error('Error fetching webhooks:', error);
+return errorResponse('Internal server error', 500)
     }
 
     // Mask secrets in the response — never return raw or encrypted secrets
@@ -126,7 +127,8 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      return errorResponse(error.message, 500);
+console.error('Error creating webhook:', error);
+return errorResponse('Internal server error', 500)
     }
 
     // Return masked response — never expose the stored secret

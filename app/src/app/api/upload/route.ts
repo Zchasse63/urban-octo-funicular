@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
-import { handleApiError } from '@/lib/api/helpers';
+return errorResponse('Internal server error', 500)
 import { SUPPORTED_AUDIO_FORMATS, PROCESSING } from '@/lib/constants';
 
 const EPISODES_BUCKET = 'episodes';
 
 export async function POST(request: NextRequest) {
   try {
+    await requireAuth();
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
@@ -53,7 +55,7 @@ export async function POST(request: NextRequest) {
     if (uploadError) {
       console.error('Upload error:', uploadError);
       return NextResponse.json(
-        { error: 'Failed to upload file', details: uploadError.message },
+        { error: 'Failed to upload file' },
         { status: 500 }
       );
     }
@@ -85,6 +87,7 @@ export async function POST(request: NextRequest) {
       mimeType: file.type,
     });
   } catch (error) {
-    return handleApiError(error, 'Upload');
+    console.error('Upload error:', error);
+return errorResponse('Internal server error', 500)
   }
 }

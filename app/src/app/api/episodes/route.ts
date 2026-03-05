@@ -36,7 +36,8 @@ export async function GET(request: NextRequest) {
     const { count, error: countError } = await countQuery
 
     if (countError) {
-      return errorResponse(countError.message, 500)
+console.error('Error counting episodes:', countError)
+return errorResponse('Internal server error', 500)
     }
 
     // Build data query
@@ -76,7 +77,8 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + perPage - 1)
 
     if (error) {
-      return errorResponse(error.message, 500)
+console.error('Error fetching episodes:', error)
+return errorResponse('Internal server error', 500)
     }
 
     return NextResponse.json<PaginatedResponse<EpisodeListItem>>({
@@ -156,7 +158,8 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      return errorResponse(error.message, 500)
+console.error('Error creating episode:', error)
+return errorResponse('Internal server error', 500)
     }
 
     return successResponse(episode, 201)

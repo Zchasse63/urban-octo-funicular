@@ -88,7 +88,8 @@ export async function POST(
       .eq('id', episodeId);
 
     if (updateError) {
-      return errorResponse(updateError.message, 500);
+console.error('Error scheduling episode:', updateError);
+return errorResponse('Internal server error', 500)
     }
 
     const scheduleInfo: ScheduleInfo = {
@@ -100,7 +101,8 @@ export async function POST(
 
     return successResponse<ScheduleInfo>(scheduleInfo);
   } catch (error) {
-    return handleApiError(error, 'scheduling episode');
+    console.error('Error scheduling episode:', error);
+return errorResponse('Internal server error', 500)
   }
 }
 
@@ -150,7 +152,8 @@ export async function GET(
 
     return successResponse<ScheduleInfo>(scheduleInfo);
   } catch (error) {
-    return handleApiError(error, 'fetching schedule');
+    console.error('Error fetching schedule:', error);
+return errorResponse('Internal server error', 500)
   }
 }
 
@@ -200,11 +203,13 @@ export async function DELETE(
       .eq('id', episodeId);
 
     if (updateError) {
-      return errorResponse(updateError.message, 500);
+console.error('Error cancelling schedule:', updateError);
+return errorResponse('Internal server error', 500)
     }
 
     return successResponse({ cancelled: true });
   } catch (error) {
-    return handleApiError(error, 'cancelling schedule');
+    console.error('Error cancelling schedule:', error);
+return errorResponse('Internal server error', 500)
   }
 }

@@ -32,7 +32,8 @@ export async function GET() {
       .order('created_at', { ascending: false })
 
     if (error) {
-      return errorResponse(error.message, 500)
+console.error('Error fetching team members:', error)
+return errorResponse('Internal server error', 500)
     }
 
     // Get seat limit
@@ -81,7 +82,8 @@ export async function POST(request: NextRequest) {
       .in('status', ['pending', 'active'])
 
     if (countError) {
-      return errorResponse(countError.message, 500)
+console.error('Error counting team seats:', countError)
+return errorResponse('Internal server error', 500)
     }
 
     if ((seatCount || 0) >= limits.teamSeats) {
@@ -143,7 +145,8 @@ export async function POST(request: NextRequest) {
       if (insertError.code === '23505') {
         return errorResponse('This user is already on your team', 409)
       }
-      return errorResponse(insertError.message, 500)
+console.error('Error inviting team member:', insertError)
+return errorResponse('Internal server error', 500)
     }
 
     // Note: Email notification would be sent here via Resend

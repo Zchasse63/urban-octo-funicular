@@ -23,7 +23,8 @@ export async function GET(request: NextRequest) {
       .eq('user_id', userId)
 
     if (countError) {
-      return errorResponse(countError.message, 500)
+console.error('Error counting shows:', countError)
+return errorResponse('Internal server error', 500)
     }
 
     // Get paginated shows
@@ -35,7 +36,8 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + perPage - 1)
 
     if (error) {
-      return errorResponse(error.message, 500)
+console.error('Error fetching shows:', error)
+return errorResponse('Internal server error', 500)
     }
 
     return NextResponse.json<PaginatedResponse<Show>>({
@@ -95,7 +97,8 @@ export async function POST(request: NextRequest) {
       if (error.code === '23505') {
         return errorResponse('A show with this name already exists', 409)
       }
-      return errorResponse(error.message, 500)
+console.error('Error creating show:', error)
+return errorResponse('Internal server error', 500)
     }
 
     return successResponse(show, 201)

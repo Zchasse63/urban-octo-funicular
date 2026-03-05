@@ -135,7 +135,7 @@ export async function GET(
 
     return successResponse<GuestPackageResponse>(response)
   } catch (error) {
-    return handleApiError(error, 'fetching guest package')
+return errorResponse('Internal server error', 500)
   }
 }
 
@@ -228,6 +228,6 @@ export async function POST(
       return errorResponse('Email service is not configured. Please contact support.', 503)
     }
 
-    return handleApiError(error, 'processing guest package action')
+return errorResponse('Internal server error', 500)
   }
 }

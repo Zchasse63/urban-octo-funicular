@@ -89,7 +89,8 @@ export async function GET(
 
     return successResponse(abVariants);
   } catch (error) {
-    return handleApiError(error, 'fetching A/B test variants');
+    console.error('Error fetching A/B test variants:', error);
+return errorResponse('Internal server error', 500)
   }
 }
 
@@ -242,6 +243,7 @@ Generate ${clampedCount} ${field} variants.`;
 
     return successResponse<ABTestResponse>(abTestData);
   } catch (error) {
-    return handleApiError(error, 'generating A/B test variants');
+    console.error('Error generating A/B test variants:', error);
+return errorResponse('Internal server error', 500)
   }
 }

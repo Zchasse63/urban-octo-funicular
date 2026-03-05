@@ -48,7 +48,8 @@ export async function GET(
 
     return successResponse<GeneratedAsset>(asset);
   } catch (error) {
-    return handleApiError(error, 'fetching asset');
+    console.error('Error fetching asset:', error);
+return errorResponse('Internal server error', 500)
   }
 }
 
@@ -122,11 +123,13 @@ export async function PATCH(
       .single();
 
     if (updateError) {
-      return errorResponse(updateError.message, 500);
+console.error('Error updating asset:', updateError);
+return errorResponse('Internal server error', 500)
     }
 
     return successResponse<GeneratedAsset>(updatedAsset);
   } catch (error) {
-    return handleApiError(error, 'updating asset');
+    console.error('Error updating asset:', error);
+return errorResponse('Internal server error', 500)
   }
 }

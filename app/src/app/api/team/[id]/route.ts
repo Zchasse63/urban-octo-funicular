@@ -37,7 +37,8 @@ export async function PATCH(
       .single()
 
     if (error) {
-      return errorResponse(error.message, 500)
+console.error('Error updating team member:', error)
+return errorResponse('Internal server error', 500)
     }
 
     if (!member) {
@@ -77,7 +78,8 @@ export async function DELETE(
       .single()
 
     if (error) {
-      return errorResponse(error.message, 500)
+console.error('Error removing team member:', error)
+return errorResponse('Internal server error', 500)
     }
 
     if (!member) {

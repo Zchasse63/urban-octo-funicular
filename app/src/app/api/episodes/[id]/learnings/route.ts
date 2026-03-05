@@ -39,6 +39,7 @@ export async function GET(
 
     return successResponse<EpisodeLearnings>(learnings);
   } catch (error) {
-    return handleApiError(error, 'fetching episode learnings');
+    console.error('Error fetching episode learnings:', error);
+return errorResponse('Internal server error', 500)
   }
 }
