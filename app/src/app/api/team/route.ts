@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAuth } from '@/lib/auth'
 import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers'
 import { getUserTier, getTierLimits } from '@/lib/tier-limits'
+import { InviteTeamMemberSchema, parseBody } from '@/lib/validation-schemas'
 
 export interface TeamMember {
   id: string
@@ -92,19 +93,10 @@ return errorResponse('Internal server error', 500)
 
     const body = await request.json()
 
-    // Validate email
-    if (!body.email || typeof body.email !== 'string' || !body.email.includes('@')) {
-      return errorResponse('Valid email address is required', 400)
-    }
-
-    // Validate role
-    const validRoles = ['admin', 'editor', 'viewer']
-    const role = body.role || 'editor'
-    if (!validRoles.includes(role)) {
-      return errorResponse('Role must be admin, editor, or viewer', 400)
-    }
-
-    const email = body.email.trim().toLowerCase()
+    const parsed = parseBody(body, InviteTeamMemberSchema)
+    if (parsed.response) return parsed.response
+    const email = parsed.data.email.trim().toLowerCase()
+    const role = parsed.data.role
 
     // Check if already invited
     const { data: existing } = await supabase

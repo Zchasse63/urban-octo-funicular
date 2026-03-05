@@ -4,6 +4,8 @@ import { requireAuth } from '@/lib/auth'
 import { errorResponse, successResponse, handleApiError, parsePagination } from '@/lib/api/helpers'
 import { canCreateShow } from '@/lib/tier-limits'
 import type { Show, PaginatedResponse } from '@/types/database'
+import { CreateShowSchema, parseBody } from '@/lib/validation-schemas'
+import type { Show, ApiResponse, PaginatedResponse } from '@/types/database'
 
 /**
  * GET /api/shows
@@ -72,18 +74,16 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
     const body = await request.json()
 
-    // Validate required fields
-    if (!body.name || typeof body.name !== 'string' || body.name.trim() === '') {
-      return errorResponse('Show name is required', 400)
-    }
+const parsed = parseBody(body, CreateShowSchema)
+    if (parsed.response) return parsed.response
 
     const showData = {
       user_id: userId,
-      name: body.name.trim(),
-      description: body.description?.trim() || null,
-      default_language: body.default_language || 'en',
-      style_preferences: body.style_preferences || {},
-      artwork_url: body.artwork_url || null,
+      name: parsed.data.name,
+      description: parsed.data.description || null,
+      default_language: parsed.data.default_language,
+      style_preferences: parsed.data.style_preferences,
+      artwork_url: parsed.data.artwork_url || null,
     }
 
     const { data: show, error } = await supabase

@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireAuth, isValidUUID, verifyShowOwnership } from '@/lib/auth'
 import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers'
+import { UpdateShowSchema, parseBody } from '@/lib/validation-schemas'
+import type { Show, ApiResponse } from '@/types/database'
 
 /**
  * GET /api/shows/[id]
@@ -61,19 +63,13 @@ export async function PATCH(
 
     const body = await request.json()
 
-    // Build update object from allowed fields
-    const updateData: Record<string, unknown> = {}
-    if (body.name !== undefined) updateData.name = body.name
-    if (body.description !== undefined) updateData.description = body.description
-    if (body.default_language !== undefined) updateData.default_language = body.default_language
-    if (body.style_preferences !== undefined) updateData.style_preferences = body.style_preferences
-    if (body.artwork_url !== undefined) updateData.artwork_url = body.artwork_url
+    const parsed = parseBody(body, UpdateShowSchema)
+    if (parsed.response) return parsed.response
 
-    if (Object.keys(updateData).length === 0) {
-      return errorResponse('No valid fields to update', 400)
+const updateData: Record<string, unknown> = {
+      ...parsed.data,
+      updated_at: new Date().toISOString(),
     }
-
-    updateData.updated_at = new Date().toISOString()
 
     const { data: show, error } = await supabase
       .from('shows')

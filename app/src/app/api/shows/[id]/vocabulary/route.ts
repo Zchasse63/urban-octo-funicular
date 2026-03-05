@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAuth, isValidUUID } from '@/lib/auth'
 import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers'
 import type { VocabularyTerm } from '@/types/database'
+import { CreateVocabularyTermSchema, parseBody } from '@/lib/validation-schemas'
+import type { VocabularyTerm, ApiResponse } from '@/types/database'
 
 // Omit the large embedding vector from API responses
 type VocabularyTermResponse = Omit<VocabularyTerm, 'embedding'>
@@ -63,11 +65,10 @@ export async function POST(
       return errorResponse('Invalid ID format', 400)
     }
 
-    const { term, alternatives = [] } = body
+    const parsed = parseBody(body, CreateVocabularyTermSchema)
+    if (parsed.response) return parsed.response
 
-    if (!term) {
-      return errorResponse('term is required', 400)
-    }
+const { term, alternatives } = parsed.data
 
     // Verify show belongs to user
     const { data: show } = await supabase

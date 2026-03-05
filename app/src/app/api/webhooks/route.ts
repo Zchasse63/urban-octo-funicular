@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { requireAuth, isValidUUID } from '@/lib/auth';
 import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers';
 import { encryptString } from '@/lib/buzzsprout/encryption';
+import { CreateWebhookSchema, parseBody } from '@/lib/validation-schemas';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -80,35 +81,17 @@ return errorResponse('Internal server error', 500)
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await requireAuth();
-    const body: CreateWebhookBody = await request.json();
+    const body = await request.json();
 
-    // Validate URL
-    if (!body.url || typeof body.url !== 'string') {
-      return errorResponse('URL is required', 400);
-    }
-
-    try {
-      new URL(body.url);
-    } catch {
-      return errorResponse('Invalid URL format', 400);
-    }
-
-    // Validate events
-    if (!body.events || !Array.isArray(body.events) || body.events.length === 0) {
-      return errorResponse('At least one event is required', 400);
-    }
-
-    const invalidEvents = body.events.filter((e) => !VALID_EVENTS.includes(e));
-    if (invalidEvents.length > 0) {
-      return errorResponse(`Invalid events: ${invalidEvents.join(', ')}. Valid events: ${VALID_EVENTS.join(', ')}`, 400);
-    }
+    const parsed = parseBody(body, CreateWebhookSchema);
+    if (parsed.response) return parsed.response;
 
     // ── Encrypt the webhook secret before storing ──
     // Secrets are stored as encrypted JSON payloads using AES-256-GCM,
     // the same encryption used for Buzzsprout API keys.
     let storedSecret: string | null = null;
-    if (body.secret) {
-      const encrypted = encryptString(body.secret);
+    if (parsed.data.secret) {
+      const encrypted = encryptString(parsed.data.secret);
       storedSecret = JSON.stringify(encrypted);
     }
 
@@ -118,8 +101,8 @@ export async function POST(request: NextRequest) {
       .from('webhooks')
       .insert({
         user_id: userId,
-        url: body.url,
-        events: body.events,
+        url: parsed.data.url,
+        events: parsed.data.events,
         secret: storedSecret,
         active: true,
       })

@@ -4,6 +4,8 @@ import { requireAuth } from '@/lib/auth'
 import { errorResponse, successResponse, handleApiError, parsePagination } from '@/lib/api/helpers'
 import { canProcessEpisode } from '@/lib/tier-limits'
 import type { EpisodeListItem, PaginatedResponse } from '@/types/database'
+import { CreateEpisodeSchema, parseBody } from '@/lib/validation-schemas'
+import type { EpisodeListItem, ApiResponse, PaginatedResponse, Episode } from '@/types/database'
 
 /**
  * GET /api/episodes
@@ -109,24 +111,10 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
     const body = await request.json()
 
-    const {
-      show_id,
-      title,
-      description,
-      audio_url,
-      guest_name,
-      guest_bio,
-      language = 'en',
-    } = body
+    const parsed = parseBody(body, CreateEpisodeSchema)
+    if (parsed.response) return parsed.response
 
-    // Validate required fields
-    if (!show_id) {
-      return errorResponse('show_id is required', 400)
-    }
-
-    if (!audio_url) {
-      return errorResponse('audio_url is required', 400)
-    }
+const { show_id, title, description, audio_url, guest_name, guest_bio, language } = parsed.data
 
     // Verify the show exists and belongs to the user
     const { data: show, error: showError } = await supabase

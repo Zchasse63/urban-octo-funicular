@@ -5,6 +5,7 @@ import { errorResponse, successResponse, handleApiError } from '@/lib/api/helper
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getTierLimits, getUserTier, getAudioHoursUsed } from '@/lib/tier-limits';
 import { parseRSSFeed } from '@/lib/rss/parser';
+import { ImportFeedSchema, parseBody } from '@/lib/validation-schemas';
 
 const MAX_IMPORT_EPISODES = 500;
 
@@ -57,23 +58,12 @@ export async function POST(
       return errorResponse('Show not found', 404);
     }
 
-    // Parse request body
+    // Parse and validate request body
     const body = await request.json();
-    const feedUrl = body?.feedUrl;
 
-    if (!feedUrl || typeof feedUrl !== 'string') {
-      return errorResponse('feedUrl is required', 400);
-    }
-
-    // Validate URL format
-    try {
-      const url = new URL(feedUrl);
-      if (!['http:', 'https:'].includes(url.protocol)) {
-        throw new Error('Invalid protocol');
-      }
-    } catch {
-      return errorResponse('feedUrl must be a valid http or https URL', 400);
-    }
+    const parsed = parseBody(body, ImportFeedSchema);
+    if (parsed.response) return parsed.response;
+    const feedUrl = parsed.data.feedUrl;
 
     // Check audio hours tier limits before importing
     const tier = await getUserTier(userId);

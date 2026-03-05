@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireAuth, isValidUUID } from '@/lib/auth'
 import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers'
+import { UpdateTeamMemberSchema, parseBody } from '@/lib/validation-schemas'
+import type { ApiResponse } from '@/types/database'
 
 /**
  * PATCH /api/team/[id]
@@ -22,15 +24,13 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const validRoles = ['admin', 'editor', 'viewer']
 
-    if (!body.role || !validRoles.includes(body.role)) {
-      return errorResponse('Role must be admin, editor, or viewer', 400)
-    }
+const parsed = parseBody(body, UpdateTeamMemberSchema)
+    if (parsed.response) return parsed.response
 
     const { data: member, error } = await supabase
       .from('team_members')
-      .update({ role: body.role, updated_at: new Date().toISOString() })
+      .update({ role: parsed.data.role, updated_at: new Date().toISOString() })
       .eq('id', id)
       .eq('owner_user_id', userId)
       .select()

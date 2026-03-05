@@ -5,26 +5,19 @@ import { requireAuth } from '@/lib/auth';
 import { handleApiError } from '@/lib/api/helpers';
 import { APP_URL } from '@/lib/constants';
 import { getServerPriceId } from '@/lib/stripe/products.server';
-import type { PricingTier, BillingInterval } from '@/lib/stripe/products';
-
-const VALID_TIERS: PricingTier[] = ['pro', 'creator', 'agency'];
+import { CheckoutSchema, parseBody } from '@/lib/validation-schemas';
 
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await requireAuth();
     const body = await request.json();
 
-    // Only accept tier name — price_id is resolved server-side to prevent injection
-    const interval: BillingInterval = body.interval === 'annual' ? 'annual' : 'monthly';
+    const parsed = parseBody(body, CheckoutSchema);
+    if (parsed.response) return parsed.response;
 
-    if (!body.tier || !VALID_TIERS.includes(body.tier)) {
-      return NextResponse.json(
-        { error: 'Invalid tier. Valid tiers: pro, creator, agency' },
-        { status: 400 }
-      );
-    }
+    const { tier, interval } = parsed.data;
 
-    const priceId = getServerPriceId(body.tier, interval);
+    const priceId = getServerPriceId(tier, interval);
     if (!priceId) {
       console.error('Price ID not configured for tier:', body.tier, interval);
       return NextResponse.json(
