@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Vocabulary Terms Database Integration Tests
  *

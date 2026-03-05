@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Shows Database Integration Tests
  *

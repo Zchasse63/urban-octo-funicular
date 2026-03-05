@@ -146,6 +146,6 @@ Added `Content-Security-Policy-Report-Only` header allowing:
 ## Verification
 
 - **Type check:** `tsc --noEmit` — clean
-- **Tests:** 789 passing, 12 pre-existing integration flakes (RLS-related), 108 skipped
+- **Tests:** 893 passing, 3 failing (live pipeline — requires real AssemblyAI/xAI), 13 skipped
 - **Build:** Next.js production build succeeds
 - **npm audit:** 8 remaining (all transitive, documented above)

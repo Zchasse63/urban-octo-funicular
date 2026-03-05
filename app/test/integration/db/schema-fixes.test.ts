@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * SCHEMA ALIGNMENT VERIFICATION TESTS
  *

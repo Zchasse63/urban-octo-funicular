@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Episodes Database Integration Tests
  *

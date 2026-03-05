@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Phase B: Live Pipeline Test
  *

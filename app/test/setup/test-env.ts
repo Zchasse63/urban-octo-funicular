@@ -1,15 +1,28 @@
 /**
  * Test Environment Setup
  *
- * Runs before each test file.
+ * Runs before each test file in the worker process.
  * Loads environment variables and sets up test utilities.
+ *
+ * NOTE: vitest's globalSetup runs in a separate process, so env vars
+ * loaded there don't propagate to test workers. We must load .env.local
+ * here in the setupFiles hook which runs inside the worker process.
  */
 
-import { afterEach, beforeAll, vi } from 'vitest'
-import { cleanupAllTestData } from './database'
+import { config } from 'dotenv'
+import { resolve } from 'path'
 
-// Load environment variables from .env.test or .env.local
-// The real values should be in your .env.local file
+// Load .env.local into the worker process BEFORE any other imports.
+// vitest's globalSetup runs in a separate process, so env vars loaded
+// there don't propagate to test workers. We must load them here.
+//
+// IMPORTANT: Do NOT import modules that read process.env at top level
+// (like ./database) because ES import hoisting would evaluate them
+// before this config() call runs.
+config({ path: resolve(__dirname, '../../.env.local') })
+
+import { beforeAll, vi } from 'vitest'
+
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
   console.warn('Warning: NEXT_PUBLIC_SUPABASE_URL not set. Tests requiring database will fail.')
 }

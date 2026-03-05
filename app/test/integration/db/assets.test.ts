@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Generated Assets Database Integration Tests
  *

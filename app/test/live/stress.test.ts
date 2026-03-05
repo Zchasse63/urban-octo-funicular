@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Phase E: Stress & Edge Case Tests
  *

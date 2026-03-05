@@ -8,10 +8,9 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-// Use REAL Supabase credentials
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+// NOTE: Env vars are read lazily inside functions (not at module top level)
+// because this module may be imported before dotenv loads .env.local.
+// ES import hoisting causes module-level code to run before dotenv.config().
 
 // Track initialization
 let _adminClient: SupabaseClient | null = null
@@ -22,6 +21,8 @@ let _anonClient: SupabaseClient | null = null
  */
 export function getAdminClient(): SupabaseClient {
   if (!_adminClient) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error(
         'Missing Supabase credentials. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY'
@@ -42,6 +43,8 @@ export function getAdminClient(): SupabaseClient {
  */
 export function getAnonClient(): SupabaseClient {
   if (!_anonClient) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     if (!supabaseUrl || !supabaseAnonKey) {
       throw new Error(
         'Missing Supabase credentials. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY'

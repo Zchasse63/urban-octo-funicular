@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Phase C: Output Quality Verification with Grok-as-Judge
  *

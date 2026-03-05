@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * REDIS CACHE TESTS
  *
