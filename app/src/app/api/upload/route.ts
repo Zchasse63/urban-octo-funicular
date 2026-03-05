@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { handleApiError } from '@/lib/api/helpers';
 import { SUPPORTED_AUDIO_FORMATS, PROCESSING } from '@/lib/constants';
 
 const EPISODES_BUCKET = 'episodes';
@@ -84,10 +85,6 @@ export async function POST(request: NextRequest) {
       mimeType: file.type,
     });
   } catch (error) {
-    console.error('Upload error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'Upload');
   }
 }

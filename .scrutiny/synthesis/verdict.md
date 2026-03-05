@@ -1,116 +1,129 @@
-# Verdict: PodBrain Pricing & Subscription Structure
+# Verdict: PodBrain Codebase Refactor
 
-**Synthesis Date:** 2026-03-01
+**Synthesis Date:** 2026-03-04
 **Reports Synthesized:** 7 (technical-feasibility, scope-complexity, user-value, cost-benefit, architecture-impact, edge-cases, competitive-context)
 **Complexity Class:** SIGNIFICANT
-**Mode:** Deep (all 7 agents)
+**Plan Source:** `/Users/zach/urban-octo-funicular/docs/planning/REFACTOR-PLAN.md`
 
 ---
 
-## Verdict: MODIFY
+## Overall Verdict: MODIFY
 
-The pricing plan should not launch as-is. It is not a GO because it misprices both the individual and agency segments, carries an unmitigated structural cost risk in the Agency tier, and misses the pre-launch window — the only moment when prices can be set correctly at zero cost. It is not a NO-GO because the product is viable, the cost structure is manageable, and the changes required are straightforward.
+The refactor plan is directionally correct and should be executed — but two items in Phase 1 contain factual errors that would introduce regressions if executed as written. Fix those two items, then proceed.
 
----
+**Verdict distribution across 7 agents:**
+- GO: user-value, cost-benefit, competitive-context (3)
+- MODIFY: technical-feasibility, scope-complexity, architecture-impact, edge-cases (4)
+- DEFER: 0
+- NO-GO: 0
 
-## Agent Verdicts Summary
-
-| Agent | Verdict | Primary Concern |
-|-------|---------|----------------|
-| technical-feasibility | MODIFY | Agency tier has no audio-hour cost cap; Stripe not provisioned |
-| scope-complexity | MODIFY | Agency at $49 is wrong market positioning; Pro limit creates no upgrade urgency |
-| user-value | MODIFY | Agency price signals consumer-grade to professional buyers; aha moment weak on free |
-| cost-benefit | MODIFY | Pro underpriced by ~50%; Agency underpriced by ~200-300% vs. market WTP |
-| architecture-impact | MODIFY | Three sources of pricing truth; team seat enforcement missing; Stripe provisioning critical |
-| edge-cases | MODIFY | Long-form Agency content causes loss; free tier has no abuse prevention; no annual pricing |
-| competitive-context | MODIFY | $19 Pro cannot compete on narrative with Castmagic; $49 Agency is invisible to real agencies |
-
-**Unanimous verdict: MODIFY.** No agent recommended GO. No agent recommended NO-GO or DEFER.
+No agent recommended stopping. The dissent is about corrections needed, not the decision to refactor.
 
 ---
 
-## The Three Core Issues
+## The Two Blockers (Must Fix Before Executing)
 
-### Issue 1: Agency Tier Is Financially Unsafe at Max Usage
+### Blocker 1: formatDuration Consolidation (Phase 1.4)
 
-At 200 episodes of long-form content (2-4 hours/episode), variable costs exceed $49 revenue by $30-82. There is no code-level protection (no audio-hour cap, no cost circuit-breaker). This is not a theoretical risk — agencies with true-crime, documentary, or interview-format podcasts routinely produce 2-4 hour episodes.
+The plan incorrectly treats the episode-list.tsx `formatDuration` as a duplicate of `lib/utils.ts`'s `formatDuration`. They are different functions with different signatures and different output formats:
 
-**Required fix before launch:** Add audio-hour monitoring/alerting. Consider adding a soft cap at 150 audio hours/month for Agency tier.
+- `lib/utils.ts`: Input `number | null`, output human-readable `"1h 23m"`
+- `episode-list.tsx`: Input `number`, output colon-separated `"1:23:45"`
 
-### Issue 2: Prices Are Set Against Cost, Not Against Value
+Naively consolidating would silently break the episode list UI (wrong display format), the sort-by-duration feature, and the selected-episodes total duration display. TypeScript would not catch this.
 
-The plan correctly identifies that PodBrain's cost per episode is $0.16-0.41. It then sets prices just above cost ("$19/mo for 50 episodes — even at max usage we're profitable!"). This is cost-plus pricing, the least optimal pricing strategy for SaaS.
+**Required fix:** Either add distinctly-named functions to `lib/utils.ts` (e.g., `formatDurationColons`, `parseDurationString`, `sumDurationDisplay`) or leave the episode-list utilities in the component since they are not shared. Do not overload the existing `formatDuration` name.
 
-The market data in the plan contradicts itself: Castmagic charges $5.80/hr, the market norm is $5-6/hr, and podcasters are saving 6-9 hours per episode. The correct price is derived from value delivered to the buyer, not from the seller's API costs.
+### Blocker 2: xAI Client Consolidation (Phase 1.2)
 
-**The current prices leave 40-60% of capturable revenue on the table.**
+The plan describes removing `createGrokClient()` and the `grokClient` default export from `lib/xai-client.ts` as "removing unused" code. These are not unused: four production files call `createGrokClient()` via dynamic import:
 
-### Issue 3: Pre-Launch Is the Only Costless Moment to Change Prices
+```
+lib/viral-moments/detector.ts
+lib/guest-intel/service.ts
+lib/cross-episode/embeddings.ts
+lib/experts/discovery.ts
+```
 
-Every day the product runs at $19 Pro and $49 Agency with paying customers is a day it becomes harder to raise prices. Grandfathering, communications, and churn risk accompany every post-launch price increase.
+Dynamic imports (`await import('@/lib/xai-client')`) may not be caught by TypeScript's static analysis depending on configuration. The regression would appear at runtime when these code paths execute, not at build time.
 
-Right now, with zero subscribers, a price change is:
-- One Stripe configuration update
-- One landing page copy change
-- Zero customer emails required
-- Zero churn risk
+Additionally, `lib/xai/client.ts` has meaningful logic beyond `createChatCompletion()`: 3-retry with exponential backoff and explicit 429 handling. These are not present in `createChatCompletion()`. Simply delegating to `createChatCompletion()` without preserving the retry loop would degrade show notes generation resilience.
 
-**This window closes the moment the first paying subscriber signs up.**
-
----
-
-## Recommended Pricing Structure
-
-### Recommended vs. Current
-
-| Tier | Current | Recommended | Rationale |
-|------|---------|-------------|-----------|
-| Free | $0, 3 eps, 6 assets | $0, 3 eps, 6 assets + 14-day Pro trial on sign-up | Current free is right; add trial to improve aha moment |
-| Pro | $19/mo, 50 eps | **$29/mo**, 50 eps | Matches Castmagic Hobby price; enables "same price, 10x features" narrative |
-| Creator (new) | — | **$59/mo**, 100 eps, 15 shows | Serves multi-show creators currently mis-placed in Agency |
-| Agency | $49/mo, 200 eps | **$149/mo**, 200 eps, 150 audio hrs | Right-prices for professional buyers; adds audio-hour cap |
-
-**Note:** The "Creator" tier is optional for launch. If simplicity is preferred, simply raise Pro to $29 and Agency to $149. The 3-tier structure is clean and sufficient.
-
-### Annual Pricing (Add Before First Subscriber)
-- Pro annual: $232/yr ($19.33/mo effective — "2 months free")
-- Agency annual: $1,192/yr ($99.33/mo effective)
-
-This is a 2-3 hour implementation in Stripe and adds annual pricing that every competitor offers.
+**Required fix:** Keep `createGrokClient()` in `lib/xai-client.ts`. If consolidating `lib/xai/client.ts`, preserve the retry loop and call `createChatCompletion()` inside it — don't replace the retry loop.
 
 ---
 
-## Key Numbers
+## Secondary Issues (Fix During Execution, Not Before)
 
-| Metric | Current Structure | Recommended Structure |
-|--------|-----------------|----------------------|
-| Pro monthly revenue per user | $19 | $29 |
-| Agency monthly revenue per user | $49 | $149 |
-| Pro gross margin at avg usage (15 eps) | 84% | 90% |
-| Agency gross margin at avg usage (80 eps) | 67% | 89% |
-| Agency gross margin at max 200 eps × avg 45 min | +35% | +52% |
-| Agency gross margin at max 200 eps × 3 hrs | **-120%** | **-17%** (with audio-hour cap: +6%) |
-| Break-even paying users (fixed costs only) | 8 Pro | 5 Pro |
-| LTV (Pro, 18-month retention) | $342 | $522 |
-| LTV (Agency, 24-month retention) | $1,176 | $3,576 |
+### Phase 2: Identify Excluded Routes Before Starting
+
+These routes must be explicitly excluded from Phase 2's response standardization:
+- `POST /api/webhooks/assemblyai` — public webhook; response shape is external contract with AssemblyAI
+- `POST /api/stripe/webhooks` — public webhook; response shape is external contract with Stripe
+- `GET /api/shows/[id]/rss` — returns XML, not JSON
+- `GET /api/episodes/[id]/assets/download` — returns binary ZIP
+- `GET /api/episodes/[id]/guest-package/download` — returns binary
+
+### Phase 2: Stripe Route Response Shape Changes Require Frontend Updates
+
+If Phase 2.3 changes `stripe/checkout` success response from `{ url }` to `{ data: { url }, error: null }`, the frontend caller must be updated in the same commit. This is a contract change that the test suite may not catch if fetch calls are mocked.
+
+### Phase 2: handleApiError Must Preserve HTTP Status Codes
+
+The proposed `handleApiError` helper must inspect error types to preserve meaningful HTTP status codes. A catch-all that returns 500 for all errors will break routes that currently distinguish 400/401/403/404/429.
+
+### Phase 4: TODO Cleanup Requires Human Review
+
+Several TODOs in `episode-detail.tsx` (lines 305, 420, 430, 441, 1173, 1480, 1850) mark active wiring tasks where mock data stands in for real API fields not yet connected. These are not stale cosmetic comments — they're a checklist of outstanding feature work. Do not remove them.
 
 ---
 
-## What Must Be Done Before Launch (Pricing-Related)
+## What the Plan Gets Right
 
-### Critical (blocking)
-1. Provision Stripe products at the new prices (not the old ones) before any subscriber exists
-2. Fix Stripe success URL redirect (B9 from prior audit: `/settings/billing` → `/settings?tab=billing`)
-3. Add audio-hour monitoring/alerting for Agency tier cost visibility
-4. Add email verification requirement before episode processing
+- Scope constraints are well-defined ("no file moves," "no new features," "no public API contract changes")
+- Phase ordering is logical (build helpers before applying them)
+- Test verification cadence is included
+- Explicitly calls out risks as Low/Medium for each item
+- Recognizes mock data fallbacks should not be removed
+- The lib/api/helpers.ts location is correct (existing directory, correct abstraction level)
+- supabase-client.ts removal is a clean improvement
+- Hook type standardization and unused import cleanup are safe
 
-### High Priority (week 1 post-decision)
-5. Consolidate three-source-of-truth pricing data into single `src/lib/pricing.ts`
-6. Add `canAddTeamMember()` enforcement guard to the team API route
-7. Add annual Stripe pricing options
-8. Implement 14-day Pro trial on sign-up (or decide on free-tier-only approach)
+---
 
-### Medium Priority (before first 100 users)
-9. Make "39 locked assets" visible to free-tier users (upgrade prompts in the UI)
-10. Add audio-hour cap enforcement for Agency tier (not just episode count)
-11. Confirm asset generation is on-demand, not auto-generating all 45 for every episode
+## Execution Sequencing Recommendation
+
+**Before starting Phase 1:**
+1. Re-run the test suite to confirm current baseline (789 passing, 12 DB failures)
+2. Correct the formatDuration plan (decide: keep in component or add distinctly named utils)
+3. Correct the xAI consolidation plan (keep createGrokClient, redesign consolidation)
+
+**Phase 1 (do 1.1, 1.3, 1.5 first — safe items):**
+1. Create `lib/api/helpers.ts` with generic type-safe signatures
+2. Remove `lib/supabase-client.ts` + update 4 importers
+3. Clean eslint-disable comments
+4. Consolidate xAI client (with corrected approach)
+5. Handle formatDuration (with corrected approach)
+6. Run full test suite
+
+**Phase 2 (treat as per-route audit, not bulk replacement):**
+1. Document excluded routes first
+2. Apply helpers to 5-10 routes, run tests, verify shape compatibility with frontend callers
+3. Then apply to remaining routes
+4. Handle Stripe routes separately with frontend caller audit
+
+**Phases 3-5:** Proceed as planned.
+
+---
+
+## Confidence Assessment
+
+| Agent Report | Confidence | Key Finding |
+|---|---|---|
+| technical-feasibility | High | Two factual errors found via codebase scan |
+| scope-complexity | High | Phase 2 harder than plan implies |
+| user-value | High | Strong positive for pre-launch timing |
+| cost-benefit | High | ~8-15x ROI estimate |
+| architecture-impact | Medium | Stripe response shape concern |
+| edge-cases | High | 5 routes must be explicitly excluded |
+| competitive-context | Medium | Low competitive pressure; timing is right |

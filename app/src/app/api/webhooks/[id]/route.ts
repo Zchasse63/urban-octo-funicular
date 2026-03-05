@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth, isValidUUID } from '@/lib/auth';
-import type { ApiResponse } from '@/types/database';
+import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers';
 
 /**
  * DELETE /api/webhooks/[id]
@@ -16,10 +16,7 @@ export async function DELETE(
     const { id: webhookId } = await params;
 
     if (!isValidUUID(webhookId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid webhook ID format' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid webhook ID format', 400);
     }
 
     const supabase = await createClient();
@@ -32,27 +29,11 @@ export async function DELETE(
       .eq('user_id', userId);
 
     if (error) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: error.message },
-        { status: 500 }
-      );
+      return errorResponse(error.message, 500);
     }
 
-    return NextResponse.json<ApiResponse<{ deleted: boolean }>>({
-      data: { deleted: true },
-      error: null,
-    });
+    return successResponse({ deleted: true });
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Error deleting webhook:', error);
-    return NextResponse.json<ApiResponse<null>>(
-      { data: null, error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'deleting webhook');
   }
 }

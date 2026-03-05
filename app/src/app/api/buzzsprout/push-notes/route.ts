@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBuzzsproutClient } from '@/lib/buzzsprout/helpers';
 import { requireAuth } from '@/lib/auth';
+import { handleApiError } from '@/lib/api/helpers';
 import DOMPurify from 'isomorphic-dompurify';
 
 function sanitizeHtml(html: string): string {
@@ -71,24 +72,12 @@ export async function POST(request: NextRequest) {
       episode: updatedEpisode,
     });
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Push notes error:', error);
-
     if (error instanceof Error && error.message === 'No Buzzsprout connection found') {
       return NextResponse.json(
         { error: error.message },
         { status: 404 }
       );
     }
-
-    return NextResponse.json(
-      { error: 'Failed to push show notes' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'Push notes');
   }
 }

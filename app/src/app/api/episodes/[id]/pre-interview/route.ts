@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth, verifyEpisodeOwnership, isValidUUID } from '@/lib/auth';
+import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { searchGuestAppearances } from '@/lib/taddy/search';
 import { createChatCompletion } from '@/lib/xai-client';
-import type { ApiResponse } from '@/types/database';
 
 // ---------------------------------------------------------------------------
 // Zod schemas for validation
@@ -59,18 +59,12 @@ export async function GET(
     const { id: episodeId } = await params;
 
     if (!isValidUUID(episodeId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid episode ID format' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid episode ID format', 400);
     }
 
     const hasAccess = await verifyEpisodeOwnership(episodeId, userId);
     if (!hasAccess) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode not found' },
-        { status: 404 }
-      );
+      return errorResponse('Episode not found', 404);
     }
 
     const supabase = await createClient();
@@ -85,38 +79,19 @@ export async function GET(
       .maybeSingle();
 
     if (cacheError) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Failed to fetch pre-interview data' },
-        { status: 500 }
-      );
+      return errorResponse('Failed to fetch pre-interview data', 500);
     }
 
     if (!cached) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'No pre-interview data found' },
-        { status: 404 }
-      );
+      return errorResponse('No pre-interview data found', 404);
     }
 
     // Reconstruct the response from the cache columns
     const responseData = buildResponseFromCache(cached);
 
-    return NextResponse.json<ApiResponse<PreInterviewData>>({
-      data: responseData,
-      error: null,
-    });
+    return successResponse<PreInterviewData>(responseData);
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Pre-interview GET error:', error);
-    return NextResponse.json<ApiResponse<null>>(
-      { data: null, error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'fetching pre-interview data');
   }
 }
 
@@ -135,37 +110,25 @@ export async function POST(
     // Rate limit: 10 requests per minute for AI generation
     const rateLimitResult = await checkRateLimit(`pre-interview:${userId}`, 10);
     if (!rateLimitResult.success) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Rate limit exceeded. Please try again shortly.' },
-        { status: 429 }
-      );
+      return errorResponse('Rate limit exceeded. Please try again shortly.', 429);
     }
 
     const { id: episodeId } = await params;
 
     if (!isValidUUID(episodeId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid episode ID format' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid episode ID format', 400);
     }
 
     const hasAccess = await verifyEpisodeOwnership(episodeId, userId);
     if (!hasAccess) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode not found' },
-        { status: 404 }
-      );
+      return errorResponse('Episode not found', 404);
     }
 
     // Parse and validate request body
     const body = await request.json();
     const parsed = PostBodySchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid request body: ' + parsed.error.issues[0]?.message },
-        { status: 400 }
-      );
+      return errorResponse('Invalid request body: ' + parsed.error.issues[0]?.message, 400);
     }
 
     const { guestName, guestBio, topics } = parsed.data;
@@ -186,10 +149,7 @@ export async function POST(
 
     if (existingCache) {
       const responseData = buildResponseFromCache(existingCache);
-      return NextResponse.json<ApiResponse<PreInterviewData>>({
-        data: responseData,
-        error: null,
-      });
+      return successResponse<PreInterviewData>(responseData);
     }
 
     // Search for guest appearances via Taddy
@@ -237,25 +197,9 @@ export async function POST(
       }
     );
 
-    return NextResponse.json<ApiResponse<PreInterviewData>>({
-      data: intelligence,
-      error: null,
-    });
+    return successResponse<PreInterviewData>(intelligence);
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Pre-interview POST error:', error);
-    return NextResponse.json<ApiResponse<null>>(
-      {
-        data: null,
-        error: error instanceof Error ? error.message : 'Internal server error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'generating pre-interview intelligence');
   }
 }
 

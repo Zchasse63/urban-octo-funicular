@@ -1,148 +1,176 @@
-# Technical Feasibility Analysis: PodBrain Pricing Structure
-
+# Technical Feasibility Analysis
 **Agent:** technical-feasibility
+**Plan:** PodBrain Codebase Refactor
 **Complexity Class:** SIGNIFICANT
-**Date:** 2026-03-01
+**Analysis Depth:** Deep
+**Date:** 2026-03-04
 
 ---
 
 ## Agent Verdict
 
-**MODIFY**
-
-The pricing structure is technically implementable as designed, but contains a structural flaw: the Agency tier at max usage is loss-making with no technical safeguard to prevent it. The Stripe integration is not yet live. No cost circuit-breaker exists at the tier level. These are not theoretical concerns — they are confirmed gaps in the codebase.
+**MODIFY** — The plan is technically sound in most respects but contains one factually incorrect assumption that would cause a silent runtime regression if executed as written (the formatDuration consolidation), and one change (xAI client consolidation) that removes code that 4 production files still actively call. Both issues are fixable with targeted corrections. The overall refactor direction is correct and the majority of items are low-risk.
 
 ---
 
-## 1. Is the Pricing Technically Enforceable?
+## Detailed Findings
 
-### Episode Count Limits
-**Status: Implemented and working.**
-`src/lib/tier-limits.ts` enforces hard caps per tier. `canCreateEpisode()` queries the DB and returns 401 with an upgrade prompt if the limit is exceeded. `getBillingPeriod()` correctly handles subscription-aligned vs. calendar-month windows.
+### Finding 1: formatDuration Consolidation Is Based on a False Premise (CRITICAL)
 
-**Gap identified:** The billing period logic for free tier uses calendar month, but for paid tiers it uses the Stripe subscription anchor date. This is correct behavior, but it means a Pro user who subscribes on the 15th gets 50 episodes between the 15th and 14th of next month — not calendar-based. This is industry-standard but could confuse users if the UI does not show the next reset date.
+The plan (Section 1.4) states that `episode-list.tsx` has a local `formatDuration()` that duplicates the one in `lib/utils.ts`, and proposes moving all time utilities to `lib/utils.ts`.
 
-### Show Count Limits
-**Status: Implemented.**
-`canCreateShow()` enforces the 1/5/999 limits. The Agency limit is set to 999 (not "unlimited" as marketed). This is functionally unlimited but technically a cap.
+**These are not duplicates. They have different signatures and produce different output.**
 
-### Asset Type Gating
-**Status: Implemented.**
-`canGenerateAssetType()` with `CORE_ASSET_TYPES` set correctly gates the 6 free assets. Free users who try to generate advanced assets should be blocked.
+`lib/utils.ts` version:
+```typescript
+// Input: number | null (raw seconds)
+// Output: human-readable — "1h 23m", "45m 30s", "12s"
+export function formatDuration(seconds: number | null): string
+```
 
-**Gap identified:** The code in `tier-limits.ts` gates generation, but the UI (episode workspace, 7-tab interface) likely renders all 45 asset types in the tab regardless of tier. Users on free tier may see UI for assets they cannot generate, creating frustration. This needs a UI-level check to show upgrade prompts rather than errors after attempted generation.
+`episode-list.tsx` local version:
+```typescript
+// Input: number (raw seconds, non-nullable)
+// Output: colon-separated — "1:23:45" (HH:MM:SS) or "45:30" (MM:SS)
+function formatDuration(seconds: number): string
+```
 
-### Team Seat Limits
-**Status: Partially implemented.**
-`teamSeats` is stored in tier config but the `team/` API routes need to enforce this. The `tier-limits.ts` file shows `teamSeats: 5` for Agency but `canCreateTeamMember()` is not implemented in the file — only `canCreateEpisode()` and `canCreateShow()` have guard functions.
+For 90 minutes of audio:
+- `lib/utils.ts` returns: `"1h 30m"`
+- `episode-list.tsx` returns: `"1:30:00"`
 
-**This is a real gap:** Agency users could theoretically add unlimited team members if the API route doesn't check tier limits.
+The episode list uses the colon format because it's displaying data in a table column (conventional time format). The utils version is for human narrative display.
 
----
+Additionally, `durationToSecs(d: string)` in episode-list takes a colon-separated string like `"1:23:45"` and converts it back to seconds — this is used for duration-based sorting and total duration calculation. `secsToHuman(total: number)` takes seconds and returns `"45m"`, `"1h 23m"` etc. — neither has an equivalent in `lib/utils.ts`.
 
-## 2. Stripe Readiness
+**Consequence of naive consolidation:** The episode list UI would show `"1h 30m"` instead of `"1:30:00"`, the sort-by-duration feature would break (since `durationToSecs` parses colon format), and the selected episodes total duration summary would return wrong values.
 
-### Current State
-Stripe products are defined in `src/lib/stripe/products.ts` with `priceId: null` for both Pro and Agency (comment: "Resolved server-side via getServerPriceId()"). The `MEMORY.md` confirms: "Create Stripe products (Pro $19/mo, Agency $49/mo) + get Price IDs" is still a pending infrastructure task.
+This is a **silent visual regression** — TypeScript would not catch it because the function signatures are close enough to pass type checking if the nullable difference is ignored.
 
-**This means the pricing plan cannot go live until:**
-1. Stripe products are created in Stripe Dashboard
-2. Price IDs are set as env vars
-3. Stripe webhook endpoint is configured
-
-**Known Stripe bugs from prior audit:**
-- B8: Stripe `priceId` reads server-only env vars on client — upgrade buttons broken
-- B9: Checkout success URL points to `/settings/billing` (non-existent) — post-checkout 404
-
-Both are confirmed 1-line fixes but neither is yet fixed. Any user who clicks "Upgrade" today will hit a broken flow.
+**Correct approach:** Either add the episode-list-specific functions as separate, distinctly named exports to `lib/utils.ts` (e.g. `formatDurationColons`, `parseDurationColons`, `formatDurationHuman`) — or simply leave these component-local functions in the component, since they serve a specific display concern that doesn't need to be shared.
 
 ---
 
-## 3. The Cost Circuit-Breaker Problem
+### Finding 2: xAI Client Consolidation Removes 4 Active Callers (HIGH)
 
-### The Structural Risk
-Agency tier: $49/mo revenue, up to $82 variable cost at max usage (200 episodes × $0.41/episode).
+Plan Section 1.2 states:
+> "Remove unused `createGrokClient()` wrapper and default `grokClient` export from `xai-client.ts`"
 
-**There is no cost protection in the codebase.** Specifically:
-- Rate limiting exists at the API level (10 req/min for processing) but does NOT enforce a monthly episode cap on cost-per-episode basis
-- The `canCreateEpisode()` function enforces the 200-episode count limit but does NOT differentiate between a 5-minute episode ($0.02) and a 4-hour episode ($1.64)
-- A single Agency user with 200 episodes of 4-hour podcasts would cost: 200 × $1.64 = **$328** in variable costs alone, against $49 revenue
+The claim of "unused" is incorrect. Four production files use `createGrokClient()` via dynamic import:
 
-**This is not a pricing strategy question — it is a technical gap that makes the current pricing unacceptable for agencies with long-form content.**
+```
+lib/viral-moments/detector.ts:66      — const { createGrokClient } = await import('@/lib/xai-client')
+lib/guest-intel/service.ts:40         — const { createGrokClient } = await import('@/lib/xai-client')
+lib/cross-episode/embeddings.ts:5     — const { createGrokClient } = await import('@/lib/xai-client')
+lib/experts/discovery.ts:284          — const { createGrokClient } = await import('@/lib/xai-client')
+```
 
-### Recommended Technical Fix
-Two options:
-1. **Hour-based cap:** Convert episode limits to audio-hour limits. 200 episodes × 45 min = 150 hours. Cap Agency at 150 audio hours/month. Implementation requires storing audio duration and checking it against the monthly budget. Moderate complexity (2-3 days).
-2. **Minimum cost floor with overage billing:** Allow unlimited but charge per-episode beyond the cap. Stripe supports metered billing. Higher complexity (1 week+).
+Because these are dynamic imports (`await import()`), TypeScript may not catch the missing export at build time (depends on how strict the dynamic import typing is configured). The error surfaces at runtime when these code paths execute — specifically when processing episodes, generating cross-episode links, or running expert discovery.
 
-**The current episode-count-only enforcement is technically unsafe for the Agency tier.**
+Additionally, `lib/xai/client.ts` has meaningful logic beyond what `createChatCompletion()` provides:
+- 3-retry loop with exponential backoff (INITIAL_RETRY_DELAY = 1000ms, 2x each attempt)
+- Explicit 429 rate-limit detection and error message
+- `markdownToHtml()` conversion utility
+- Different model resolution (uses `process.env.XAI_MODEL` directly)
 
----
+Replacing `lib/xai/client.ts`'s fetch call with `createChatCompletion()` would lose the retry logic unless it's explicitly re-wrapped. The consolidation as described would change behavior in the show notes generation path.
 
-## 4. AssemblyAI Cost Variance
-
-The plan cites "$0.17-0.39/hr" but this is a wide range. The variance matters:
-- Universal-2 model (higher quality, speaker diarization): $0.17/hr
-- Standard model: ~$0.39/hr
-
-The codebase uses Universal-2 with speaker diarization enabled (confirmed in `lib/assemblyai/` config). So the realistic cost is closer to the LOW end ($0.17/hr), which is good news for margins. At $0.17/hr:
-- Agency (200 eps × 45 min = 150 hrs): $25.50 AssemblyAI + ~$3-6 Grok = ~$28.50-31.50 variable
-- At $49 revenue: gross margin is +37-42% at average usage
-
-But at 4-hour episodes (200 × 4 hrs = 800 hrs): $136 AssemblyAI alone exceeds the $49 price. **The hour dimension is the real cost driver, not episode count.**
+**Correct approach:**
+1. Keep `createGrokClient()` in `xai-client.ts` (it has 4 callers — it is not unused)
+2. If consolidating `lib/xai/client.ts`, make it call `createChatCompletion()` *inside* its retry loop, not replace the retry loop
+3. Alternatively, leave both files as-is and only consolidate the 4 dynamic-import callers to use `createChatCompletion()` directly
 
 ---
 
-## 5. Taddy API Cost at Scale
+### Finding 3: supabase-client.ts Removal — Clean (LOW RISK)
 
-Taddy Pro: $75/mo flat for 100,000 requests.
+The 4 import sites are straightforward re-export consumers. The wrapper exports:
+```typescript
+export { createClient as getSupabaseClient, createAdminClient } from './supabase/server';
+```
 
-The plan assumes this is sufficient for "early growth." But:
-- Each expert discovery search likely makes 2-5 Taddy API calls (search + episode lookup + caching)
-- Pre-interview intelligence may make 5-10 calls per guest
-- If the free tier has access to Taddy-powered search (it does — the `/api/taddy/search` route has only rate limiting, not tier gating), free users consume Taddy quota
+Changing these 4 files to import from `lib/supabase/server` directly is mechanically safe. TypeScript will catch any missed sites. No behavioral change.
 
-**Gap:** The Taddy search API route (`/api/taddy/search`) is not gated behind a paid tier in the current code. Free users can use Taddy-powered expert discovery at the same $75/mo fixed cost. At 1,000 free users making 5 searches each = 5,000 Taddy calls. At 10,000 free users = 50,000 calls (within Pro limit). But at 30,000 free users, the Taddy quota is exceeded and the feature breaks for all users.
-
-**Recommendation:** Gate Taddy-powered features (pre-interview intelligence, expert discovery beyond basic) behind Pro tier in the code.
+One minor verification: confirm none of the 4 files use `createAdminClient` from this path (scan shows they don't, but confirm before deleting).
 
 ---
 
-## 6. xAI Cost Growth with Asset Count
+### Finding 4: API Response Helpers — Correct Direction, Type Signatures Unspecified (MEDIUM RISK)
 
-The plan says "9 API calls" for Grok at $0.01-0.03/episode. This is based on the default asset set. But:
-- Pro and Agency tiers get all 45 asset types
-- If all 45 assets are generated per episode, this is potentially 45 separate Grok calls
-- At $0.50/M output tokens, generating 45 detailed assets (avg 500 tokens each) = 22,500 tokens × $0.50/M = $0.011 in output costs per episode
+Creating `lib/api/helpers.ts` is good practice. The `lib/api/` directory already exists with `dev-guard.ts`, so the location is validated.
 
-The plan's $0.01-0.03 estimate appears to assume a subset of assets are generated (the 9 default ones), not all 45. If users trigger generation of all 45 assets on every episode, the Grok cost per episode could reach $0.05-0.10, which is 3-5x the assumed cost.
+The plan claims "150+ duplicate response blocks" but the codebase has ~490 `NextResponse.json` calls in API routes. The helpers will cover a subset. Before writing the helpers, decide whether they should be generic:
 
-**This is within acceptable margins but should be verified against actual usage patterns.**
+```typescript
+// Generic — preserves type information for callers
+function successResponse<T>(data: T): NextResponse<ApiResponse<T>>
+function errorResponse(message: string, status: number): NextResponse<ApiResponse<null>>
+```
 
----
+vs. plain:
+```typescript
+// Simpler but loses type inference
+function successResponse(data: unknown): NextResponse
+```
 
-## 7. Infrastructure Cost at Scale
-
-The $135/mo fixed cost baseline creates a minimum revenue threshold:
-- Break-even on fixed costs alone requires: $135 ÷ $19 = ~7.1 Pro subscribers
-- Or: $135 ÷ $49 = ~2.8 Agency subscribers
-
-This is a very low bar to clear. The fixed cost structure is appropriate for a pre-launch SaaS.
-
-**However:** Supabase Pro ($25/mo) includes 8GB database and 100GB storage. pgvector embeddings for episodes grow quickly. At 1,000 episodes with transcript segments, each ~1KB per segment × 50 segments = 50MB. At 10,000 episodes: 500MB. Storage is manageable but the embedding search (`find_similar_sections` RPC) may become expensive at scale and will require Supabase compute add-ons.
+The existing codebase uses `NextResponse.json<ApiResponse<T>>({ data: result })` with explicit generics. If helpers use `unknown`/`any` internals, existing tests that check response types may fail.
 
 ---
 
-## Summary of Technical Findings
+### Finding 5: Hook Return Type Renames — Safe with Re-Exports (LOW RISK)
 
-| Finding | Severity | Action Required |
-|---------|----------|----------------|
-| No hour-based cost cap for Agency | CRITICAL | Add audio-hour tracking and cap |
-| Team seat limit not enforced in API | HIGH | Add `canCreateTeamMember()` guard |
-| Stripe not yet provisioned | HIGH | Provisioning task (non-code) |
-| Taddy search ungated from free tier | MEDIUM | Add Pro tier gate |
-| xAI cost may be underestimated for full 45-asset generation | MEDIUM | Monitor and benchmark |
-| UI shows all assets regardless of tier | MEDIUM | Add tier-aware UI gating |
-| Billing period reset date not shown in UI | LOW | UX enhancement |
+Renaming `UseAuthReturn` → `UseAuthResult` etc. requires:
+1. Rename the type definition
+2. Add backwards-compat re-export: `export type UseAuthReturn = UseAuthResult`
+3. Update all direct consumers
 
-**Bottom line:** The pricing is technically implementable but the Agency tier as designed has a cost exposure that is technically unbounded relative to its revenue. Episode count alone is the wrong enforcement unit when audio duration varies from 5 minutes to 4 hours.
+TypeScript will catch missed consumers at compile time. This is safe. The plan mentions re-exports for types moved to `types/database.ts` (Section 4.2) but does not explicitly mention re-exports for the renamed hook return types (Section 3.1). Both need backwards-compat aliases.
+
+---
+
+### Finding 6: eslint-disable Fix in use-episode-seo.ts — Requires Real Type Work (LOW RISK)
+
+The block-level `/* eslint-disable @typescript-eslint/no-explicit-any */` in `use-episode-seo.ts` covers `normalizeAnalysis(raw: any)`, which handles two API response shapes. Creating a `RawSEOResponse` union type requires auditing what the SEO API actually returns in both cases. If there are undocumented third shapes, the `any` was intentional protection. The fix is feasible but requires investigation, not just mechanical refactoring.
+
+---
+
+### Finding 7: POLL_INTERVAL_MS Extraction — Minor Coupling Concern (LOW RISK)
+
+`use-polling.ts` is a generic utility hook. Making its default parameter reference `POLL_INTERVAL_MS` from `lib/constants.ts` creates a dependency from a generic utility to an application-specific constant. Better to keep the two separate: `lib/constants.ts` defines `POLL_INTERVAL_MS = 3000`, `use-episode.ts` uses it, and `use-polling.ts` retains its own `interval = 3000` default as a plain numeric literal. The plan can achieve the deduplication goal without the coupling.
+
+---
+
+### Finding 8: TODO Cleanup — Some TODOs Are Not Cosmetic (MEDIUM RISK)
+
+Of the 13 TODOs found:
+
+**Genuinely stale/cosmetic (safe to remove):**
+- `lib/i18n/index.ts` — translations pending (known scaffold)
+- `lib/publishing/types.ts` — OAuth flows (known scaffold)
+
+**Actively tracking incomplete wiring (do NOT remove):**
+- `episode-detail.tsx:305, 420, 430, 441, 1173, 1480, 1850` — all reference mock data standing in for real API fields not yet wired ("TODO: Replace with real data when API returns structured show notes fields")
+- `settings-page.tsx:584, 595, 967` — integration connect/disconnect and rate limit display not yet wired
+
+The plan says "remove ones that are no longer actionable" and "keep TODOs that are genuinely pending." The risk is the developer miscategorizes the episode-detail TODOs as cosmetic when they are actually outstanding feature wiring tasks for a pre-launch app. This should be an explicit review step, not a quick pass.
+
+---
+
+## Summary Assessment
+
+| Item | Risk | Notes |
+|------|------|-------|
+| 1.1 API response helpers | Low-Medium | Type signature design needed |
+| 1.2 xAI client consolidation | HIGH | 4 active callers not accounted for; retry logic not equivalent |
+| 1.3 supabase-client.ts removal | Low | Clean mechanical change |
+| 1.4 formatDuration consolidation | HIGH | Different output formats — not duplicates |
+| 1.5 eslint-disable cleanup | Low | Requires real type audit for use-episode-seo |
+| 2.x API route standardization | Medium | Large surface area, type signatures need care |
+| 3.1 Hook type renames | Low | Re-exports needed |
+| 3.2 Hook error handling | Low | |
+| 3.3 Component conditionals | Low | |
+| 3.4 Unused imports | Low | |
+| 4.1-4.3 Types/constants | Low | |
+| 4.4 TODO cleanup | Medium | Review carefully — some TODOs are active wiring tasks |
+
+**2 items need correction before execution. 12 items are feasible as described.**

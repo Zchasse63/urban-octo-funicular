@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireAuth } from '@/lib/auth'
+import { errorResponse, successResponse, handleApiError, parsePagination } from '@/lib/api/helpers'
 import { canCreateShow } from '@/lib/tier-limits'
-import { PAGINATION } from '@/lib/constants'
-import type { Show, ApiResponse, PaginatedResponse } from '@/types/database'
+import type { Show, PaginatedResponse } from '@/types/database'
 
 /**
  * GET /api/shows
@@ -14,13 +14,7 @@ export async function GET(request: NextRequest) {
     const { userId } = await requireAuth()
     const supabase = await createClient()
     const { searchParams } = new URL(request.url)
-
-    const page = parseInt(searchParams.get('page') || '1', 10)
-    const perPage = Math.min(
-      parseInt(searchParams.get('per_page') || String(PAGINATION.defaultPageSize), 10),
-      PAGINATION.maxPageSize
-    )
-    const offset = (page - 1) * perPage
+    const { page, perPage, offset } = parsePagination(searchParams)
 
     // Get total count
     const { count, error: countError } = await supabase
@@ -29,10 +23,7 @@ export async function GET(request: NextRequest) {
       .eq('user_id', userId)
 
     if (countError) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: countError.message },
-        { status: 500 }
-      )
+      return errorResponse(countError.message, 500)
     }
 
     // Get paginated shows
@@ -44,10 +35,7 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + perPage - 1)
 
     if (error) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: error.message },
-        { status: 500 }
-      )
+      return errorResponse(error.message, 500)
     }
 
     return NextResponse.json<PaginatedResponse<Show>>({
@@ -61,17 +49,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-    console.error('Error fetching shows:', error)
-    return NextResponse.json<ApiResponse<null>>(
-      { data: null, error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'fetching shows')
   }
 }
 
@@ -86,10 +64,7 @@ export async function POST(request: NextRequest) {
     // Tier enforcement: check show limit
     const showCheck = await canCreateShow(userId)
     if (!showCheck.allowed) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: showCheck.reason || 'Show limit reached' },
-        { status: 403 }
-      )
+      return errorResponse(showCheck.reason || 'Show limit reached', 403)
     }
 
     const supabase = await createClient()
@@ -97,10 +72,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!body.name || typeof body.name !== 'string' || body.name.trim() === '') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Show name is required' },
-        { status: 400 }
-      )
+      return errorResponse('Show name is required', 400)
     }
 
     const showData = {
@@ -121,32 +93,13 @@ export async function POST(request: NextRequest) {
     if (error) {
       // Handle unique constraint violation
       if (error.code === '23505') {
-        return NextResponse.json<ApiResponse<null>>(
-          { data: null, error: 'A show with this name already exists' },
-          { status: 409 }
-        )
+        return errorResponse('A show with this name already exists', 409)
       }
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: error.message },
-        { status: 500 }
-      )
+      return errorResponse(error.message, 500)
     }
 
-    return NextResponse.json<ApiResponse<Show>>(
-      { data: show, error: null },
-      { status: 201 }
-    )
+    return successResponse(show, 201)
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-    console.error('Error creating show:', error)
-    return NextResponse.json<ApiResponse<null>>(
-      { data: null, error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'creating show')
   }
 }

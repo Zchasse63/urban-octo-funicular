@@ -1,184 +1,169 @@
-# Edge Cases Analysis: PodBrain Pricing Structure
-
+# Edge Cases Analysis
 **Agent:** edge-cases
+**Plan:** PodBrain Codebase Refactor
 **Complexity Class:** SIGNIFICANT
-**Date:** 2026-03-01
+**Analysis Depth:** Deep
+**Date:** 2026-03-04
 
 ---
 
 ## Agent Verdict
 
-**MODIFY**
-
-The pricing plan has several failure modes that are not addressed: the Agency tier is financially catastrophic under specific (not merely theoretical) usage patterns, the free tier has no abuse prevention, and the billing period logic creates exploitable edge cases. These are not corner cases — they are the predictable behaviors of motivated users encountering the system.
+**MODIFY** — Several edge cases in Phase 2 (API route standardization) could silently break frontend callers or webhook consumers if not explicitly handled. The most dangerous are: (1) routes with non-standard success response shapes that the frontend decodes directly, (2) the AssemblyAI webhook route which must not have its response shape changed, and (3) the `_request` standardization which could break if a route handler uses the request object in a way the developer doesn't notice.
 
 ---
 
-## 1. The Long-Form Content Catastrophe
+## Edge Case Catalog
 
-### Scenario
-An Agency user manages 5 true-crime podcasts, each publishing weekly 3-hour episodes.
-- 5 shows × 4 episodes/month × 3 hours = 60 episodes, 180 audio hours/month
-- AssemblyAI at $0.17/hr: 180 × $0.17 = **$30.60 AssemblyAI cost**
-- Grok API: 60 episodes × 9 calls × ~$0.003 = **$1.62 Grok cost**
-- Total variable: **~$32.22** against Revenue: **$49** — margin: +34% (barely acceptable)
+### Edge Case 1: AssemblyAI Webhook Endpoint Must Be Excluded from Phase 2
 
-But now the same agency also generates all 45 assets per episode:
-- Additional Grok calls: 60 episodes × 36 more assets × $0.003 = **$6.48 more**
-- Total variable: **~$38.70** — margin: +20% (dangerously thin before fixed cost allocation)
+`POST /api/webhooks/assemblyai` is a **public webhook callback** endpoint. Its response shape is not defined by internal conventions — it's defined by what AssemblyAI expects back from the webhook receiver.
 
-Now scale to 200 episodes at 3 hours each:
-- AssemblyAI: 200 × 3 × $0.17 = **$102**
-- Grok (9 default calls): **$6**
-- Total variable: **$108** against Revenue: **$49** — Net loss: **-$59 per user per month**
+Typically, webhook receivers must return HTTP 200 with a specific shape (or just 200 with no body). If Phase 2.1 modifies this route to return `{ data: null, error: null }` when it currently returns just a `200 OK`, AssemblyAI may:
+- Log the response as an unexpected shape
+- Retry the webhook (leading to duplicate processing)
+- Depending on AssemblyAI's behavior, mark the webhook as failed
 
-**This is not a theoretical edge case.** Long-form agencies (true crime, documentary, interview podcasts) routinely produce 2-4 hour episodes. Any Agency-tier user with this content type loses PodBrain money every month.
+**This route must be explicitly excluded from Phase 2.1.** The plan does not mention this exclusion.
 
-**Mitigation options:**
-1. Cap audio hours (Agency = 150 hrs/month, not 200 episodes of unlimited length)
-2. Add overage billing ($1/hour beyond base allocation)
-3. Clearly disclaim in marketing: "optimized for episodes under 90 minutes"
+### Edge Case 2: Stripe Webhook Endpoint Must Be Excluded from Phase 2
 
----
+`POST /api/stripe/webhooks` is another public webhook endpoint. Stripe sends webhook events and expects an HTTP 200 response quickly. If the response shape changes or the handler adds overhead (like wrapping in a helper that logs), Stripe may retry the event.
 
-## 2. Free Tier Abuse via Re-Registration
+Additionally, this route has special handling for webhook signature verification — any change to the route's early error returns must preserve the exact error behavior that Stripe interprets.
 
-### Scenario
-A podcaster uses 3 free episodes in January, finds the tool valuable, and instead of upgrading:
-1. Creates a new Gmail (using period trick: j.ohn@gmail.com vs john@gmail.com)
-2. Re-registers for a new free PodBrain account
-3. Gets 3 more free episodes
-4. Repeats indefinitely
+**This route must be explicitly excluded from Phase 2.** The plan does not mention this exclusion.
 
-**Current code has no mitigation.** The `users` table is keyed on Supabase Auth user ID. No device fingerprinting, no payment method verification, no IP-based limits exist.
+### Edge Case 3: Stripe Checkout Response Shape Change Breaks Frontend
 
-**Cost per abusive block:** ~$0.65 in variable costs for 3 episodes. At $0 revenue, each block is a loss. At 100 users doing this over 12 months: ~$780 wasted variable costs + accumulated Supabase storage with no cleanup mechanism.
+The current checkout route returns:
+```typescript
+return NextResponse.json({ url: session.url });
+```
 
-**Recommended minimum mitigation:** Require email verification before any episode processing. Supabase Auth supports this natively — it's a configuration toggle, not a code change.
+The frontend calls this route and does something like:
+```typescript
+const data = await response.json();
+if (data.url) window.location.href = data.url;
+```
 
----
+If Phase 2.3 changes this to:
+```typescript
+return successResponse({ url: session.url });
+// Returns: { data: { url: '...' }, error: null }
+```
 
-## 3. Billing Period Timing Exploitation
+The frontend check `if (data.url)` becomes `if (data.data?.url)` — a breaking change. The frontend would silently fail to redirect after checkout, which means paid users can't complete checkout.
 
-### Scenario
-The free tier resets on the 1st of each calendar month. A user who knows this:
-1. Registers on January 31st
-2. Processes 3 episodes that day
-3. On February 1st, processes 3 more
+**This is a high-stakes edge case.** Stripe checkout failure is directly revenue-impacting.
 
-Result: 6 episodes in ~48 hours, all on the free tier. This is not rule-breaking but the conversion model assumes 3 episodes/month, not 6 in 2 days.
+The plan says "Ensure Stripe routes use consistent `{ data, error }` format" — this means the plan intends to change the shape. But it doesn't mention updating the frontend caller.
 
-**Impact:** Low. Most users won't exploit this deliberately. But the conversion funnel math — "a weekly podcaster hits the cap in month 1 and upgrades" — is undermined if savvy users can get a month's worth of value in 2 days.
+**Fix:** Before changing any Stripe route response shape, grep for the fetch call that consumes it and update the frontend in the same change.
 
----
+### Edge Case 4: RSS Proxy Route Must Be Excluded
 
-## 4. The Show Limit Forcing Agency Upgrade
+`GET /api/shows/[id]/rss` is a **public RSS feed endpoint** consumed by podcast players (e.g., Apple Podcasts, Spotify). Its response is XML, not JSON. The `errorResponse()` helper returns JSON. If Phase 2 accidentally applies `errorResponse()` to this route's error cases, podcast players would receive JSON error bodies instead of valid XML error responses, causing feed parsing failures.
 
-### Scenario
-A dedicated independent podcaster runs 6 shows (main show + 5 spinoffs/collaborations). They publish:
-- 6 shows × 4 episodes each = 24 episodes/month
-- Well within Pro's 50-episode limit
-- But exceeds Pro's 5-show limit
+This route almost certainly already returns XML directly (bypassing `NextResponse.json()`) — but the plan doesn't explicitly exclude it.
 
-They must upgrade to Agency ($49/mo) purely for the extra show, even though they use only 24 of their 200 episode allowance and don't need team seats or white-label.
+### Edge Case 5: `_request` Standardization — Silent Behavioral Change Risk
 
-**User experience:** "I'm paying 2.5× more ($49 vs $19) for the same amount of content because I have one extra show. That's wrong."
+Plan Section 2.2 mentions: "Standardize unused request params: use `_request` consistently when unused."
 
-This is a legitimate complaint and a churn trigger. The show limit is the wrong forcing function for this user's growth pattern.
+This is normally cosmetic — renaming `request` to `_request` in a route handler where the parameter is unused. But there's a subtle edge case:
 
-**Options:**
-- Raise Pro show limit from 5 to 10
-- Offer "additional shows" as a $5/show/month add-on
-- Create an intermediate tier at $39-49 with 10 shows but no team features
+If a developer reviews a route and sees `request` is unused, then renames it to `_request`, they may be wrong if the `request` object is used indirectly. For example:
+- Some routes pass `request` to middleware or helper functions implicitly
+- Next.js route handlers have specific behavior for reading request headers in dynamic routes
+- The `rateLimitByIP` call uses `request.headers.get("x-forwarded-for")` — if this is missed during the review, renaming `request` to `_request` creates an incorrect signal that the request is unused
 
----
+This is a low-probability edge case but the fix (careful human review) is cheap.
 
-## 5. Agency Team Seat Lifecycle Gaps
+### Edge Case 6: handleApiError Swallows Structured Error Information
 
-### Scenario
-An agency buys the Agency tier for 5 team seats. They add 5 members. One employee leaves. They remove that person and try to add a replacement.
+When `handleApiError(error, 'context')` catches an error, the implementation details matter. If the error has structured data (e.g., a Supabase `PostgrestError` with a `code` field, a Stripe `StripeError` with an HTTP status), a generic `handleApiError` may:
+- Return a 500 when the original error warrants a 400 or 404
+- Lose the structured error code that the frontend uses to display specific messages
+- Lose the HTTP status code that the circuit breaker uses to determine retry behavior
 
-**Undefined behaviors:**
-- Does the departing team member's active session get invalidated?
-- Who owns episodes/assets the departing member created?
-- Is there a seat reassignment or "transfer" flow?
-- What if the owner account is deleted?
+Currently, catch blocks in some routes inspect the error type:
+```typescript
+if (error instanceof Error && error.message === 'Unauthorized') {
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+}
+```
 
-None of this is implemented. Team features are Phase 2.3 additions and lifecycle edge cases are unaddressed.
+A generic `handleApiError` needs to preserve this logic — either by:
+- Type-checking the error before returning
+- Preserving the original status code if available
+- Having a way for callers to pass the expected error-to-status mapping
 
-**Pricing implication:** Selling "5 team seats" as a feature requires those seats to work reliably through normal employee turnover. If team management is broken, Agency-tier marketing is misleading.
+The plan doesn't specify `handleApiError`'s behavior, which is the most complex of the proposed helpers.
 
----
+### Edge Case 7: Dynamic Import Resolution After xAI Export Removal
 
-## 6. Vocabulary Learning Cross-Tier Behavior
+The 4 files that use `createGrokClient()` via `await import('@/lib/xai-client')` use destructured imports. TypeScript's type checking for dynamic imports is weaker than for static imports, especially when the import result type isn't explicitly declared.
 
-### Scenario
-A user on the free tier adds 50 vocabulary terms for their niche podcast over 3 months, then upgrades to Pro. Their accumulated vocabulary should immediately improve processing — and it does, because vocabulary is stored per-show and used at processing time regardless of tier.
+If `createGrokClient` is removed from `lib/xai-client.ts`:
+- TypeScript may or may not error at build time depending on `isolatedModules` and dynamic import typing strictness
+- The error would surface at runtime when the code path executes
+- In development: visible immediately
+- In production: only when a user triggers viral moments, expert discovery, or cross-episode features
 
-**Good design:** This creates genuine switching cost. The vocabulary investment is tied to the PodBrain account.
+The consequence: a build that passes TypeScript checks deploys and throws `TypeError: createGrokClient is not a function` in production on specific code paths. This is a worst-case scenario for a "zero behavioral changes" refactor.
 
-**But the edge case:** A Pro user who downgrades to free still has their vocabulary. Free-tier episodes still benefit from Pro-era vocabulary accumulation. This is arguably a free service extension, but it's also a retention feature — the user's investment in vocabulary makes them reluctant to cancel.
+### Edge Case 8: parsePagination Helper and Query Parameter Types
 
-**No action required** — this behavior should be intentional and highlighted in retention messaging. "Your vocabulary AI gets smarter with every episode — and it stays yours."
+The plan mentions adding a `parsePagination(searchParams)` helper. Pagination parameters in Next.js App Router are typed as `URLSearchParams` or `ReadonlyURLSearchParams` depending on context (route handler vs. page).
 
----
+If the helper is typed for one but called in the other context, TypeScript errors appear. Additionally, some routes may use custom pagination parameter names (`page`, `offset`, `cursor`) — a single helper needs to handle all conventions or be parameterized.
 
-## 7. The Competitor Free Trial Comparison Problem
+### Edge Case 9: Backwards-Compat Re-exports and Module Tree Shaking
 
-### Scenario
-A user evaluates PodBrain vs. Castmagic. Both have free tiers. Castmagic's free trial gives access to all features for a limited period. PodBrain's free tier gives access to 6 of 45 assets indefinitely.
+When types are moved from hooks to `types/database.ts` with re-exports:
+```typescript
+// in use-pre-interview.ts
+export type { PreInterviewData } from '@/types/database';
+```
 
-**User's mental comparison:** "Castmagic free trial lets me try everything. PodBrain free only lets me use 6 features."
+This creates a re-export chain. In a tree-shaken bundle, type-only re-exports are removed at build time, so no runtime cost. However, if a consumer imports the type from the hook file (`import type { PreInterviewData } from '@/hooks/use-pre-interview'`) and the type is actually a value (e.g., a runtime constant that happens to have a type annotation), the re-export chain could cause the wrong module to be included. For pure type definitions, this is fine.
 
-Result: Castmagic wins the evaluation even though PodBrain's paid product is vastly better value — the user never experienced PodBrain's full capability.
+### Edge Case 10: Concurrent Test Suite During Development
 
-**Risk:** High. This is a predictable evaluation pattern for any user comparison-shopping.
+The plan says "run `npx vitest run` after each phase." The test suite takes ~76 seconds (per MEMORY.md). During the 17-32 hour refactor window:
+- If tests are only run after each phase, regressions in Phase 1 changes are only caught after Phase 1 completes
+- If a developer runs a partial test subset to go faster, they may miss cross-phase interactions
+- The 12 pre-existing DB test failures need to be re-baselined at the start to confirm they're still only 12
 
-**Mitigation:** Offer a 14-day Pro trial on sign-up in addition to (or instead of) the perpetual restricted free tier. Let users taste all 45 assets. The conversion data will tell you whether this improves paid conversion.
-
----
-
-## 8. The "200 Episodes × All 45 Assets" Max Stress Case
-
-### Scenario
-A power Agency user, possibly using the API, triggers full 45-asset generation for all 200 episodes in a billing period.
-
-- 200 episodes × 45 assets = 9,000 Grok API calls
-- At $0.003/call average: **$27 in Grok costs**
-- Plus AssemblyAI at avg 45 min: **$25.50**
-- Total variable: **$52.50** against **$49 revenue** — **Net loss: -$3.50**
-
-This is the "moderate" version of the catastrophe — even at average episode length and all assets, the Agency tier barely breaks even. At 3-hour episodes, it's a -$59 loss.
-
-**The current code likely prevents this partially** — asset generation is rate-limited at 30 req/min, and assets may be generated on-demand rather than automatically for all episodes. Confirm that the generate-assets endpoint takes specific asset types rather than auto-generating all 45 per episode.
+**Recommendation:** Run the test suite continuously in watch mode (`npx vitest --watch`) during development, not just at phase boundaries.
 
 ---
 
-## 9. No Annual Pricing Option
+## Edge Case Severity Matrix
 
-The plan discusses only monthly pricing. Annual pricing is a standard SaaS mechanism that:
-- Collects 10-12 months of revenue upfront (improves cash flow)
-- Reduces monthly churn (annual subscribers cancel 40-60% less often)
-- Increases LTV certainty
-- Creates a price anchor ("$19/mo billed annually vs. $23/mo monthly")
-
-**Implementation cost:** 2-3 hours — create annual Stripe prices at a discount (e.g., Pro annual: $190/yr = $15.83/mo effective, vs $19/mo monthly).
-
-**Not offering annual pricing at launch is a missed opportunity** that costs nothing to add and meaningfully improves unit economics.
+| Edge Case | Severity | Probability | Catchable by Tests? |
+|-----------|----------|-------------|---------------------|
+| 1. AssemblyAI webhook excluded | HIGH | 60% if not explicit | Unlikely (needs real webhook) |
+| 2. Stripe webhook excluded | HIGH | 60% if not explicit | Unlikely (needs real Stripe) |
+| 3. Stripe checkout shape break | HIGH | 70% if Phase 2.3 proceeds | Possibly (if frontend test exists) |
+| 4. RSS route excluded | MEDIUM | 30% | No (XML response) |
+| 5. _request rename edge | LOW | 20% | Yes (TS error or test) |
+| 6. handleApiError swallows info | MEDIUM | 40% | Partially (depends on test detail) |
+| 7. Dynamic import removal | HIGH | 95% if xAI removal proceeds | Sometimes (TS + test) |
+| 8. parsePagination types | LOW | 40% | Yes (TS error) |
+| 9. Re-export tree shaking | LOW | 10% | Yes (build) |
+| 10. Test baseline drift | MEDIUM | 30% | Self-evident |
 
 ---
 
-## Summary
+## Recommended Explicit Exclusions for Phase 2
 
-| Edge Case | Severity | Probability |
-|-----------|----------|-------------|
-| Long-form Agency user loses money per month | CRITICAL | Medium |
-| Free tier re-registration abuse | HIGH | Medium |
-| Show limit forcing Agency upgrade prematurely | MEDIUM | Medium |
-| Competitor free trial beats restricted free tier in evaluation | HIGH | High |
-| All-assets Agency stress case barely breaks even | HIGH | Medium |
-| No annual pricing option | MEDIUM | High (most SaaS buyers check for this) |
-| Billing period gaming | LOW | Low |
-| Team seat lifecycle gaps | MEDIUM | Low at launch |
+Before beginning Phase 2, document these routes as excluded from response shape standardization:
+- `POST /api/webhooks/assemblyai` — must return specific shape for AssemblyAI
+- `POST /api/stripe/webhooks` — must return specific shape for Stripe
+- `GET /api/shows/[id]/rss` — returns XML, not JSON
+- `GET /api/episodes/[id]/assets/download` — returns ZIP binary, not JSON
+- `GET /api/episodes/[id]/guest-package/download` — returns binary/ZIP
 
-**Bottom line:** Three edge cases need immediate action before launch: (1) add audio-hour monitoring for Agency-tier cost exposure, (2) add email verification to prevent free tier abuse, (3) confirm assets are generated on-demand not automatically. Annual pricing is a high-value addition with low implementation cost and should be added before the first paying subscriber.
+These are all routes where the response contract is defined by an external system, not internal convention.

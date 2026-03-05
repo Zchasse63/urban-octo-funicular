@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
+import { handleApiError } from '@/lib/api/helpers';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { sanitizeString } from '@/lib/validation';
 import { isTaddyAvailable } from '@/lib/taddy/client';
@@ -105,20 +106,6 @@ export async function GET(request: NextRequest) {
       podcasts,
     });
   } catch (error) {
-    // Auth errors
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Taddy search API error:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
-    }
-
-    return NextResponse.json(
-      { error: 'Podcast search unavailable' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'Taddy search');
   }
 }

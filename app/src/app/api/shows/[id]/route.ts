@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireAuth, isValidUUID, verifyShowOwnership } from '@/lib/auth'
-import type { Show, ApiResponse } from '@/types/database'
+import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers'
 
 /**
  * GET /api/shows/[id]
@@ -17,10 +17,7 @@ export async function GET(
     const supabase = await createClient()
 
     if (!isValidUUID(id)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid show ID' },
-        { status: 400 }
-      )
+      return errorResponse('Invalid show ID', 400)
     }
 
     const { data: show, error } = await supabase
@@ -31,25 +28,12 @@ export async function GET(
       .single()
 
     if (error || !show) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Show not found' },
-        { status: 404 }
-      )
+      return errorResponse('Show not found', 404)
     }
 
-    return NextResponse.json<ApiResponse<Show>>({ data: show, error: null })
+    return successResponse(show)
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-    console.error('Error fetching show:', error)
-    return NextResponse.json<ApiResponse<null>>(
-      { data: null, error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'fetching show')
   }
 }
 
@@ -67,18 +51,12 @@ export async function PATCH(
     const supabase = await createClient()
 
     if (!isValidUUID(id)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid show ID' },
-        { status: 400 }
-      )
+      return errorResponse('Invalid show ID', 400)
     }
 
     const isOwner = await verifyShowOwnership(id, userId)
     if (!isOwner) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Show not found' },
-        { status: 404 }
-      )
+      return errorResponse('Show not found', 404)
     }
 
     const body = await request.json()
@@ -92,10 +70,7 @@ export async function PATCH(
     if (body.artwork_url !== undefined) updateData.artwork_url = body.artwork_url
 
     if (Object.keys(updateData).length === 0) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'No valid fields to update' },
-        { status: 400 }
-      )
+      return errorResponse('No valid fields to update', 400)
     }
 
     updateData.updated_at = new Date().toISOString()
@@ -109,25 +84,12 @@ export async function PATCH(
       .single()
 
     if (error) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: error.message },
-        { status: 500 }
-      )
+      return errorResponse(error.message, 500)
     }
 
-    return NextResponse.json<ApiResponse<Show>>({ data: show, error: null })
+    return successResponse(show)
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-    console.error('Error updating show:', error)
-    return NextResponse.json<ApiResponse<null>>(
-      { data: null, error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'updating show')
   }
 }
 
@@ -145,18 +107,12 @@ export async function DELETE(
     const supabase = await createClient()
 
     if (!isValidUUID(id)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid show ID' },
-        { status: 400 }
-      )
+      return errorResponse('Invalid show ID', 400)
     }
 
     const isOwner = await verifyShowOwnership(id, userId)
     if (!isOwner) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Show not found' },
-        { status: 404 }
-      )
+      return errorResponse('Show not found', 404)
     }
 
     const { error } = await supabase
@@ -166,24 +122,11 @@ export async function DELETE(
       .eq('user_id', userId)
 
     if (error) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: error.message },
-        { status: 500 }
-      )
+      return errorResponse(error.message, 500)
     }
 
-    return NextResponse.json({ data: { deleted: true }, error: null })
+    return successResponse({ deleted: true })
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-    console.error('Error deleting show:', error)
-    return NextResponse.json<ApiResponse<null>>(
-      { data: null, error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'deleting show')
   }
 }

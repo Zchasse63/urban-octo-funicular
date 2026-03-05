@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth } from '@/lib/auth';
+import { handleApiError } from '@/lib/api/helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,16 +47,6 @@ export async function GET() {
       current_period_end: subscription.current_period_end,
     });
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Subscription error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'Subscription');
   }
 }

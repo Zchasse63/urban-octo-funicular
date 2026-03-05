@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe/client';
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth } from '@/lib/auth';
+import { handleApiError } from '@/lib/api/helpers';
 import { APP_URL } from '@/lib/constants';
 import { getServerPriceId } from '@/lib/stripe/products.server';
 import type { PricingTier, BillingInterval } from '@/lib/stripe/products';
@@ -109,16 +110,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url: session.url });
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Checkout error:', error);
-    return NextResponse.json(
-      { error: 'Failed to create checkout session' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'Checkout');
   }
 }

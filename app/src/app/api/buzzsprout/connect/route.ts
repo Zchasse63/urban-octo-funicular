@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { BuzzsproutClient } from '@/lib/buzzsprout/client';
 import { encryptCredentials } from '@/lib/buzzsprout/encryption';
 import { requireAuth } from '@/lib/auth';
+import { handleApiError } from '@/lib/api/helpers';
 
 export async function POST(request: NextRequest) {
 
@@ -64,17 +65,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, id: data.id });
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Connect error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'Connect');
   }
 }
 
@@ -99,16 +90,6 @@ export async function DELETE() {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Disconnect error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'Disconnect');
   }
 }

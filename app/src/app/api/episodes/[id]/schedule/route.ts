@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth, isValidUUID } from '@/lib/auth';
-import type { ApiResponse } from '@/types/database';
+import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers';
 
 interface ScheduleInfo {
   episodeId: string;
@@ -26,45 +26,30 @@ export async function POST(
     const { id: episodeId } = await params;
 
     if (!isValidUUID(episodeId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid ID format' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid ID format', 400);
     }
 
     const body = await request.json();
     const { scheduledAt } = body;
 
     if (!scheduledAt || typeof scheduledAt !== 'string') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Missing or invalid scheduledAt parameter' },
-        { status: 400 }
-      );
+      return errorResponse('Missing or invalid scheduledAt parameter', 400);
     }
 
     // Validate the date
     const scheduledDate = new Date(scheduledAt);
     if (isNaN(scheduledDate.getTime())) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid date format. Use ISO 8601 datetime.' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid date format. Use ISO 8601 datetime.', 400);
     }
 
     const now = new Date();
     if (scheduledDate <= now) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Scheduled time must be in the future' },
-        { status: 400 }
-      );
+      return errorResponse('Scheduled time must be in the future', 400);
     }
 
     const maxDate = new Date(now.getTime() + MAX_SCHEDULE_DAYS * 24 * 60 * 60 * 1000);
     if (scheduledDate > maxDate) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: `Scheduled time must be within ${MAX_SCHEDULE_DAYS} days` },
-        { status: 400 }
-      );
+      return errorResponse(`Scheduled time must be within ${MAX_SCHEDULE_DAYS} days`, 400);
     }
 
     const supabase = await createClient();
@@ -78,18 +63,12 @@ export async function POST(
       .single();
 
     if (fetchError || !episode) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode not found' },
-        { status: 404 }
-      );
+      return errorResponse('Episode not found', 404);
     }
 
     // Only allow scheduling for pending episodes
     if (episode.status !== 'pending' && episode.status !== 'scheduled') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: `Cannot schedule an episode with status: ${episode.status}` },
-        { status: 400 }
-      );
+      return errorResponse(`Cannot schedule an episode with status: ${episode.status}`, 400);
     }
 
     // Update episode metadata and status
@@ -109,10 +88,7 @@ export async function POST(
       .eq('id', episodeId);
 
     if (updateError) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: updateError.message },
-        { status: 500 }
-      );
+      return errorResponse(updateError.message, 500);
     }
 
     const scheduleInfo: ScheduleInfo = {
@@ -122,25 +98,9 @@ export async function POST(
       status: 'scheduled',
     };
 
-    return NextResponse.json<ApiResponse<ScheduleInfo>>({
-      data: scheduleInfo,
-      error: null,
-    });
+    return successResponse<ScheduleInfo>(scheduleInfo);
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Error scheduling episode:', error);
-    return NextResponse.json<ApiResponse<null>>(
-      {
-        data: null,
-        error: error instanceof Error ? error.message : 'Internal server error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'scheduling episode');
   }
 }
 
@@ -157,10 +117,7 @@ export async function GET(
     const { id: episodeId } = await params;
 
     if (!isValidUUID(episodeId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid ID format' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid ID format', 400);
     }
 
     const supabase = await createClient();
@@ -173,10 +130,7 @@ export async function GET(
       .single();
 
     if (fetchError || !episode) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode not found' },
-        { status: 404 }
-      );
+      return errorResponse('Episode not found', 404);
     }
 
     const metadata = (episode.metadata as Record<string, unknown>) || {};
@@ -184,10 +138,7 @@ export async function GET(
     const scheduledBy = metadata.scheduled_by as string | undefined;
 
     if (!scheduledAt || episode.status !== 'scheduled') {
-      return NextResponse.json<ApiResponse<null>>({
-        data: null,
-        error: null, // No schedule set — this is not an error
-      });
+      return successResponse(null); // No schedule set — this is not an error
     }
 
     const scheduleInfo: ScheduleInfo = {
@@ -197,25 +148,9 @@ export async function GET(
       status: episode.status,
     };
 
-    return NextResponse.json<ApiResponse<ScheduleInfo>>({
-      data: scheduleInfo,
-      error: null,
-    });
+    return successResponse<ScheduleInfo>(scheduleInfo);
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Error fetching schedule:', error);
-    return NextResponse.json<ApiResponse<null>>(
-      {
-        data: null,
-        error: error instanceof Error ? error.message : 'Internal server error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'fetching schedule');
   }
 }
 
@@ -232,10 +167,7 @@ export async function DELETE(
     const { id: episodeId } = await params;
 
     if (!isValidUUID(episodeId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid ID format' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid ID format', 400);
     }
 
     const supabase = await createClient();
@@ -248,17 +180,11 @@ export async function DELETE(
       .single();
 
     if (fetchError || !episode) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode not found' },
-        { status: 404 }
-      );
+      return errorResponse('Episode not found', 404);
     }
 
     if (episode.status !== 'scheduled') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode is not currently scheduled' },
-        { status: 400 }
-      );
+      return errorResponse('Episode is not currently scheduled', 400);
     }
 
     // Remove schedule metadata and revert status to pending
@@ -274,30 +200,11 @@ export async function DELETE(
       .eq('id', episodeId);
 
     if (updateError) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: updateError.message },
-        { status: 500 }
-      );
+      return errorResponse(updateError.message, 500);
     }
 
-    return NextResponse.json<ApiResponse<{ cancelled: boolean }>>({
-      data: { cancelled: true },
-      error: null,
-    });
+    return successResponse({ cancelled: true });
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Error cancelling schedule:', error);
-    return NextResponse.json<ApiResponse<null>>(
-      {
-        data: null,
-        error: error instanceof Error ? error.message : 'Internal server error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'cancelling schedule');
   }
 }

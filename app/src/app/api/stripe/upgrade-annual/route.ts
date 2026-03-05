@@ -1,10 +1,9 @@
-import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe/client';
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth } from '@/lib/auth';
+import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers';
 import { getServerPriceId, getTierByPriceId } from '@/lib/stripe/products.server';
 import { PRICING_TIERS } from '@/lib/stripe/products';
-import type { ApiResponse } from '@/types/database';
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -30,38 +29,26 @@ export async function POST() {
       .single();
 
     if (subError || !sub?.stripe_subscription_id) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'No active subscription found' },
-        { status: 404 }
-      );
+      return errorResponse('No active subscription found', 404);
     }
 
     // Get current tier from price ID
     const currentTier = sub.price_id ? getTierByPriceId(sub.price_id) : null;
     if (!currentTier || currentTier === 'free') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Cannot upgrade free tier to annual' },
-        { status: 400 }
-      );
+      return errorResponse('Cannot upgrade free tier to annual', 400);
     }
 
     // Get annual price ID for the current tier
     const annualPriceId = getServerPriceId(currentTier, 'annual');
     if (!annualPriceId) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Annual pricing not configured for this tier' },
-        { status: 500 }
-      );
+      return errorResponse('Annual pricing not configured for this tier', 500);
     }
 
     // Check if already on annual billing
     const subscription = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
     const currentPriceInterval = subscription.items.data[0]?.price?.recurring?.interval;
     if (currentPriceInterval === 'year') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Already on annual billing' },
-        { status: 400 }
-      );
+      return errorResponse('Already on annual billing', 400);
     }
 
     // Check subscription age for the 30-day full-credit window
@@ -91,12 +78,9 @@ export async function POST() {
         proration_behavior: 'none',
       });
 
-      return NextResponse.json<ApiResponse<{ subscriptionId: string; credited: number }>>({
-        data: {
-          subscriptionId: updated.id,
-          credited: monthlyPrice,
-        },
-        error: null,
+      return successResponse({
+        subscriptionId: updated.id,
+        credited: monthlyPrice,
       });
     } else {
       // After 30 days: standard Stripe proration
@@ -108,25 +92,12 @@ export async function POST() {
         proration_behavior: 'always_invoice',
       });
 
-      return NextResponse.json<ApiResponse<{ subscriptionId: string; credited: number }>>({
-        data: {
-          subscriptionId: updated.id,
-          credited: 0,
-        },
-        error: null,
+      return successResponse({
+        subscriptionId: updated.id,
+        credited: 0,
       });
     }
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Annual upgrade error:', error);
-    return NextResponse.json<ApiResponse<null>>(
-      { data: null, error: 'Failed to upgrade to annual billing' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'Annual upgrade');
   }
 }

@@ -1,236 +1,148 @@
-# Architecture Impact Analysis: PodBrain Pricing Structure
-
+# Architecture Impact Analysis
 **Agent:** architecture-impact
+**Plan:** PodBrain Codebase Refactor
 **Complexity Class:** SIGNIFICANT
-**Date:** 2026-03-01
+**Analysis Depth:** Deep
+**Date:** 2026-03-04
 
 ---
 
 ## Agent Verdict
 
-**MODIFY**
-
-The pricing plan has direct architectural consequences that are not currently implemented. The most serious: the episode-count enforcement unit creates an unbounded cost exposure for audio-heavy Agency users, and the Stripe integration is not yet provisioned. Several pricing decisions (adding a 4th tier, switching to hourly pricing) have non-trivial architectural implications that should be evaluated before committing to a direction.
+**MODIFY** — Most of the refactor has minimal architectural impact (cosmetic standardization, boilerplate elimination). However, two items have architectural implications that need explicit design decisions: (1) the xAI client consolidation changes the module boundary between two client implementations with different responsibilities, and (2) the API response shape standardization for Stripe routes silently changes public API contracts. Both need explicit design before execution.
 
 ---
 
-## 1. Current Architecture State for Pricing Enforcement
+## Architecture Impact by Item
 
-### What Is Built and Working
+### Item 1.1: API Response Helpers — Positive Architectural Impact
 
-**Tier configuration** (3 locations, must stay in sync):
-1. `src/lib/constants.ts` — `SUBSCRIPTION_TIERS` object
-2. `src/lib/tier-limits.ts` — `TIER_LIMITS` with feature flags + guard functions
-3. `src/lib/stripe/products.ts` — `PRICING_TIERS` with Stripe price IDs
+Creating `lib/api/helpers.ts` introduces a well-placed abstraction layer in the existing `lib/api/` directory. The impact is positive:
+- Centralizes HTTP response construction, making format changes single-point
+- The location (`lib/api/`) is semantically correct — it's infrastructure for API routes
+- Does not introduce a new dependency direction (helpers don't depend on domain logic)
 
-These three sources of truth can drift. If the Pro price is updated in Stripe but `SUBSCRIPTION_TIERS.pro.priceMonthly` is not updated in constants.ts, the displayed price is wrong. This is a maintenance liability.
+**Architectural risk:** Low. This is the correct pattern.
 
-**Recommendation:** Consolidate to single source of truth. `tier-limits.ts` (or a new `pricing.ts`) should own all tier data. The other files should import from it.
+One design decision needed: should helpers validate their inputs? (e.g. should `errorResponse()` validate that `status` is a valid HTTP error code?) Given the existing codebase style (minimal validation in utilities), probably not — but worth noting.
 
-### What Is Not Built
+### Item 1.2: xAI Client Consolidation — Moderate Architectural Risk
 
-1. **Audio-hour tracking:** No database column for audio duration budgets. Episodes have `duration_seconds` but there is no monthly aggregate query or enforcement.
-2. **Team seat enforcement:** `canCreateTeamMember()` function does not exist. Tier config shows `teamSeats: 5` for Agency but there is no guard at the API level.
-3. **Stripe provisioning:** Price IDs are null in code. Stripe products don't exist yet in the dashboard.
-4. **Metered billing:** No metered billing configured. All tiers are flat-rate subscriptions.
-5. **Usage dashboard:** `GET /api/usage` exists but needs to be wired to the UI's upgrade prompts.
+Currently there are two distinct client implementations:
 
----
+**`lib/xai-client.ts`** (the base layer):
+- Provides `createChatCompletion()`, `createEmbedding()` — raw API calls wrapped in circuit breaker
+- Provides `createGrokClient()` — a thin object wrapper over the two functions
+- 4 library files use `createGrokClient()` via dynamic import
+- 1 API route uses `createChatCompletion()` directly
 
-## 2. Architectural Implications of Each Pricing Decision
+**`lib/xai/client.ts`** (the show notes layer):
+- Provides `generateShowNotes()` — domain-specific function
+- Has its own retry loop (3 attempts, exponential backoff)
+- Has its own 429 rate-limit detection
+- Has `markdownToHtml()` conversion
+- Called by `lib/xai/index.ts` which re-exports it
 
-### Decision 1: Keep Current Episode-Count Pricing (No Change)
+**The architectural question:** Should the retry/backoff logic live at the transport layer (`xai-client.ts`) or at the use-case layer (`xai/client.ts`)?
 
-**Architectural impact:** Minimal. Current enforcement is built.
+**Current state:** Retry lives at the use-case layer only for show notes. Other callers (viral moments, guest intel, embeddings) don't have retry logic — they inherit only the circuit breaker from the base layer.
 
-**Hidden risk:** `duration_seconds` is stored in the episodes table (from AssemblyAI). A future switch to hour-based billing requires this column and the data has been accumulating from day one. No schema migration needed — the data is already there.
+**The plan's proposed consolidation** is architecturally sound in principle (one client, one place to configure headers/auth/timeout) but the plan doesn't specify where retry logic goes. Options:
 
-**Action required for safety:** Add a soft warning system. When a user's episodes in the current month sum to >X audio hours, log a monitoring alert (Sentry custom event). This costs 10 minutes to implement and gives visibility into cost exposure before it becomes a problem.
+Option A: Move retry into `createChatCompletion()` at base layer → all callers get retry automatically (better)
+Option B: Keep retry in `lib/xai/client.ts` (show notes only) → other callers remain without retry (status quo)
+Option C: Remove retry from `lib/xai/client.ts` and rely on circuit breaker only → show notes loses retry protection (worse)
 
-### Decision 2: Switch to Hour-Based Pricing
+**The plan implies Option B** (make `lib/xai/client.ts` use `createChatCompletion()` internally) but without explicit direction, an implementer might accidentally choose Option C.
 
-**Database impact:**
-```sql
--- New query needed for hour-based enforcement:
-SELECT SUM(duration_seconds) / 3600 AS total_hours
-FROM episodes
-JOIN shows ON episodes.show_id = shows.id
-WHERE shows.user_id = $1
-  AND episodes.created_at >= $billing_start
-  AND episodes.status = 'completed'
-```
-This query is straightforward. An index on `(shows.user_id, episodes.created_at)` is likely needed for performance.
+**Recommendation:** Explicitly design this before implementation. Option A (retry at transport layer) is architecturally superior and would improve resilience of viral-moments, guest-intel, and embeddings calls that currently have no retry.
 
-**Tier limits change:**
-```typescript
-// tier-limits.ts would change from:
-episodesPerMonth: 50
-// to:
-audioHoursPerMonth: 37.5  // 50 eps × 45 min avg
-```
+### Item 1.3: supabase-client.ts Removal — Minor Positive Impact
 
-**API impact:** `canCreateEpisode()` becomes `canProcessAudio(userId, durationSeconds)`. The check must happen BEFORE AssemblyAI is called (since that's when cost is incurred), which means the upload step must record the audio duration before processing begins.
+Removing a thin re-export wrapper is architecturally clean. It reduces the module graph by one unnecessary node. No significant architectural concern.
 
-**Problem:** Audio duration is not known until AssemblyAI processes the file (or until ffprobe analyzes the upload). This creates a chicken-and-egg problem: you need duration to enforce limits, but you only know duration after processing. Workaround: allow the upload and check a soft limit, or require duration metadata from the client.
+**One note:** The 4 files that use the wrapper are in different feature domains (viral-moments, guest-intel, cross-episode, related-episodes). They all currently depend on a compatibility shim. After removal they depend on `lib/supabase/server` directly — which is the correct dependency.
 
-**Estimated architectural complexity:** 1.5-2 weeks including schema work, API changes, UI changes, Stripe reconfiguration.
+### Item 1.4: formatDuration Consolidation — Architecturally Concerning If Done Naively
 
-**Verdict:** Feasible but non-trivial. Do not switch pre-launch unless the financial case for it is compelling enough to delay launch by 2 weeks.
+The plan proposes moving component-specific display utilities into `lib/utils.ts`. This raises an architectural question about what `lib/utils.ts` should contain.
 
-### Decision 3: Add a 4th Tier (Starter at ~$9/mo)
+Currently `lib/utils.ts` contains general-purpose utilities (`cn()`, human-readable duration, relative time, date formatting, score colors). These are UI-agnostic utilities.
 
-**Database impact:** None — the `subscription_tier` column in the `users` table is a text field. A new value 'starter' simply needs to be handled everywhere tier is checked.
+The episode-list utilities (`formatDuration` colon format, `durationToSecs`, `secsToHuman`) are component-specific display utilities for a specific list view. Moving them to `lib/utils.ts` would:
+1. Inflate the general utilities file with component-specific logic
+2. Create a false sense that "colon-formatted durations" are a general pattern (they're specific to the episode list table)
+3. Rename collision: `formatDuration` already exists in `lib/utils.ts` with different semantics
 
-**Code impact — files that need changes:**
-1. `src/lib/constants.ts` — Add `SUBSCRIPTION_TIERS.starter`
-2. `src/lib/tier-limits.ts` — Add `TIER_LIMITS.starter` with new limits + `canGenerateAssetType()` update
-3. `src/lib/stripe/products.ts` — Add `PRICING_TIERS.starter` with Stripe price ID
-4. `src/lib/stripe/products.server.ts` — Add price ID env var handling
-5. Landing page pricing component — Add Starter column
-6. Upgrade prompt components — Add Starter as an option
+**Architecturally, these utilities belong either:**
+- In the component file (current state — acceptable for component-specific logic)
+- In a `lib/utils/episode-display.ts` (only if reused)
+- In `lib/utils.ts` with distinct names that signal their specificity (e.g., `formatDurationColons`, `parseDurationColons`)
 
-**Stripe impact:** New Stripe product + price must be created. Existing webhook handler must handle 'starter' tier.
+The plan's framing of "move all time utilities to utils.ts" is architecturally imprecise. The correct principle is "shared utilities go in shared locations." These are not currently shared, so moving them is premature unless there's a concrete reuse case.
 
-**Estimated complexity:** 2-3 days. Manageable.
+### Item 2.3: Response Shape Standardization — Behavioral Change Risk on External Contracts
 
-**Risk:** Complicates the pricing page. A 4-tier pricing page is harder to communicate than 3 tiers, especially for a new product. Good pricing pages should tell a simple story.
-
-### Decision 4: Raise Prices (No New Tiers)
-
-**Architectural impact:** Essentially zero. Change numbers in `products.ts`, update Stripe, update marketing copy. This is the lowest-complexity pricing change available.
-
-**Risk:** None architecturally. Business risk (conversion) is the only concern.
-
-### Decision 5: Metered/Overage Billing
-
-**Architectural impact:** High.
-
-Stripe supports metered billing (`usage_type: 'metered'` in price configuration). This requires:
-1. New Stripe price type (recurring + metered)
-2. Usage reporting to Stripe after each episode processed
-3. Stripe webhook handling for usage-based invoices
-4. UI to show estimated vs. actual bill
-
-This is a 2-3 week architectural addition. Not recommended pre-launch.
-
----
-
-## 3. The Three-Source-of-Truth Problem
-
-Pricing data currently lives in 3 separate files that must be kept in sync:
-
-```
-constants.ts        → SUBSCRIPTION_TIERS (priceMonthly, episodesPerMonth, maxShows, teamSeats)
-tier-limits.ts      → TIER_LIMITS (same data + feature flags + guard functions)
-stripe/products.ts  → PRICING_TIERS (same data + Stripe price IDs + features array for UI)
-```
-
-If Pro changes from $19 to $39:
-- Update `constants.ts` line 63
-- Update `stripe/products.ts` line 32
-- Update Stripe Dashboard (external)
-- Update landing page copy (separate component)
-- Update any hardcoded references in email templates
-
-This is brittle. A pricing change in Stripe that doesn't propagate to `constants.ts` means the app displays the wrong price.
-
-**Recommended architectural fix (2-3 hours):**
-Create `src/lib/pricing.ts` as the single canonical source. All other files import from it. The Stripe price IDs remain server-side only (in `products.server.ts`). This reduces future pricing changes to 2 file edits + Stripe.
+The plan proposes standardizing Stripe routes to use `{ data, error }` format. Currently:
 
 ```typescript
-// src/lib/pricing.ts — single source of truth
-export const TIERS = {
-  free:   { price: 0,  episodes: 3,   shows: 1,    seats: 1 },
-  pro:    { price: 39, episodes: 50,  shows: 5,    seats: 1 },  // raised from $19
-  agency: { price: 149, episodes: 200, shows: 999, seats: 5 },  // raised from $49
-} as const
+// stripe/checkout — current
+return NextResponse.json({ url: session.url });
+
+// stripe/portal — likely similar
+// stripe/invoices — different shape
 ```
 
----
-
-## 4. Stripe Integration Architecture Gaps
-
-### Current State
-The Stripe checkout, portal, and webhook handler are implemented in code. But:
-- `STRIPE_PUBLISHABLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` are not set in production env
-- `STRIPE_PRO_PRICE_ID` and `STRIPE_AGENCY_PRICE_ID` do not exist (Stripe products not created)
-- Post-checkout redirect goes to `/settings/billing` (404 — should be `/settings?tab=billing`)
-
-### What Happens When a User Tries to Upgrade Today
-1. They click "Upgrade to Pro"
-2. Client-side code reads `STRIPE_PUBLISHABLE_KEY` from env — which is undefined
-3. Stripe.js fails to initialize
-4. Or: the checkout session API call fails because `STRIPE_SECRET_KEY` is undefined
-5. User sees an error
-
-This is a pre-launch blocker, not a pricing strategy question. But it's relevant because **the pricing plan cannot be validated until users can actually pay.**
-
-### Stripe Architecture Checklist Before Any Pricing Decision Is Final
-- [ ] Create Stripe products and prices for Pro and Agency
-- [ ] Set `STRIPE_PRO_PRICE_ID` and `STRIPE_AGENCY_PRICE_ID` env vars
-- [ ] Fix success URL redirect (B9 from prior audit)
-- [ ] Set Stripe webhook endpoint in Stripe Dashboard
-- [ ] Verify webhook signature validation works
-- [ ] Test checkout flow end-to-end with Stripe test mode
-
-If prices are to be raised (recommended), do it NOW in Stripe before these products are created. Changing a Stripe price after customers are subscribed requires migration or grandfathering.
-
----
-
-## 5. Tier Enforcement Architecture for Team Seats
-
-The Agency tier includes 5 team seats. This feature is listed in the tier config but the enforcement guard doesn't exist.
-
-**Current code in `tier-limits.ts`:**
+**If the frontend caller does:**
 ```typescript
-agency: {
-  episodesPerMonth: 200,
-  maxShows: 999,
-  teamSeats: 5,  // defined but never enforced
-  ...
-}
+const { url } = await response.json();
+router.push(url);
 ```
 
-**What needs to be added:**
+And the route is changed to:
 ```typescript
-export async function canAddTeamMember(userId: string): Promise<{
-  allowed: boolean;
-  reason?: string;
-  current: number;
-  limit: number;
-}> {
-  const tier = await getUserTier(userId);
-  const limits = getTierLimits(tier);
-  const supabase = await createClient();
-  const { count } = await supabase
-    .from('team_members')
-    .select('id', { count: 'exact', head: true })
-    .eq('owner_id', userId);
-
-  if ((count || 0) >= limits.teamSeats) {
-    return { allowed: false, reason: `Team seat limit reached`, current: count || 0, limit: limits.teamSeats };
-  }
-  return { allowed: true, current: count || 0, limit: limits.teamSeats };
-}
+return successResponse({ url: session.url });  // returns { data: { url }, error: null }
 ```
 
-This guard needs to be called in `POST /api/team`. Without it, any user (including free) can add unlimited team members.
+The frontend caller breaks unless also updated. The plan says "no changing public API contracts" but the current Stripe route shapes are technically non-standard. Standardizing them IS a contract change from the frontend's perspective.
 
-**Estimated fix:** 30 minutes.
+**The plan's Phase 2.3 creates a cross-cutting concern:** When you change a route's response shape, you must also update its frontend caller. The plan addresses the route side but doesn't mention frontend callers.
+
+**Architectural requirement:** For any route in Phase 2.3 where the response shape changes (not just error shapes, but success shapes), identify and update the frontend caller in the same commit. Failing to do this creates a frontend-backend contract mismatch that may not be caught by the test suite (if tests mock the fetch call).
+
+### Items 3.1-3.4: Component/Hook Changes — Minimal Architectural Impact
+
+Hook return type renames, error handling standardization, and import cleanup are cosmetic at the architecture level. They improve code quality without changing module boundaries or data flows.
+
+One architectural note on moving types to `types/database.ts` (Phase 4.2): `PreInterviewAppearance`, `PreInterviewData`, `GuestPackageData` are currently defined alongside their consuming hooks. Moving them to `types/database.ts` is correct if these types are (or will be) shared. If they're only used by one hook, co-location is architecturally appropriate and the move adds coupling for no benefit. Check actual usage before moving.
 
 ---
 
-## 6. Architecture Summary
+## Dependency Direction Analysis
 
-| Change | Complexity | Priority |
-|--------|-----------|----------|
-| Fix three-source-of-truth pricing data | 2-3 hrs | HIGH |
-| Add audio-hour monitoring (alerting only) | 30 min | HIGH |
-| Add `canAddTeamMember()` guard | 30 min | HIGH |
-| Provision Stripe products + set env vars | 1 hr (non-code) | CRITICAL |
-| Fix Stripe success URL redirect | 5 min | HIGH |
-| Add Starter tier (if decided) | 2-3 days | MEDIUM |
-| Switch to hour-based enforcement | 1.5-2 weeks | LOW (post-launch) |
-| Metered/overage billing | 2-3 weeks | LOW (post-launch) |
+The refactor should not introduce new dependency direction violations. Current clean directions:
+- Components → Hooks → Lib → External APIs
+- API Routes → Lib → External APIs
+- Types → (nothing)
 
-**The most important architectural action:** Raise prices before Stripe products are created. A price change in Stripe before any subscribers exist costs nothing. A price change after 100 users are subscribed at $19 requires grandfathering, communications, and accepts churn risk.
+The helpers file (`lib/api/helpers.ts`) introduces:
+- API Routes → `lib/api/helpers` (new dependency, correct direction)
+- `lib/api/helpers` → `next/server` (external, fine)
+
+No violations introduced.
+
+---
+
+## Architecture Summary
+
+| Item | Architectural Impact | Direction |
+|------|---------------------|-----------|
+| API helpers | Positive — correct abstraction | Forward |
+| xAI consolidation | Mixed — needs explicit design | Needs design |
+| supabase-client removal | Positive — removes indirection | Forward |
+| formatDuration consolidation | Negative if done naively | Needs redesign |
+| API response standardization | Requires frontend audit | Needs verification |
+| Type centralization | Neutral to positive | Forward if shared |
+| Hook/component cleanup | Neutral (cosmetic) | Neutral |
+
+**No architectural regressions if the two flagged items are addressed first. The refactor is architecturally conservative by design — good.**

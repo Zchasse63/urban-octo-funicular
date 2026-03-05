@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireAuth, isValidUUID } from '@/lib/auth'
+import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers'
 import { generateGuestPackage, generateAlsoHeardOn } from '@/lib/guest-package/generator'
 import { sendGuestPackageEmail, validateEmailAddress, EmailConfigurationError } from '@/lib/email/service'
 import { logger } from '@/lib/logger'
-import type { ApiResponse, Episode, Show } from '@/types/database'
+import type { Episode, Show } from '@/types/database'
 import type { SocialPostVariant, QuoteCard, AlsoHeardOnSection } from '@/lib/guest-package/generator'
 
 interface GuestPackageResponse {
@@ -37,10 +38,7 @@ export async function GET(
     const { id: episodeId } = await params
 
     if (!isValidUUID(episodeId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid ID format' },
-        { status: 400 }
-      )
+      return errorResponse('Invalid ID format', 400)
     }
 
     const supabase = await createClient()
@@ -57,18 +55,12 @@ export async function GET(
       .single()
 
     if (fetchError || !episode) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode not found' },
-        { status: 404 }
-      )
+      return errorResponse('Episode not found', 404)
     }
 
     // Validate episode is completed
     if (episode.status !== 'completed') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode processing not completed' },
-        { status: 400 }
-      )
+      return errorResponse('Episode processing not completed', 400)
     }
 
     // Extract show data
@@ -141,25 +133,9 @@ export async function GET(
       package: packageContent,
     }
 
-    return NextResponse.json<ApiResponse<GuestPackageResponse>>({
-      data: response,
-      error: null,
-    })
+    return successResponse<GuestPackageResponse>(response)
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-    logger.error('Error fetching guest package', error instanceof Error ? error : { error })
-    return NextResponse.json<ApiResponse<null>>(
-      {
-        data: null,
-        error: error instanceof Error ? error.message : 'Internal server error',
-      },
-      { status: 500 }
-    )
+    return handleApiError(error, 'fetching guest package')
   }
 }
 
@@ -176,10 +152,7 @@ export async function POST(
     const { id: episodeId } = await params
 
     if (!isValidUUID(episodeId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid ID format' },
-        { status: 400 }
-      )
+      return errorResponse('Invalid ID format', 400)
     }
 
     const body: SendEmailRequest = await request.json()
@@ -190,10 +163,7 @@ export async function POST(
 
     // Validate guest email
     if (!guestEmail || !validateEmailAddress(guestEmail)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid email address' },
-        { status: 400 }
-      )
+      return errorResponse('Invalid email address', 400)
     }
 
     // Fetch episode with show relation
@@ -208,17 +178,11 @@ export async function POST(
       .single()
 
     if (fetchError || !episode) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode not found' },
-        { status: 404 }
-      )
+      return errorResponse('Episode not found', 404)
     }
 
     if (episode.status !== 'completed') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode processing not completed' },
-        { status: 400 }
-      )
+      return errorResponse('Episode processing not completed', 400)
     }
 
     const showData = Array.isArray(episode.shows) ? episode.shows[0] : episode.shows
@@ -236,12 +200,9 @@ export async function POST(
       post => post.characterCount > post.maxCharacters
     )
     if (invalidPosts.length > 0) {
-      return NextResponse.json<ApiResponse<null>>(
-        {
-          data: null,
-          error: `Social posts exceed character limits: ${invalidPosts.map(p => p.platform).join(', ')}. Please shorten episode content.`,
-        },
-        { status: 400 }
+      return errorResponse(
+        `Social posts exceed character limits: ${invalidPosts.map(p => p.platform).join(', ')}. Please shorten episode content.`,
+        400
       )
     }
 
@@ -256,40 +217,17 @@ export async function POST(
       customMessage,
     })
 
-    return NextResponse.json<ApiResponse<{ success: boolean; messageId?: string }>>({
-      data: {
-        success: emailResult.success,
-        messageId: emailResult.messageId,
-      },
-      error: null,
+    return successResponse({
+      success: emailResult.success,
+      messageId: emailResult.messageId,
     })
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    // Handle EmailConfigurationError specifically
+    // Handle EmailConfigurationError specifically before the generic handler
     if (error instanceof EmailConfigurationError) {
       logger.error('Email service not configured', { error: error.message })
-      return NextResponse.json<ApiResponse<null>>(
-        {
-          data: null,
-          error: 'Email service is not configured. Please contact support.',
-        },
-        { status: 503 }
-      )
+      return errorResponse('Email service is not configured. Please contact support.', 503)
     }
 
-    logger.error('Error processing guest package action', error instanceof Error ? error : { error })
-    return NextResponse.json<ApiResponse<null>>(
-      {
-        data: null,
-        error: error instanceof Error ? error.message : 'Internal server error',
-      },
-      { status: 500 }
-    )
+    return handleApiError(error, 'processing guest package action')
   }
 }

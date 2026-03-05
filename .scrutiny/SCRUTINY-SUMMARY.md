@@ -1,212 +1,149 @@
-# Scrutiny Summary: PodBrain Launch Roadmap
+# Scrutiny Summary: PodBrain Codebase Refactor
 
-**Date:** 2026-02-26
-**Plans Reviewed:**
-- `/Users/zach/urban-octo-funicular/docs/planning/LAUNCH-ROADMAP.md` — 8-phase launch plan (primary)
-- `/Users/zach/urban-octo-funicular/docs/planning/TADDY-INTEGRATION-PLAN.md` — Phase 7 Taddy integration
-- `/Users/zach/urban-octo-funicular/docs/planning/PODCASTING-2.0-STRATEGY.md` — Phase 7 PC2.0 strategy
-**Complexity Class:** MAJOR
-**Agents Run:** 7 (all agents, Deep+ mode)
-**Agent Verdicts:** 7/7 MODIFY (0 GO, 0 DEFER, 0 NO-GO)
+**Date:** 2026-03-04
+**Plan reviewed:** `/Users/zach/urban-octo-funicular/docs/planning/REFACTOR-PLAN.md`
+**Agents run:** 7 (technical-feasibility, scope-complexity, user-value, cost-benefit, architecture-impact, edge-cases, competitive-context)
+**Complexity class:** SIGNIFICANT
+**Analysis depth:** Deep
 
 ---
 
 ## Verdict: MODIFY
 
-The plan is structurally correct and technically executable. The phase ordering is right. The architecture is sound. Most of the "broken" items are genuinely fixable quickly. The path to launch is real. What needs modification is the timeline (too compressed by 75%), three items that should be in Phase 0 but are deferred to Phase 1, and Phase 7 which has an architectural omission and significant scope undercount.
+Execute the refactor — but correct two specific items in Phase 1 before starting. Both errors are factual (they can be verified in the codebase right now) and both would introduce silent regressions if the plan is followed as written.
 
-**This is a GO with required modifications — not a "stop and rethink."**
-
----
-
-## The One-Paragraph Summary
-
-PodBrain has a solid foundation: a working Trigger.dev + AssemblyAI + xAI Grok pipeline, a polished Swiss Broadcast UI, 26 API routes, and a real SEO intelligence layer. Ten critical bugs are blocking the core user experience, but they're genuinely fixable in 1-2 days. The 8-phase launch plan is correctly ordered and covers all the necessary ground — bugs, polish, auth, billing, marketing, performance, testing, and differentiation. The modifications needed are calibration, not restructuring: the timeline should be 15-22 weeks (not 8-11), four items from Phase 1 are ready to move into Phase 0 right now (fake integrations removal, rate limiting, model pinning, episode title field), and Phase 7's pre-interview intelligence feature will time out in production unless it's built as a Trigger.dev background job rather than a synchronous API route. The Podcasting 2.0 Batch 1 features are a genuinely differentiated, near-zero-cost opportunity that should ship as early as possible — ideally as part of Phase 5-6 parallel work — rather than waiting for Phase 7 terminus.
+5 of 7 agents recommend GO or MODIFY. 0 agents recommend DEFER or NO-GO. The overall direction is correct; the corrections are surgical.
 
 ---
 
-## Critical Findings
+## The Two Required Corrections
 
-### Finding 1: Phase 0 Needs 4 More Items (Trivial Effort, High Impact)
-**Source:** edge-cases, user-value agents
+### Correction 1: Phase 1.4 — formatDuration Is Not a Duplicate
 
-The following items are in Phase 1 but should be in Phase 0:
+The plan says to consolidate `episode-list.tsx`'s local `formatDuration()` with the one in `lib/utils.ts` because they're duplicates.
 
-| Item | Current Phase | Why Move to Phase 0 |
-|------|--------------|---------------------|
-| Remove fake settings integrations (Spotify, Apple, YouTube, Slack) | Phase 1, item 9/14 | Trust erosion every day it shows. 15-minute fix. |
-| Pin xAI model to stable identifier (replace `grok-beta`) | Phase 1, item 13/14 | `grok-beta` deprecation breaks all AI features simultaneously. Should verify before Phase 0 end-to-end test. |
-| Apply rate limiting to processing/asset routes | Phase 1, item 14/14 | Currently unlimited cost exposure. Attacker or heavy user can trigger $0.15/call with no ceiling. |
-| Add episode title field to upload wizard | Phase 1, item 1/14 | "Untitled Episode" × N is embarrassing in any demo. 1-hour UI fix. |
+They are not duplicates. They do different things:
 
-**These don't add meaningfully to Phase 0 scope but prevent real problems from day 1.**
+| Function | Input | Output |
+|----------|-------|--------|
+| `lib/utils.ts formatDuration` | `number \| null` seconds | `"1h 23m"` (human-readable) |
+| `episode-list.tsx formatDuration` | `number` seconds | `"1:23:45"` (colon-separated) |
 
----
+For 90 minutes of audio: utils returns `"1h 30m"`, episode-list returns `"1:30:00"`.
 
-### Finding 2: Timeline Is Understated by ~75%
-**Source:** scope-complexity agent (high confidence)
+Additionally, `durationToSecs()` and `secsToHuman()` in episode-list parse colon-format strings back to seconds — these have no equivalent in utils.ts and are needed for duration sorting and total-duration display.
 
-| Phase | Original | Revised | Primary Reason for Change |
-|-------|----------|---------|--------------------------|
-| 0 | 1-2 days | 1.5-2 days | +4 quick wins |
-| 1 | 1-2 weeks | 2-3 weeks | Show notes editor = 3-4 days |
-| 2 | 1-2 weeks | 2.5-3.5 weeks | 26 routes to migrate + middleware design |
-| 3 | 1 week | 1.5-2 weeks | Tier enforcement middleware |
-| 4 | 1 week | 1.5-2 weeks | Landing page takes real design time |
-| 5 | 1 week | 2-3 weeks | AssemblyAI webhook = 2-4 day rewrite |
-| 6 | 1 week | 1.5-2 weeks | 12 hooks to test |
-| 7 | 2-3 weeks | 4-6 weeks | Pre-interview is 8-12 days alone |
-| **Total** | **8-11 weeks** | **15-22 weeks** | — |
+**If executed as written:** Episode list shows wrong duration format, sort-by-duration breaks, selected-duration total breaks. TypeScript does not catch this.
 
-**This is not a reason to not build the plan — it's a reason to set honest expectations.**
+**Fix:** Add distinctly named functions to `lib/utils.ts`:
+- `formatDurationColons(seconds: number): string` — replaces local `formatDuration`
+- `parseDurationColons(duration: string): number` — replaces local `durationToSecs`
+- `formatDurationCompact(totalSeconds: number): string` — replaces local `secsToHuman`
 
-If 15-22 weeks is too long, the minimum viable launch (Phases 0-4 only) lands at ~8-11 weeks and produces a working, monetized, legally compliant, discoverable product. Phases 5-7 become post-launch milestones.
+Then update episode-list.tsx to use these names.
 
----
+### Correction 2: Phase 1.2 — createGrokClient() Is Not Unused
 
-### Finding 3: Phase 7 Pre-Interview Intelligence Must Use Trigger.dev
-**Source:** technical-feasibility, architecture-impact agents
+The plan says to remove the "unused" `createGrokClient()` wrapper from `lib/xai-client.ts`.
 
-The plan creates `app/api/episodes/[id]/pre-interview/route.ts` as a standard Next.js API route. This pipeline takes 3-10 minutes to execute (10-20 transcript fetches + Grok analysis). Next.js API routes have a 60-second timeout on Vercel/Netlify.
+It is not unused. Four files use it via dynamic import:
 
-**This will fail in production for any guest with more than a few appearances. This is certain, not a risk.**
+```
+lib/viral-moments/detector.ts
+lib/guest-intel/service.ts
+lib/cross-episode/embeddings.ts
+lib/experts/discovery.ts
+```
 
-**Required fix:** Build pre-interview intelligence as a Trigger.dev background job (`generatePreInterviewJob`), following the same pattern as episode processing. The API route creates the job and returns a job ID. The UI polls for completion.
+Dynamic imports (`await import('@/lib/xai-client')`) may not be caught by TypeScript's static analysis. The error appears at runtime — specifically when users trigger viral moments, guest intelligence, cross-episode similarity, or expert discovery features.
 
-This adds scope to Phase 7 but is architecturally necessary.
+Also: `lib/xai/client.ts` has retry logic (3 attempts, exponential backoff) and 429 handling not present in `createChatCompletion()`. Replacing its fetch call with `createChatCompletion()` without preserving the retry loop degrades show notes reliability.
+
+**Fix:** Keep `createGrokClient()` in `lib/xai-client.ts`. Consolidate `lib/xai/client.ts` by calling `createChatCompletion()` inside its existing retry loop (not replacing the loop). The retry behavior is preserved; the duplicated fetch setup is eliminated.
 
 ---
 
-### Finding 4: Auth Migration Is Harder Than a Single Checklist Item
-**Source:** scope-complexity, technical-feasibility agents
+## Secondary Issues (Address During Execution)
 
-Phase 2 lists "Replace DEFAULT_USER_ID with auth.uid() in all route handlers" as one item. This is 26 route files to update, each requiring auth extraction from the request context plus testing. It's mechanical work — but it's 2-3 days of mechanical work, not one checkbox.
+**Before starting Phase 2:**
+Document these routes as explicitly excluded from response-shape standardization:
+- `POST /api/webhooks/assemblyai` — response contract defined by AssemblyAI
+- `POST /api/stripe/webhooks` — response contract defined by Stripe
+- `GET /api/shows/[id]/rss` — returns XML, not JSON
+- `GET /api/episodes/[id]/assets/download` — returns binary ZIP
+- `GET /api/episodes/[id]/guest-package/download` — returns binary
 
-Similarly, `middleware.ts` creation is the auth control plane for the entire app — it needs to handle auth verification, webhook exclusions (Stripe, AssemblyAI), rate limit enforcement, and tier checks. This is a 2-3 day design-and-test task.
+**For Phase 2.3 (Stripe routes):**
+The current `stripe/checkout` route returns `{ url: session.url }` (no `data` wrapper). If you standardize this to `{ data: { url }, error: null }`, the frontend caller breaks silently — it currently does `const { url } = await response.json()`. Audit and update the frontend caller in the same commit as any Stripe route shape change.
 
-**Budget 3 weeks for Phase 2, not 1-2 weeks.**
+**For `handleApiError` helper design:**
+The helper must inspect the error type and return appropriate HTTP status codes — not just return 500 for all errors. Errors with message `'Unauthorized'` should return 401; patterns from Supabase/Stripe should map to their appropriate codes.
 
----
+**Before starting Phase 4.4 (TODO cleanup):**
+The TODOs in `episode-detail.tsx` (9 instances) and `settings-page.tsx` (3 instances) are active wiring tasks, not cosmetic comments. They mark mock data standing in for real API fields not yet connected. Do not remove them — they're a pre-launch completion checklist.
 
-### Finding 5: The Trigger.dev Timeout Blocks Real Use Before Phase 5
-**Source:** technical-feasibility, edge-cases agents
-
-CRIT-04 (30-minute Trigger.dev job timeout vs. 4-8 hour transcription for long podcasts) is identified in the plan but the fix is in Phase 5. This means a podcaster who uploads a 60-minute episode during Phases 0-4 will experience processing that silently times out with no error message.
-
-**The Phase 0 milestone must explicitly constrain to short audio (< 20 minutes) until Phase 5 completes.** This constraint is not in the current plan.
-
----
-
-### Finding 6: `grok-beta` Is an Unstable Model Identifier
-**Source:** technical-feasibility, edge-cases agents
-
-`grok-beta` is used in 7+ locations. This is a development/preview identifier. When xAI deprecates it, all AI generation fails simultaneously across every feature. The plan addresses this in Phase 1 — but it should be Phase 0 since it must be verified before the Phase 0 end-to-end test run.
-
-**Specify the target model identifier (e.g., `grok-2-1212` or whatever xAI's current stable production model is) before writing a single test command.**
+**Before starting anything:**
+Re-run the test suite and record the actual baseline. The plan says 789 passing / 12 failures, but CLAUDE.md says 513 and MEMORY.md says 750. The numbers differ. Know your actual baseline before starting so you can detect regressions.
 
 ---
 
 ## What the Plan Gets Right
 
-These items are correctly designed and should not change:
-
-- **Phase ordering (0→1→2→3→4→5→6→7)**: Correct. Bugs first, then polish, then auth, then billing, then marketing, then performance, then testing, then differentiation.
-- **The 10 core bug identifications**: All 10 bugs are real, correctly diagnosed, and the fix complexity estimates are accurate.
-- **Podcasting 2.0 Batch 1 strategy**: Near-zero cost, genuine user value (Apple Podcasts transcripts, chapter navigation), first-mover positioning. This is the best-ROI item in Phase 7.
-- **Taddy service layer architecture (`lib/taddy/`)**: Correctly follows the established service pattern.
-- **Auth before billing before marketing**: The phase ordering for the business-model phases is correct.
-- **Deferring T5 (Podcast Search & Discovery) to post-launch**: Correct prioritization.
-- **Taddy as the transcript source for pre-interview intelligence**: Only viable option with on-demand transcript access.
-- **The "data moat" as vocabulary learning, not guest credits cache**: The competitive analysis confirms per-show vocabulary is the unique moat; guest credits are table stakes.
-
----
-
-## Assumption Register
-
-Key assumptions with their validation status:
-
-| Assumption | Confidence | Validation Needed |
-|-----------|------------|-------------------|
-| Phase 0 fixes are genuinely 1-5 lines | HIGH — based on bug descriptions | First run confirms |
-| Single developer can do 15-22 weeks | MEDIUM — depends on interruptions | Weekly velocity tracking |
-| Taddy `persons` field adequate for expert discovery | LOW — plan notes 0% mainstream coverage | Required: run 10 topic searches before T2 |
-| $75/mo Taddy Pro sufficient for launch | MEDIUM — depends on T3 timing | Business plan required if T3 ships at launch |
-| $19/mo Pro pricing is competitive | MEDIUM — Castmagic charges $39-99 | Validate with pricing page A/B test |
-| PC2.0 adoption continues growing | MEDIUM — Apple Podcasts transcript support validates | Monitor quarterly |
-| Flywheel effect materializes | LOW — needs >12 months and meaningful user base | Long-term bet, not launch-day driver |
+The overall direction is sound:
+- API response helpers are the right abstraction at the right layer
+- supabase-client.ts removal is clean and correct
+- ESLint suppression fixes are valuable
+- Hook type standardization is safe and improves consistency
+- Unused import cleanup reduces noise
+- The "no file moves, no UI changes, no new features" scope constraints are exactly right
+- Test suite checkpoints after each phase are correct practice
+- The pre-launch timing is ideal — zero user disruption risk
 
 ---
 
-## Risk Register
+## Risk Summary
 
-Top 7 risks ordered by launch impact:
-
-| Risk | Probability | Impact | Mitigation |
-|------|-------------|--------|------------|
-| Timeline slip: 15-22 weeks vs. 8-11 | CERTAIN | HIGH | Set honest milestones, launch at Phase 4 if needed |
-| `grok-beta` deprecation before Phase 1 | MEDIUM | CRITICAL | Move to Phase 0: pin stable model ID |
-| Trigger.dev timeout for long audio | HIGH | HIGH | Constrain Phase 0 to <20 min audio; expedite Phase 5 |
-| Pre-interview route timeout (Phase 7) | CERTAIN if built as sync route | HIGH | Must use Trigger.dev job |
-| Rate limiting cost exposure | HIGH | MEDIUM | Move to Phase 0 |
-| Taddy `persons` field empty for most searches | HIGH | MEDIUM | Validate before T2 build; design fallback explicitly |
-| Transcript credit exhaustion (Pro plan) | HIGH if T3 launches | MEDIUM | Business plan for T3; Redis credit counter + graceful degradation |
-
----
-
-## Recommended Next Steps (Ordered)
-
-**This week:**
-1. **Start Phase 0.** Fix all 10 bugs PLUS the 4 additions above (fake integrations, grok-beta pin, rate limiting, episode title). Total: ~1.5-2 days.
-2. **Constrain Phase 0 tests to short audio** (< 20 minutes). Do not attempt long-form until Phase 5.
-
-**Phase 0 done:**
-3. **Set honest milestone dates.** Use the revised estimates: Phase 0-4 = ~8-11 weeks (MVP launch), Phase 5-7 = 7-11 more weeks (full roadmap).
-4. **Start Phase 1** with show notes editor as the priority item (the longest single task in the phase).
-
-**Before Phase 7:**
-5. **Run Taddy free tier validation.** Test `persons` field coverage on 10 representative topic searches. This determines whether T2 needs a fundamental rethink.
-6. **Decide T3 timing** (pre-launch vs. post-launch) to determine whether to subscribe to Taddy Pro or Business plan.
-7. **Confirm T3 uses Trigger.dev** (not a sync API route) before any Phase 7 code is written.
-
-**Ongoing:**
-8. **Build PC2.0 Batch 1 as a parallel track during Phases 5-6.** It has no dependencies and represents the earliest possible "first AI platform for Podcasting 2.0" positioning claim.
+| Risk | Severity | Status |
+|------|----------|--------|
+| formatDuration silent regression | HIGH | Requires plan correction |
+| xAI dynamic import runtime failure | HIGH | Requires plan correction |
+| Stripe checkout shape breaks frontend | HIGH | Requires frontend audit in Phase 2.3 |
+| Webhook routes get wrong format | HIGH | Requires explicit exclusion list |
+| handleApiError swallows HTTP status | MEDIUM | Requires careful implementation |
+| Test baseline discrepancy | MEDIUM | Verify before starting |
+| TODO removal of active wiring tasks | MEDIUM | Review each individually |
+| Phase 2 scope creep | LOW | Process discipline |
 
 ---
 
-## What Would Upgrade This to GO (No Modifications)
+## Effort Estimate
 
-The verdict moves to full GO if:
-- The 4 quick wins are added to Phase 0
-- Timeline expectations are calibrated to 15-22 weeks
-- The pre-interview route is explicitly designated as a Trigger.dev job
-- PC2.0 Batch 1 is moved to a Phase 5-6 parallel track
+| Phase | Estimate |
+|-------|----------|
+| Gate 0: Baseline | 30 min |
+| Gate 1: Safe Phase 1 items | 2-4 hours |
+| Gate 2: Corrected Phase 1 items | 2-4 hours |
+| Gate 3: Phase 2 API Routes | 8-14 hours |
+| Gate 4: Phase 3 Components/Hooks | 3-5 hours |
+| Gate 5: Phase 4 Types/Constants | 1-2 hours |
+| **Total** | **17-30 hours (2.5-4 developer days)** |
 
-These are documentation and planning changes, not code changes. The core plan is already sound.
-
----
-
-## What Would Change the Verdict to DEFER
-
-The verdict would move to DEFER only if:
-- Phase 0 bug fixes reveal deeper architectural problems (unlikely based on audit)
-- A competitor launches a significantly better product before Phase 2 (unlikely at current market maturity)
-- The developer is unavailable for the required 15-22 week commitment
+The plan underestimates Phase 2. Treat it as a per-route audit, not a bulk find-and-replace.
 
 ---
 
-## File Index
+## Full Reports
 
 All detailed analysis is in `/Users/zach/urban-octo-funicular/.scrutiny/`:
 
-| File | Contents |
-|------|----------|
-| `.scrutiny/normalized-plan.md` | Structured version of all 3 input documents |
-| `.scrutiny/analysis/technical-feasibility.md` | Phase 0 bugs, timeout issues, auth migration, model identifier risk, PC2.0 technical assessment |
-| `.scrutiny/analysis/scope-complexity.md` | Phase-by-phase effort estimates, timeline recalibration, single-developer velocity |
-| `.scrutiny/analysis/user-value.md` | Value delivery by phase, expert discovery dead-end, pre-interview as lead value, vocabulary feedback loop |
-| `.scrutiny/analysis/cost-benefit.md` | Per-episode economics, Taddy tier analysis, infrastructure costs, ROI by feature |
-| `.scrutiny/analysis/architecture-impact.md` | middleware.ts design, 3 xAI client consolidation, pre-interview Trigger.dev requirement, schema issues |
-| `.scrutiny/analysis/edge-cases.md` | 14 failure scenarios: timeout, rate limiting, transcript credit exhaustion, fake integrations |
-| `.scrutiny/analysis/competitive-context.md` | Market landscape, pricing analysis, PC2.0 competitive position, real data moat |
-| `.scrutiny/synthesis/verdict.md` | Synthesized MODIFY verdict with reasoning and modified plan |
-| `.scrutiny/planning/scope-decomposition.md` | Revised phase breakdown with corrected estimates and Phase 7 architecture |
+- `.scrutiny/analysis/technical-feasibility.md` — code-level findings, exact line references
+- `.scrutiny/analysis/scope-complexity.md` — phase complexity breakdown
+- `.scrutiny/analysis/user-value.md` — developer experience value assessment
+- `.scrutiny/analysis/cost-benefit.md` — time ROI analysis
+- `.scrutiny/analysis/architecture-impact.md` — module boundary and dependency analysis
+- `.scrutiny/analysis/edge-cases.md` — specific failure scenarios with probability
+- `.scrutiny/analysis/competitive-context.md` — strategic timing assessment
+- `.scrutiny/synthesis/verdict.md` — full synthesized verdict
+- `.scrutiny/synthesis/risk-register.md` — scored risk register with mitigations
+- `.scrutiny/synthesis/assumptions.md` — assumptions that are false, unverified, or confirmed
+- `.scrutiny/planning/scope-decomposition.md` — recommended execution order with gates and acceptance criteria

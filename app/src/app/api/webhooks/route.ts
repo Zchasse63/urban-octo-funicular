@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth, isValidUUID } from '@/lib/auth';
+import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers';
 import { encryptString } from '@/lib/buzzsprout/encryption';
-import type { ApiResponse } from '@/types/database';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -62,31 +62,15 @@ export async function GET() {
       .order('created_at', { ascending: false });
 
     if (error) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: error.message },
-        { status: 500 }
-      );
+      return errorResponse(error.message, 500);
     }
 
     // Mask secrets in the response — never return raw or encrypted secrets
     const masked = maskWebhookRecords((webhooks || []) as WebhookRecord[]);
 
-    return NextResponse.json<ApiResponse<{ webhooks: WebhookRecordMasked[] }>>({
-      data: { webhooks: masked },
-      error: null,
-    });
+    return successResponse({ webhooks: masked });
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Error fetching webhooks:', error);
-    return NextResponse.json<ApiResponse<null>>(
-      { data: null, error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'fetching webhooks');
   }
 }
 
@@ -99,35 +83,23 @@ export async function POST(request: NextRequest) {
 
     // Validate URL
     if (!body.url || typeof body.url !== 'string') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'URL is required' },
-        { status: 400 }
-      );
+      return errorResponse('URL is required', 400);
     }
 
     try {
       new URL(body.url);
     } catch {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid URL format' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid URL format', 400);
     }
 
     // Validate events
     if (!body.events || !Array.isArray(body.events) || body.events.length === 0) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'At least one event is required' },
-        { status: 400 }
-      );
+      return errorResponse('At least one event is required', 400);
     }
 
     const invalidEvents = body.events.filter((e) => !VALID_EVENTS.includes(e));
     if (invalidEvents.length > 0) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: `Invalid events: ${invalidEvents.join(', ')}. Valid events: ${VALID_EVENTS.join(', ')}` },
-        { status: 400 }
-      );
+      return errorResponse(`Invalid events: ${invalidEvents.join(', ')}. Valid events: ${VALID_EVENTS.join(', ')}`, 400);
     }
 
     // ── Encrypt the webhook secret before storing ──
@@ -154,30 +126,14 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: error.message },
-        { status: 500 }
-      );
+      return errorResponse(error.message, 500);
     }
 
     // Return masked response — never expose the stored secret
     const masked = maskWebhookRecords([webhook as WebhookRecord])[0];
 
-    return NextResponse.json<ApiResponse<WebhookRecordMasked>>(
-      { data: masked, error: null },
-      { status: 201 }
-    );
+    return successResponse(masked, 201);
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Error creating webhook:', error);
-    return NextResponse.json<ApiResponse<null>>(
-      { data: null, error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'creating webhook');
   }
 }

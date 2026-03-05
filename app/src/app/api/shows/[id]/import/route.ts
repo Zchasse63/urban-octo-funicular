@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth, isValidUUID } from '@/lib/auth';
+import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers';
 import { checkRateLimit } from '@/lib/rate-limit';
-import { canProcessEpisode, getTierLimits, getUserTier, getAudioHoursUsed } from '@/lib/tier-limits';
+import { getTierLimits, getUserTier, getAudioHoursUsed } from '@/lib/tier-limits';
 import { parseRSSFeed } from '@/lib/rss/parser';
-import type { ApiResponse } from '@/types/database';
 
 const MAX_IMPORT_EPISODES = 500;
 
@@ -35,19 +35,13 @@ export async function POST(
 
     // Validate show ID format
     if (!isValidUUID(showId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid show ID format' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid show ID format', 400);
     }
 
     // Rate limit: 5 imports per minute per user
     const rateLimitResult = await checkRateLimit(`rss-import:${userId}`, 5);
     if (!rateLimitResult.success) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Rate limit exceeded. Try again in a minute.' },
-        { status: 429 }
-      );
+      return errorResponse('Rate limit exceeded. Try again in a minute.', 429);
     }
 
     // Verify show ownership
@@ -60,10 +54,7 @@ export async function POST(
       .single();
 
     if (!show) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Show not found' },
-        { status: 404 }
-      );
+      return errorResponse('Show not found', 404);
     }
 
     // Parse request body
@@ -71,10 +62,7 @@ export async function POST(
     const feedUrl = body?.feedUrl;
 
     if (!feedUrl || typeof feedUrl !== 'string') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'feedUrl is required' },
-        { status: 400 }
-      );
+      return errorResponse('feedUrl is required', 400);
     }
 
     // Validate URL format
@@ -84,10 +72,7 @@ export async function POST(
         throw new Error('Invalid protocol');
       }
     } catch {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'feedUrl must be a valid http or https URL' },
-        { status: 400 }
-      );
+      return errorResponse('feedUrl must be a valid http or https URL', 400);
     }
 
     // Check audio hours tier limits before importing
@@ -97,12 +82,9 @@ export async function POST(
     const remainingHours = Math.max(0, limits.audioHoursPerMonth - hoursUsed);
 
     if (remainingHours <= 0) {
-      return NextResponse.json<ApiResponse<null>>(
-        {
-          data: null,
-          error: `You've used all ${limits.audioHoursPerMonth} audio hours this month on the ${tier} plan. Upgrade to import more episodes.`,
-        },
-        { status: 403 }
+      return errorResponse(
+        `You've used all ${limits.audioHoursPerMonth} audio hours this month on the ${tier} plan. Upgrade to import more episodes.`,
+        403
       );
     }
 
@@ -111,20 +93,14 @@ export async function POST(
     try {
       feed = await parseRSSFeed(feedUrl);
     } catch (error) {
-      return NextResponse.json<ApiResponse<null>>(
-        {
-          data: null,
-          error: `Failed to parse RSS feed: ${error instanceof Error ? error.message : 'unknown error'}`,
-        },
-        { status: 422 }
+      return errorResponse(
+        `Failed to parse RSS feed: ${error instanceof Error ? error.message : 'unknown error'}`,
+        422
       );
     }
 
     if (feed.episodes.length === 0) {
-      return NextResponse.json<ApiResponse<ImportResult>>({
-        data: { imported: 0, skipped: 0, total: 0, feedTitle: feed.title },
-        error: null,
-      });
+      return successResponse({ imported: 0, skipped: 0, total: 0, feedTitle: feed.title });
     }
 
     // Limit episodes to the max import limit
@@ -163,14 +139,11 @@ export async function POST(
     const skipped = episodesToProcess.length - newEpisodes.length;
 
     if (newEpisodes.length === 0) {
-      return NextResponse.json<ApiResponse<ImportResult>>({
-        data: {
-          imported: 0,
-          skipped,
-          total: feed.episodes.length,
-          feedTitle: feed.title,
-        },
-        error: null,
+      return successResponse({
+        imported: 0,
+        skipped,
+        total: feed.episodes.length,
+        feedTitle: feed.title,
       });
     }
 
@@ -200,32 +173,16 @@ export async function POST(
 
     if (insertError) {
       console.error('RSS import insert error:', insertError);
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: `Failed to import episodes: ${insertError.message}` },
-        { status: 500 }
-      );
+      return errorResponse(`Failed to import episodes: ${insertError.message}`, 500);
     }
 
-    return NextResponse.json<ApiResponse<ImportResult>>({
-      data: {
-        imported: newEpisodes.length,
-        skipped,
-        total: feed.episodes.length,
-        feedTitle: feed.title,
-      },
-      error: null,
+    return successResponse({
+      imported: newEpisodes.length,
+      skipped,
+      total: feed.episodes.length,
+      feedTitle: feed.title,
     });
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('RSS import error:', error);
-    return NextResponse.json<ApiResponse<null>>(
-      { data: null, error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'RSS import');
   }
 }

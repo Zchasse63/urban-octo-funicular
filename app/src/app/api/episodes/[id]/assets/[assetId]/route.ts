@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth, isValidUUID } from '@/lib/auth';
-import type { ApiResponse, GeneratedAsset } from '@/types/database';
+import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers';
+import type { GeneratedAsset } from '@/types/database';
 
 /**
  * GET /api/episodes/[id]/assets/[assetId]
@@ -16,10 +17,7 @@ export async function GET(
     const { id: episodeId, assetId } = await params;
 
     if (!isValidUUID(episodeId) || !isValidUUID(assetId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid ID format' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid ID format', 400);
     }
 
     const supabase = await createClient();
@@ -33,10 +31,7 @@ export async function GET(
       .single();
 
     if (fetchError || !episode) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode not found' },
-        { status: 404 }
-      );
+      return errorResponse('Episode not found', 404);
     }
 
     // Fetch the specific asset
@@ -48,31 +43,12 @@ export async function GET(
       .single();
 
     if (assetError || !asset) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Asset not found' },
-        { status: 404 }
-      );
+      return errorResponse('Asset not found', 404);
     }
 
-    return NextResponse.json<ApiResponse<GeneratedAsset>>({
-      data: asset,
-      error: null,
-    });
+    return successResponse<GeneratedAsset>(asset);
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Error fetching asset:', error);
-    return NextResponse.json<ApiResponse<null>>(
-      {
-        data: null,
-        error: error instanceof Error ? error.message : 'Internal server error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'fetching asset');
   }
 }
 
@@ -89,20 +65,14 @@ export async function PATCH(
     const { id: episodeId, assetId } = await params;
 
     if (!isValidUUID(episodeId) || !isValidUUID(assetId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid ID format' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid ID format', 400);
     }
 
     const body = await request.json();
     const { content } = body as { content: string };
 
     if (typeof content !== 'string') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Content is required and must be a string' },
-        { status: 400 }
-      );
+      return errorResponse('Content is required and must be a string', 400);
     }
 
     const supabase = await createClient();
@@ -116,10 +86,7 @@ export async function PATCH(
       .single();
 
     if (fetchError || !episode) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode not found' },
-        { status: 404 }
-      );
+      return errorResponse('Episode not found', 404);
     }
 
     // Verify the asset belongs to this episode
@@ -131,10 +98,7 @@ export async function PATCH(
       .single();
 
     if (assetLookupError || !existingAsset) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Asset not found for this episode' },
-        { status: 404 }
-      );
+      return errorResponse('Asset not found for this episode', 404);
     }
 
     // Merge existing metadata with edit tracking
@@ -158,30 +122,11 @@ export async function PATCH(
       .single();
 
     if (updateError) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: updateError.message },
-        { status: 500 }
-      );
+      return errorResponse(updateError.message, 500);
     }
 
-    return NextResponse.json<ApiResponse<GeneratedAsset>>({
-      data: updatedAsset,
-      error: null,
-    });
+    return successResponse<GeneratedAsset>(updatedAsset);
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Error updating asset:', error);
-    return NextResponse.json<ApiResponse<null>>(
-      {
-        data: null,
-        error: error instanceof Error ? error.message : 'Internal server error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'updating asset');
   }
 }

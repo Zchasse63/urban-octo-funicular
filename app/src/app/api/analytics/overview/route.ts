@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireAuth } from '@/lib/auth'
-import type { ApiResponse } from '@/types/database'
+import { errorResponse, handleApiError } from '@/lib/api/helpers'
 
 export interface AnalyticsOverview {
   episodeTrends: {
@@ -71,10 +71,7 @@ export async function GET(request: NextRequest) {
     const { data: episodes, error: episodesError } = await episodesQuery
 
     if (episodesError) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: episodesError.message },
-        { status: 500 }
-      )
+      return errorResponse(episodesError.message, 500)
     }
 
     // 1. Episode processing trends - group by week
@@ -186,7 +183,7 @@ export async function GET(request: NextRequest) {
       vocabularyGrowth,
     }
 
-    return NextResponse.json<ApiResponse<AnalyticsOverview>>(
+    return NextResponse.json(
       { data: overview, error: null },
       {
         headers: {
@@ -195,16 +192,6 @@ export async function GET(request: NextRequest) {
       }
     )
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-    console.error('Error fetching analytics:', error)
-    return NextResponse.json<ApiResponse<null>>(
-      { data: null, error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'fetching analytics')
   }
 }

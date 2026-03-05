@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth, isValidUUID } from '@/lib/auth';
+import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers';
 import { getBuzzsproutClient } from '@/lib/buzzsprout/helpers';
 import { logger } from '@/lib/logger';
-import type { ApiResponse, Episode } from '@/types/database';
+import type { Episode } from '@/types/database';
 import DOMPurify from 'isomorphic-dompurify';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -57,10 +58,7 @@ export async function POST(
     // Buzzsprout integration is available on all tiers
 
     if (!isValidUUID(episodeId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid episode ID format' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid episode ID format', 400);
     }
 
     // Parse and validate request body
@@ -71,10 +69,7 @@ export async function POST(
       typeof body.buzzsproutPodcastId !== 'string' ||
       body.buzzsproutPodcastId.length > 100
     ) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid or missing buzzsproutPodcastId' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid or missing buzzsproutPodcastId', 400);
     }
 
     if (
@@ -82,10 +77,7 @@ export async function POST(
       typeof body.buzzsproutEpisodeId !== 'string' ||
       body.buzzsproutEpisodeId.length > 100
     ) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid or missing buzzsproutEpisodeId' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid or missing buzzsproutEpisodeId', 400);
     }
 
     const supabase = await createClient();
@@ -104,10 +96,7 @@ export async function POST(
       .single();
 
     if (fetchError || !episode) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode not found' },
-        { status: 404 }
-      );
+      return errorResponse('Episode not found', 404);
     }
 
     const ep = episode as unknown as Pick<
@@ -116,13 +105,9 @@ export async function POST(
     >;
 
     if (!ep.show_notes) {
-      return NextResponse.json<ApiResponse<null>>(
-        {
-          data: null,
-          error:
-            'No show notes available. Process the episode first to generate show notes.',
-        },
-        { status: 400 }
+      return errorResponse(
+        'No show notes available. Process the episode first to generate show notes.',
+        400
       );
     }
 
@@ -134,13 +119,9 @@ export async function POST(
     try {
       client = await getBuzzsproutClient(userId);
     } catch {
-      return NextResponse.json<ApiResponse<null>>(
-        {
-          data: null,
-          error:
-            'No Buzzsprout connection found. Connect your Buzzsprout account in Settings first.',
-        },
-        { status: 404 }
+      return errorResponse(
+        'No Buzzsprout connection found. Connect your Buzzsprout account in Settings first.',
+        404
       );
     }
 
@@ -156,35 +137,11 @@ export async function POST(
       buzzsprout_episode_id: body.buzzsproutEpisodeId,
     });
 
-    return NextResponse.json<ApiResponse<BuzzsproutInjectResponse>>({
-      data: {
-        success: true,
-        buzzsproutEpisodeId: body.buzzsproutEpisodeId,
-      },
-      error: null,
+    return successResponse<BuzzsproutInjectResponse>({
+      success: true,
+      buzzsproutEpisodeId: body.buzzsproutEpisodeId,
     });
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    logger.error(
-      'Buzzsprout inject error',
-      error instanceof Error ? error : { error }
-    );
-
-    return NextResponse.json<ApiResponse<null>>(
-      {
-        data: null,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to push show notes to Buzzsprout',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'pushing show notes to Buzzsprout');
   }
 }

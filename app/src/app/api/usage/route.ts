@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
+import { successResponse, handleApiError } from '@/lib/api/helpers'
 import {
   getUserTier,
   getTierLimits,
@@ -7,7 +7,6 @@ import {
   getShowCount,
   getBillingPeriod,
 } from '@/lib/tier-limits'
-import type { ApiResponse } from '@/types/database'
 
 interface UsageData {
   tier: string
@@ -58,21 +57,8 @@ export async function GET() {
       },
     }
 
-    return NextResponse.json<ApiResponse<UsageData>>({
-      data: usage,
-      error: null,
-    })
+    return successResponse(usage)
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-    console.error('Error fetching usage:', error)
-    return NextResponse.json<ApiResponse<null>>(
-      { data: null, error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'fetching usage')
   }
 }

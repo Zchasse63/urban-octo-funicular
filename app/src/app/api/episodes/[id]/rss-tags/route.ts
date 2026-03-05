@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth, isValidUUID } from '@/lib/auth';
+import { errorResponse, handleApiError } from '@/lib/api/helpers';
 import {
   generatePersonTags,
   generateSoundbiteTags,
@@ -17,7 +18,7 @@ import type {
 import { generateRSSSnippet } from '@/lib/podcasting2/rss-snippet';
 import type { LocationTag } from '@/lib/podcasting2/tag-generators';
 import { extractLocations } from '@/lib/podcasting2/location-extractor';
-import type { ApiResponse, Episode, ViralMoment } from '@/types/database';
+import type { Episode, ViralMoment } from '@/types/database';
 
 // ─── Response Types ──────────────────────────────────────────────────────────
 
@@ -118,10 +119,7 @@ export async function GET(
     const { id: episodeId } = await params;
 
     if (!isValidUUID(episodeId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid ID format' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid ID format', 400);
     }
 
     const supabase = await createClient();
@@ -140,10 +138,7 @@ export async function GET(
       .single();
 
     if (fetchError || !episode) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode not found' },
-        { status: 404 }
-      );
+      return errorResponse('Episode not found', 404);
     }
 
     const ep = episode as unknown as Episode & {
@@ -347,7 +342,7 @@ export async function GET(
       },
     };
 
-    return NextResponse.json<ApiResponse<RSSTagsResponse>>(
+    return NextResponse.json(
       {
         data: response,
         error: null,
@@ -360,22 +355,6 @@ export async function GET(
       }
     );
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Error generating RSS tags:', error);
-    return NextResponse.json<ApiResponse<null>>(
-      {
-        data: null,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Internal server error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'generating RSS tags');
   }
 }

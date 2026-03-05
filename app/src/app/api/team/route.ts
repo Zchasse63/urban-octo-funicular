@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireAuth } from '@/lib/auth'
+import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers'
 import { getUserTier, getTierLimits } from '@/lib/tier-limits'
-import type { ApiResponse } from '@/types/database'
 
 export interface TeamMember {
   id: string
@@ -32,10 +32,7 @@ export async function GET() {
       .order('created_at', { ascending: false })
 
     if (error) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: error.message },
-        { status: 500 }
-      )
+      return errorResponse(error.message, 500)
     }
 
     // Get seat limit
@@ -54,17 +51,7 @@ export async function GET() {
       tier,
     })
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-    console.error('Error fetching team members:', error)
-    return NextResponse.json<ApiResponse<null>>(
-      { data: null, error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'fetching team members')
   }
 }
 
@@ -83,10 +70,7 @@ export async function POST(request: NextRequest) {
     const limits = getTierLimits(tier)
 
     if (limits.teamSeats <= 1) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Team collaboration requires the Agency plan. Please upgrade to invite team members.' },
-        { status: 403 }
-      )
+      return errorResponse('Team collaboration requires the Agency plan. Please upgrade to invite team members.', 403)
     }
 
     // Count current active/pending members
@@ -97,37 +81,25 @@ export async function POST(request: NextRequest) {
       .in('status', ['pending', 'active'])
 
     if (countError) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: countError.message },
-        { status: 500 }
-      )
+      return errorResponse(countError.message, 500)
     }
 
     if ((seatCount || 0) >= limits.teamSeats) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: `You've reached your ${limits.teamSeats} team seat limit. Remove a member to add a new one.` },
-        { status: 403 }
-      )
+      return errorResponse(`You've reached your ${limits.teamSeats} team seat limit. Remove a member to add a new one.`, 403)
     }
 
     const body = await request.json()
 
     // Validate email
     if (!body.email || typeof body.email !== 'string' || !body.email.includes('@')) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Valid email address is required' },
-        { status: 400 }
-      )
+      return errorResponse('Valid email address is required', 400)
     }
 
     // Validate role
     const validRoles = ['admin', 'editor', 'viewer']
     const role = body.role || 'editor'
     if (!validRoles.includes(role)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Role must be admin, editor, or viewer' },
-        { status: 400 }
-      )
+      return errorResponse('Role must be admin, editor, or viewer', 400)
     }
 
     const email = body.email.trim().toLowerCase()
@@ -142,10 +114,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
 
     if (existing) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'This email has already been invited to your team' },
-        { status: 409 }
-      )
+      return errorResponse('This email has already been invited to your team', 409)
     }
 
     // Look up user by email to get member_user_id
@@ -172,35 +141,16 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       if (insertError.code === '23505') {
-        return NextResponse.json<ApiResponse<null>>(
-          { data: null, error: 'This user is already on your team' },
-          { status: 409 }
-        )
+        return errorResponse('This user is already on your team', 409)
       }
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: insertError.message },
-        { status: 500 }
-      )
+      return errorResponse(insertError.message, 500)
     }
 
     // Note: Email notification would be sent here via Resend
     // Skipping for now — just create the record
 
-    return NextResponse.json<ApiResponse<TeamMember>>(
-      { data: member, error: null },
-      { status: 201 }
-    )
+    return successResponse(member, 201)
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-    console.error('Error inviting team member:', error)
-    return NextResponse.json<ApiResponse<null>>(
-      { data: null, error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'inviting team member')
   }
 }

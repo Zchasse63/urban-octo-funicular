@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth, isValidUUID } from '@/lib/auth';
-import type { ApiResponse, Episode } from '@/types/database';
+import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers';
+import type { Episode } from '@/types/database';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -63,10 +64,7 @@ export async function GET(
     const { id: episodeId } = await params;
 
     if (!isValidUUID(episodeId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid ID format' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid ID format', 400);
     }
 
     const supabase = await createClient();
@@ -79,38 +77,19 @@ export async function GET(
       .single();
 
     if (fetchError || !episode) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode not found' },
-        { status: 404 }
-      );
+      return errorResponse('Episode not found', 404);
     }
 
     const metadata = (episode.metadata || {}) as Record<string, unknown>;
     const abVariants = metadata.ab_variants as Record<string, unknown> | undefined;
 
     if (!abVariants) {
-      return NextResponse.json<ApiResponse<null>>({
-        data: null,
-        error: null,
-      });
+      return successResponse(null);
     }
 
-    return NextResponse.json<ApiResponse<Record<string, unknown>>>({
-      data: abVariants,
-      error: null,
-    });
+    return successResponse(abVariants);
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Error fetching A/B test variants:', error);
-    return NextResponse.json<ApiResponse<null>>(
-      { data: null, error: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'fetching A/B test variants');
   }
 }
 
@@ -129,20 +108,14 @@ export async function POST(
     const { id: episodeId } = await params;
 
     if (!isValidUUID(episodeId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid ID format' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid ID format', 400);
     }
 
     const body: ABTestPostBody = await request.json();
     const { field, variantCount = 3 } = body;
 
     if (!field || !['title', 'description'].includes(field)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'field must be "title" or "description"' },
-        { status: 400 }
-      );
+      return errorResponse('field must be "title" or "description"', 400);
     }
 
     const clampedCount = Math.min(Math.max(2, variantCount), 5);
@@ -158,10 +131,7 @@ export async function POST(
       .single();
 
     if (fetchError || !episode) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode not found' },
-        { status: 404 }
-      );
+      return errorResponse('Episode not found', 404);
     }
 
     const ep = episode as unknown as Episode & {
@@ -197,10 +167,7 @@ Generate ${clampedCount} ${field} variants.`;
 
     const apiKey = process.env.XAI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'AI service not configured' },
-        { status: 503 }
-      );
+      return errorResponse('AI service not configured', 503);
     }
 
     const aiResponse = await fetch('https://api.x.ai/v1/chat/completions', {
@@ -273,21 +240,8 @@ Generate ${clampedCount} ${field} variants.`;
       })
       .eq('id', episodeId);
 
-    return NextResponse.json<ApiResponse<ABTestResponse>>({
-      data: abTestData,
-      error: null,
-    });
+    return successResponse<ABTestResponse>(abTestData);
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Error generating A/B test variants:', error);
-    return NextResponse.json<ApiResponse<null>>(
-      { data: null, error: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'generating A/B test variants');
   }
 }

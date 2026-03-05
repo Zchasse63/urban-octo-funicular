@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth, isValidUUID } from '@/lib/auth';
+import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers';
 import { analyzeSEO, type SEOAnalysisResult } from '@/lib/seo/analyzer';
 import {
   generatePodcastEpisodeSchema,
   type PodcastEpisodeSchema,
 } from '@/lib/seo/schema-generator';
-import type { ApiResponse, Episode, SEOAnalysis } from '@/types/database';
+import type { Episode, SEOAnalysis } from '@/types/database';
 
 interface SEOResponse {
   analysis: SEOAnalysisResult;
@@ -40,10 +41,7 @@ export async function GET(
     const { id: episodeId } = await params;
 
     if (!isValidUUID(episodeId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid ID format' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid ID format', 400);
     }
 
     const supabase = await createClient();
@@ -60,10 +58,7 @@ export async function GET(
       .single();
 
     if (fetchError || !episode) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode not found' },
-        { status: 404 }
-      );
+      return errorResponse('Episode not found', 404);
     }
 
     // Run SEO analysis on show notes
@@ -90,29 +85,12 @@ export async function GET(
       },
     };
 
-    return NextResponse.json<ApiResponse<SEOResponse>>({
-      data: response,
-      error: null,
-    }, {
-      headers: {
-        'Cache-Control': 'private, max-age=60, stale-while-revalidate=120',
-      },
-    });
-  } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Error getting SEO analysis:', error);
-    return NextResponse.json<ApiResponse<null>>(
-      {
-        data: null,
-        error: error instanceof Error ? error.message : 'Internal server error',
-      },
-      { status: 500 }
+    return NextResponse.json(
+      { data: response, error: null },
+      { headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=120' } }
     );
+  } catch (error) {
+    return handleApiError(error, 'getting SEO analysis');
   }
 }
 
@@ -129,10 +107,7 @@ export async function POST(
     const { id: episodeId } = await params;
 
     if (!isValidUUID(episodeId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid ID format' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid ID format', 400);
     }
 
     const body: SEOFixRequest = await request.json();
@@ -150,10 +125,7 @@ export async function POST(
       .single();
 
     if (fetchError || !episode) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode not found' },
-        { status: 404 }
-      );
+      return errorResponse('Episode not found', 404);
     }
 
     // Build update object based on what was provided
@@ -184,10 +156,7 @@ export async function POST(
       .eq('id', episodeId);
 
     if (updateError) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: updateError.message },
-        { status: 500 }
-      );
+      return errorResponse(updateError.message, 500);
     }
 
     // Re-analyze SEO after fix
@@ -212,33 +181,13 @@ export async function POST(
       })
       .eq('id', episodeId);
 
-    return NextResponse.json<ApiResponse<{
-      success: boolean;
-      newScore: number;
-      fixId: string;
-    }>>({
-      data: {
-        success: true,
-        newScore: newAnalysis.overallScore,
-        fixId: body.fixId,
-      },
-      error: null,
+    return successResponse({
+      success: true,
+      newScore: newAnalysis.overallScore,
+      fixId: body.fixId,
     });
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Error applying SEO fix:', error);
-    return NextResponse.json<ApiResponse<null>>(
-      {
-        data: null,
-        error: error instanceof Error ? error.message : 'Internal server error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'applying SEO fix');
   }
 }
 
@@ -255,10 +204,7 @@ export async function PUT(
     const { id: episodeId } = await params;
 
     if (!isValidUUID(episodeId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid ID format' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid ID format', 400);
     }
 
     const supabase = await createClient();
@@ -275,10 +221,7 @@ export async function PUT(
       .single();
 
     if (fetchError || !episode) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode not found' },
-        { status: 404 }
-      );
+      return errorResponse('Episode not found', 404);
     }
 
     // Run fresh SEO analysis
@@ -315,39 +258,20 @@ export async function PUT(
       .eq('id', episodeId);
 
     if (updateError) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: updateError.message },
-        { status: 500 }
-      );
+      return errorResponse(updateError.message, 500);
     }
 
-    return NextResponse.json<ApiResponse<SEOResponse>>({
-      data: {
-        analysis,
-        schema,
-        episode: {
-          id: episode.id,
-          title: episode.title,
-          description: episode.description,
-          seo_score: analysis.overallScore,
-        },
+    return successResponse<SEOResponse>({
+      analysis,
+      schema,
+      episode: {
+        id: episode.id,
+        title: episode.title,
+        description: episode.description,
+        seo_score: analysis.overallScore,
       },
-      error: null,
     });
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Error regenerating SEO analysis:', error);
-    return NextResponse.json<ApiResponse<null>>(
-      {
-        data: null,
-        error: error instanceof Error ? error.message : 'Internal server error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'regenerating SEO analysis');
   }
 }

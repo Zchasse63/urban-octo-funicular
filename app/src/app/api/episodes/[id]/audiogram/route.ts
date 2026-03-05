@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireAuth, isValidUUID } from '@/lib/auth';
-import type { ApiResponse } from '@/types/database';
+import { errorResponse, handleApiError } from '@/lib/api/helpers';
 
 /**
  * POST /api/episodes/[id]/audiogram
@@ -19,32 +19,16 @@ export async function POST(
     const { id: episodeId } = await params;
 
     if (!isValidUUID(episodeId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid ID format' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid ID format', 400);
     }
 
-    return NextResponse.json<ApiResponse<null>>(
-      {
-        data: null,
-        error:
-          'Audiogram generation is not yet implemented. ' +
-          'This feature requires the Remotion video rendering library (@remotion/renderer). ' +
-          'See app/src/lib/audiogram/README.md for the implementation plan and architecture.',
-      },
-      { status: 501 }
+    return errorResponse(
+      'Audiogram generation is not yet implemented. ' +
+        'This feature requires the Remotion video rendering library (@remotion/renderer). ' +
+        'See app/src/lib/audiogram/README.md for the implementation plan and architecture.',
+      501
     );
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    return NextResponse.json<ApiResponse<null>>(
-      { data: null, error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'audiogram generation');
   }
 }

@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe/client'
 import { createClient } from '@/lib/supabase/server'
 import { requireAuth } from '@/lib/auth'
+import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers'
 
 interface InvoiceData {
   id: string
@@ -26,7 +26,7 @@ export async function GET() {
       .maybeSingle()
 
     if (!sub?.stripe_customer_id) {
-      return NextResponse.json({ data: [], error: null })
+      return successResponse([])
     }
 
     // Fetch invoices from Stripe
@@ -45,12 +45,8 @@ export async function GET() {
       description: inv.lines?.data?.[0]?.description || null,
     }))
 
-    return NextResponse.json({ data: invoiceData, error: null })
+    return successResponse(invoiceData)
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json({ data: null, error: 'Unauthorized' }, { status: 401 })
-    }
-    console.error('Error fetching invoices:', error)
-    return NextResponse.json({ data: null, error: 'Failed to fetch invoices' }, { status: 500 })
+    return handleApiError(error, 'fetching invoices')
   }
 }

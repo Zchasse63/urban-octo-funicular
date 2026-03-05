@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireAuth } from '@/lib/auth'
+import { errorResponse, successResponse, handleApiError, parsePagination } from '@/lib/api/helpers'
 import { canProcessEpisode } from '@/lib/tier-limits'
-import { PAGINATION } from '@/lib/constants'
-import type { EpisodeListItem, ApiResponse, PaginatedResponse, Episode } from '@/types/database'
+import type { EpisodeListItem, PaginatedResponse } from '@/types/database'
 
 /**
  * GET /api/episodes
@@ -17,12 +17,7 @@ export async function GET(request: NextRequest) {
 
     const showId = searchParams.get('show_id')
     const status = searchParams.get('status')
-    const page = parseInt(searchParams.get('page') || '1', 10)
-    const perPage = Math.min(
-      parseInt(searchParams.get('per_page') || String(PAGINATION.defaultPageSize), 10),
-      PAGINATION.maxPageSize
-    )
-    const offset = (page - 1) * perPage
+    const { page, perPage, offset } = parsePagination(searchParams)
 
     // Build base query for count
     let countQuery = supabase
@@ -41,10 +36,7 @@ export async function GET(request: NextRequest) {
     const { count, error: countError } = await countQuery
 
     if (countError) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: countError.message },
-        { status: 500 }
-      )
+      return errorResponse(countError.message, 500)
     }
 
     // Build data query
@@ -84,10 +76,7 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + perPage - 1)
 
     if (error) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: error.message },
-        { status: 500 }
-      )
+      return errorResponse(error.message, 500)
     }
 
     return NextResponse.json<PaginatedResponse<EpisodeListItem>>({
@@ -97,17 +86,7 @@ export async function GET(request: NextRequest) {
       per_page: perPage,
     })
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-    console.error('Error fetching episodes:', error)
-    return NextResponse.json<ApiResponse<null>>(
-      { data: null, error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'fetching episodes')
   }
 }
 
@@ -122,10 +101,7 @@ export async function POST(request: NextRequest) {
     // Tier enforcement: check audio hours limit
     const hoursCheck = await canProcessEpisode(userId)
     if (!hoursCheck.allowed) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: hoursCheck.reason || 'Audio hours limit reached' },
-        { status: 403 }
-      )
+      return errorResponse(hoursCheck.reason || 'Audio hours limit reached', 403)
     }
 
     const supabase = await createClient()
@@ -143,17 +119,11 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!show_id) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'show_id is required' },
-        { status: 400 }
-      )
+      return errorResponse('show_id is required', 400)
     }
 
     if (!audio_url) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'audio_url is required' },
-        { status: 400 }
-      )
+      return errorResponse('audio_url is required', 400)
     }
 
     // Verify the show exists and belongs to the user
@@ -165,10 +135,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (showError || !show) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Show not found or access denied' },
-        { status: 404 }
-      )
+      return errorResponse('Show not found or access denied', 404)
     }
 
     // Insert the new episode
@@ -189,27 +156,11 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: error.message },
-        { status: 500 }
-      )
+      return errorResponse(error.message, 500)
     }
 
-    return NextResponse.json<ApiResponse<Episode>>(
-      { data: episode, error: null },
-      { status: 201 }
-    )
+    return successResponse(episode, 201)
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-    console.error('Error creating episode:', error)
-    return NextResponse.json<ApiResponse<null>>(
-      { data: null, error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'creating episode')
   }
 }

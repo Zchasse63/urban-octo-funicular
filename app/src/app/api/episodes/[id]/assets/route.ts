@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth, isValidUUID } from '@/lib/auth';
+import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers';
 import { rateLimitByIP } from '@/lib/rate-limit';
 import { getUserTier, canGenerateAssetType } from '@/lib/tier-limits';
 import {
@@ -8,7 +9,7 @@ import {
   buildAssetContext,
   formatAssetForStorage,
 } from '@/lib/content';
-import type { ApiResponse, GeneratedAsset, AssetType, Episode } from '@/types/database';
+import type { GeneratedAsset, AssetType, Episode } from '@/types/database';
 
 interface GenerateAssetRequest {
   assetType: AssetType;
@@ -33,10 +34,7 @@ export async function GET(
     const { id: episodeId } = await params;
 
     if (!isValidUUID(episodeId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid ID format' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid ID format', 400);
     }
 
     const supabase = await createClient();
@@ -56,10 +54,7 @@ export async function GET(
       .single();
 
     if (fetchError || !episode) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode not found' },
-        { status: 404 }
-      );
+      return errorResponse('Episode not found', 404);
     }
 
     // Build query for assets
@@ -76,38 +71,15 @@ export async function GET(
     const { data: assets, error: assetsError } = await query;
 
     if (assetsError) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: assetsError.message },
-        { status: 500 }
-      );
+      return errorResponse(assetsError.message, 500);
     }
 
-    return NextResponse.json<ApiResponse<AssetsResponse>>({
-      data: {
-        assets: assets || [],
-        episodeId,
-      },
-      error: null,
-    }, {
-      headers: {
-        'Cache-Control': 'private, max-age=60, stale-while-revalidate=120',
-      },
-    });
-  } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Error fetching assets:', error);
-    return NextResponse.json<ApiResponse<null>>(
-      {
-        data: null,
-        error: error instanceof Error ? error.message : 'Internal server error',
-      },
-      { status: 500 }
+    return NextResponse.json(
+      { data: { assets: assets || [], episodeId }, error: null },
+      { headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=120' } }
     );
+  } catch (error) {
+    return handleApiError(error, 'fetching assets');
   }
 }
 
@@ -124,7 +96,7 @@ export async function POST(
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     const rateLimit = await rateLimitByIP(ip, 20);
     if (!rateLimit.success) {
-      return NextResponse.json<ApiResponse<null>>(
+      return NextResponse.json(
         { data: null, error: "Too many requests. Please try again later." },
         { status: 429, headers: { "Retry-After": String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)) } }
       );
@@ -134,10 +106,7 @@ export async function POST(
     const { id: episodeId } = await params;
 
     if (!isValidUUID(episodeId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid ID format' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid ID format', 400);
     }
 
     const body: GenerateAssetRequest = await request.json();
@@ -145,12 +114,9 @@ export async function POST(
     // ── Tier gate: check if user can generate this asset type ──
     const tier = await getUserTier(userId);
     if (!canGenerateAssetType(tier, body.assetType)) {
-      return NextResponse.json<ApiResponse<null>>(
-        {
-          data: null,
-          error: `The "${body.assetType}" asset type requires a Pro or Agency plan. Upgrade to unlock advanced content generation.`,
-        },
-        { status: 403 }
+      return errorResponse(
+        `The "${body.assetType}" asset type requires a Pro or Agency plan. Upgrade to unlock advanced content generation.`,
+        403
       );
     }
 
@@ -168,17 +134,11 @@ export async function POST(
       .single();
 
     if (fetchError || !episode) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode not found' },
-        { status: 404 }
-      );
+      return errorResponse('Episode not found', 404);
     }
 
     if (!episode.transcript) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode must be transcribed before generating assets' },
-        { status: 400 }
-      );
+      return errorResponse('Episode must be transcribed before generating assets', 400);
     }
 
     // Check if asset already exists (unless regenerate is requested)
@@ -191,13 +151,7 @@ export async function POST(
         .single();
 
       if (existingAsset) {
-        return NextResponse.json<ApiResponse<null>>(
-          {
-            data: null,
-            error: 'Asset already exists. Use regenerate: true to replace it.',
-          },
-          { status: 409 }
-        );
+        return errorResponse('Asset already exists. Use regenerate: true to replace it.', 409);
       }
     }
 
@@ -217,10 +171,7 @@ export async function POST(
     const result = await generateAsset(body.assetType, context);
 
     if (!result.success) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: result.error || 'Failed to generate asset' },
-        { status: 500 }
-      );
+      return errorResponse(result.error || 'Failed to generate asset', 500);
     }
 
     // Only delete old asset AFTER new one generated successfully
@@ -249,31 +200,12 @@ export async function POST(
       .single();
 
     if (insertError) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: insertError.message },
-        { status: 500 }
-      );
+      return errorResponse(insertError.message, 500);
     }
 
-    return NextResponse.json<ApiResponse<GeneratedAsset>>({
-      data: newAsset,
-      error: null,
-    });
+    return successResponse(newAsset);
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Error generating asset:', error);
-    return NextResponse.json<ApiResponse<null>>(
-      {
-        data: null,
-        error: error instanceof Error ? error.message : 'Internal server error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'generating asset');
   }
 }
 
@@ -290,10 +222,7 @@ export async function DELETE(
     const { id: episodeId } = await params;
 
     if (!isValidUUID(episodeId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid ID format' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid ID format', 400);
     }
 
     const supabase = await createClient();
@@ -303,10 +232,7 @@ export async function DELETE(
     const assetId = searchParams.get('id');
 
     if (!assetType && !assetId) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Must provide either type or id parameter' },
-        { status: 400 }
-      );
+      return errorResponse('Must provide either type or id parameter', 400);
     }
 
     // Verify episode exists and user has access
@@ -321,10 +247,7 @@ export async function DELETE(
       .single();
 
     if (fetchError || !episode) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode not found' },
-        { status: 404 }
-      );
+      return errorResponse('Episode not found', 404);
     }
 
     // Build delete query
@@ -342,30 +265,11 @@ export async function DELETE(
     const { error: deleteError } = await query;
 
     if (deleteError) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: deleteError.message },
-        { status: 500 }
-      );
+      return errorResponse(deleteError.message, 500);
     }
 
-    return NextResponse.json<ApiResponse<{ deleted: boolean }>>({
-      data: { deleted: true },
-      error: null,
-    });
+    return successResponse({ deleted: true });
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Error deleting asset:', error);
-    return NextResponse.json<ApiResponse<null>>(
-      {
-        data: null,
-        error: error instanceof Error ? error.message : 'Internal server error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'deleting asset');
   }
 }

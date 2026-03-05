@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireAuth, isValidUUID } from '@/lib/auth'
-import type { VocabularyTerm, ApiResponse } from '@/types/database'
+import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers'
+import type { VocabularyTerm } from '@/types/database'
 
 // Omit the large embedding vector from API responses
 type VocabularyTermResponse = Omit<VocabularyTerm, 'embedding'>
@@ -16,10 +17,7 @@ export async function GET(
     const { id: showId } = await params
 
     if (!isValidUUID(showId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid ID format' },
-        { status: 400 }
-      )
+      return errorResponse('Invalid ID format', 400)
     }
 
     // Verify show belongs to user
@@ -31,10 +29,7 @@ export async function GET(
       .single()
 
     if (!show) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Show not found' },
-        { status: 404 }
-      )
+      return errorResponse('Show not found', 404)
     }
 
     const { data: terms, error } = await supabase
@@ -44,27 +39,12 @@ export async function GET(
       .order('created_at', { ascending: false })
 
     if (error) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: error.message },
-        { status: 500 }
-      )
+      return errorResponse(error.message, 500)
     }
 
-    return NextResponse.json<ApiResponse<VocabularyTermResponse[]>>(
-      { data: terms || [], error: null }
-    )
+    return successResponse(terms || [])
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-    console.error('Error fetching vocabulary:', error)
-    return NextResponse.json<ApiResponse<null>>(
-      { data: null, error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'fetching vocabulary')
   }
 }
 
@@ -79,19 +59,13 @@ export async function POST(
     const body = await request.json()
 
     if (!isValidUUID(showId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid ID format' },
-        { status: 400 }
-      )
+      return errorResponse('Invalid ID format', 400)
     }
 
     const { term, alternatives = [] } = body
 
     if (!term) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'term is required' },
-        { status: 400 }
-      )
+      return errorResponse('term is required', 400)
     }
 
     // Verify show belongs to user
@@ -103,10 +77,7 @@ export async function POST(
       .single()
 
     if (!show) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Show not found' },
-        { status: 404 }
-      )
+      return errorResponse('Show not found', 404)
     }
 
     const { data: newTerm, error } = await supabase
@@ -121,28 +92,12 @@ export async function POST(
       .single()
 
     if (error) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: error.message },
-        { status: 500 }
-      )
+      return errorResponse(error.message, 500)
     }
 
-    return NextResponse.json<ApiResponse<VocabularyTermResponse>>(
-      { data: newTerm, error: null },
-      { status: 201 }
-    )
+    return successResponse(newTerm, 201)
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-    console.error('Error creating vocabulary term:', error)
-    return NextResponse.json<ApiResponse<null>>(
-      { data: null, error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'creating vocabulary term')
   }
 }
 
@@ -158,17 +113,11 @@ export async function DELETE(
     const termId = searchParams.get('term_id')
 
     if (!isValidUUID(showId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid ID format' },
-        { status: 400 }
-      )
+      return errorResponse('Invalid ID format', 400)
     }
 
     if (!termId) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'term_id is required' },
-        { status: 400 }
-      )
+      return errorResponse('term_id is required', 400)
     }
 
     // Verify show belongs to user
@@ -180,10 +129,7 @@ export async function DELETE(
       .single()
 
     if (!show) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Show not found' },
-        { status: 404 }
-      )
+      return errorResponse('Show not found', 404)
     }
 
     const { error } = await supabase
@@ -193,26 +139,11 @@ export async function DELETE(
       .eq('show_id', showId)
 
     if (error) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: error.message },
-        { status: 500 }
-      )
+      return errorResponse(error.message, 500)
     }
 
-    return NextResponse.json<ApiResponse<{ deleted: true }>>(
-      { data: { deleted: true }, error: null }
-    )
+    return successResponse({ deleted: true })
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-    console.error('Error deleting vocabulary term:', error)
-    return NextResponse.json<ApiResponse<null>>(
-      { data: null, error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'deleting vocabulary term')
   }
 }

@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth, isValidUUID } from '@/lib/auth';
-import type { ApiResponse, Episode } from '@/types/database';
+import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers';
+import type { Episode } from '@/types/database';
 
 /**
  * GET /api/episodes/[id]
@@ -16,10 +17,7 @@ export async function GET(
     const { id: episodeId } = await params;
 
     if (!isValidUUID(episodeId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid ID format' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid ID format', 400);
     }
 
     const supabase = await createClient();
@@ -35,31 +33,12 @@ export async function GET(
       .single();
 
     if (fetchError || !episode) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode not found' },
-        { status: 404 }
-      );
+      return errorResponse('Episode not found', 404);
     }
 
-    return NextResponse.json<ApiResponse<Episode>>({
-      data: episode as unknown as Episode,
-      error: null,
-    });
+    return successResponse(episode as unknown as Episode);
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Error fetching episode:', error);
-    return NextResponse.json<ApiResponse<null>>(
-      {
-        data: null,
-        error: error instanceof Error ? error.message : 'Internal server error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'fetching episode');
   }
 }
 
@@ -89,10 +68,7 @@ export async function PUT(
     const { id: episodeId } = await params;
 
     if (!isValidUUID(episodeId)) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Invalid ID format' },
-        { status: 400 }
-      );
+      return errorResponse('Invalid ID format', 400);
     }
 
     const body = await request.json();
@@ -110,10 +86,7 @@ export async function PUT(
       .single();
 
     if (fetchError || !episode) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Episode not found' },
-        { status: 404 }
-      );
+      return errorResponse('Episode not found', 404);
     }
 
     // Filter to only allowed fields
@@ -125,10 +98,7 @@ export async function PUT(
     }
 
     if (Object.keys(updates).length === 0) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'No valid fields to update' },
-        { status: 400 }
-      );
+      return errorResponse('No valid fields to update', 400);
     }
 
     // Perform the update
@@ -140,30 +110,11 @@ export async function PUT(
       .single();
 
     if (updateError) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: updateError.message },
-        { status: 500 }
-      );
+      return errorResponse(updateError.message, 500);
     }
 
-    return NextResponse.json<ApiResponse<Episode>>({
-      data: updated as unknown as Episode,
-      error: null,
-    });
+    return successResponse(updated as unknown as Episode);
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Error updating episode:', error);
-    return NextResponse.json<ApiResponse<null>>(
-      {
-        data: null,
-        error: error instanceof Error ? error.message : 'Internal server error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'updating episode');
   }
 }
