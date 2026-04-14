@@ -30,13 +30,19 @@ export async function POST(request: NextRequest) {
     if (webhookSecret) {
       const url = new URL(request.url)
       const token = url.searchParams.get('token')
-      if (
-        !token ||
-        !crypto.timingSafeEqual(
-          Buffer.from(token),
-          Buffer.from(webhookSecret)
-        )
-      ) {
+
+      // Guard against RangeError: crypto.timingSafeEqual throws if buffer
+      // lengths differ. Without this check, an attacker sending a token of
+      // the wrong length would get a 500 (leaking timing info) instead of 401.
+      // Length-checking via `===` is NOT a timing leak because the attacker
+      // already knows the length via the 401 vs 500 discrepancy anyway.
+      const secretBuf = Buffer.from(webhookSecret)
+      const tokenBuf = token ? Buffer.from(token) : null
+      const lengthsMatch = tokenBuf && tokenBuf.length === secretBuf.length
+      const tokenMatches =
+        lengthsMatch && crypto.timingSafeEqual(tokenBuf, secretBuf)
+
+      if (!tokenMatches) {
         console.error('AssemblyAI webhook: invalid or missing authentication token')
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }

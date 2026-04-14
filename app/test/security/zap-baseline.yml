@@ -1,0 +1,36 @@
+# OWASP ZAP Baseline Scan configuration for PodBrain
+#
+# Runs a passive scan against the running app looking for common
+# vulnerabilities: XSS, SQL injection, missing security headers,
+# sensitive data leakage, CORS misconfigurations, etc.
+#
+# This is a BASELINE scan — it does NOT perform active attacks. It only
+# observes traffic and flags issues. Safe to run against any environment.
+#
+# Run:
+#   docker run -v $(pwd)/test/security:/zap/wrk/:rw \
+#     -t ghcr.io/zaproxy/zaproxy:stable \
+#     zap-baseline.py \
+#     -t http://host.docker.internal:3100 \
+#     -c zap-baseline.yml \
+#     -r zap-report.html
+#
+# Pre-requisites:
+#   - Docker installed
+#   - Dev server running on port 3100
+#
+# CI integration: run nightly against the staging environment.
+
+# Rules to ignore (known false positives for Next.js SSR):
+rules:
+  # Informational-only rules we don't care about in baseline
+  10015: IGNORE  # Incomplete or No Cache-control (Next.js handles this)
+  10027: IGNORE  # Information Disclosure - Suspicious Comments (source maps)
+  10096: IGNORE  # Timestamp Disclosure (Next.js build timestamps)
+  10109: IGNORE  # Modern Web Application (informational)
+
+  # Dependency scanning is done by npm audit; no point duplicating
+  10202: IGNORE  # Absence of Anti-CSRF Tokens (Supabase uses PKCE)
+
+  # Everything else: FAIL on WARN or higher
+  # (this is the default for zap-baseline.py)

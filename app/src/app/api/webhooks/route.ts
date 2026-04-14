@@ -85,10 +85,7 @@ export async function POST(request: NextRequest) {
 
     const rl = await checkRateLimit(`create-webhook:${userId}`, 10);
     if (!rl.success) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Rate limit exceeded. Please try again shortly.' },
-        { status: 429 }
-      );
+      return errorResponse('Rate limit exceeded. Please try again shortly.', 429);
     }
 
     const body = await request.json();

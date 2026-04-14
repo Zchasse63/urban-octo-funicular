@@ -16,6 +16,11 @@
  * Expected runtime: ~3-5 minutes (one Grok call per asset type for judging)
  */
 import { describe, it, expect, beforeAll } from 'vitest';
+
+// ⚠️ SKIPPED BY DEFAULT — same rationale as pipeline.test.ts.
+// Opt in with `LIVE_TESTS_ENABLED=true npm run test:live:quality`.
+const LIVE_TESTS_ENABLED = process.env.LIVE_TESTS_ENABLED === 'true';
+const describeLive = LIVE_TESTS_ENABLED ? describe : describe.skip;
 import { ensureLiveTestUser, getAdminClient } from './helpers/auth';
 import { getEpisode, fetchAllAssets, createTestShow, uploadAndCreateEpisode, transcribeEpisode, generateShowNotes, CORE_ASSET_TYPES } from './helpers/pipeline';
 import {
@@ -34,7 +39,7 @@ let showName: string;
 let guestName: string | undefined;
 let assets: Array<{ asset_type: string; content: string; metadata: unknown }> = [];
 
-describe('Quality Verification: Grok-as-Judge + Manual Checks', () => {
+describeLive('Quality Verification: Grok-as-Judge + Manual Checks', () => {
   beforeAll(async () => {
     console.log('\n--- Quality Test Setup ---');
     await ensureLiveTestUser();

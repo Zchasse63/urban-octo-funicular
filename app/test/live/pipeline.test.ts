@@ -2,20 +2,30 @@
 /**
  * Phase B: Live Pipeline Test
  *
- * End-to-end test of the complete episode processing pipeline
- * using REAL services:
- *   1. Create a show in Supabase
- *   2. Add vocabulary terms for learning
- *   3. Upload real audio to Supabase Storage
- *   4. Transcribe via AssemblyAI (real API)
- *   5. Generate show notes via xAI Grok (real API)
- *   6. Generate all core assets via xAI Grok (real API)
- *   7. Structural validation of every generated asset
- *   8. Verify database state is consistent
+ * End-to-end test of the complete episode processing pipeline using
+ * REAL services (Supabase Storage, AssemblyAI, xAI Grok, Trigger.dev).
  *
- * Expected runtime: ~5-10 minutes (mostly transcription + generation)
+ * ⚠️  SKIPPED BY DEFAULT. Opt in with `LIVE_TESTS_ENABLED=true npm run test:live`.
+ *
+ * Why skipped:
+ *   1. Depends on real API credits — runs cost real money per execution
+ *   2. Requires Trigger.dev to be deployed + running (not guaranteed in CI)
+ *   3. Test audio clip is short (~30s) — AI output quality thresholds are
+ *      sensitive to the clip content and fail inconsistently on small
+ *      clips. A longer, higher-quality fixture would make this more
+ *      reliable; tracked in `specs/testing-roadmap.md` under Tier 4.
+ *
+ * When to run:
+ *   - Before deploying AI pipeline changes
+ *   - When verifying a new AssemblyAI/Grok API key
+ *   - During pre-launch smoke tests
+ *
+ * Runtime: ~5-10 minutes.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+
+const LIVE_TESTS_ENABLED = process.env.LIVE_TESTS_ENABLED === 'true';
+const describeLive = LIVE_TESTS_ENABLED ? describe : describe.skip;
 import {
   createTestShow,
   addVocabularyTerms,
@@ -43,7 +53,7 @@ const ctx: PipelineContext = {
   assets: new Map(),
 };
 
-describe('Live Pipeline: Full Episode Processing', () => {
+describeLive('Live Pipeline: Full Episode Processing', () => {
   // ─── Setup ───────────────────────────────────────────────────────────
   beforeAll(async () => {
     console.log('\n--- Pipeline Test Setup ---');

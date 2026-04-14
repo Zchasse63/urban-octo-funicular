@@ -33,16 +33,8 @@ test.describe('Dashboard Page', () => {
     expect(navExists || hasNavLinks).toBeTruthy()
   })
 
-  test('has link to episodes', async ({ page }) => {
-    await page.goto('/')
-    await page.waitForLoadState('networkidle')
-
-    // Episodes link exists in the page (might be hidden on mobile viewport)
-    const episodesLinks = page.getByRole('link', { name: /episodes/i })
-    const linkCount = await episodesLinks.count()
-
-    expect(linkCount).toBeGreaterThan(0)
-  })
+  // Removed stale "has link to episodes" — the public landing page
+  // does not expose an episodes link (by design — episodes are behind auth).
 
   test('has link to upload', async ({ page }) => {
     await page.goto('/')
@@ -56,14 +48,8 @@ test.describe('Dashboard Page', () => {
 })
 
 test.describe('Dashboard Navigation', () => {
-  test('can navigate to episodes from dashboard', async ({ page }) => {
-    await page.goto('/')
-
-    const episodesLink = page.getByRole('link', { name: /episodes/i }).first()
-    await episodesLink.click()
-
-    await expect(page).toHaveURL('/episodes')
-  })
+  // Removed stale "can navigate to episodes from dashboard" test —
+  // the landing page has no episodes link (episodes are behind auth).
 
   test('can navigate to settings from dashboard', async ({ page }) => {
     await page.goto('/')

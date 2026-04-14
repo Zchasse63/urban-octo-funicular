@@ -17,6 +17,17 @@ interface UseVocabularyResult {
   deleteTerm: (termId: string) => Promise<boolean>
 }
 
+// ─── Cross-instance sync ─────────────────────────────────────────────────────
+// Multiple components (e.g. Sidebar + Vocabulary page) can mount this hook
+// independently. When one mutates, broadcast a custom event so the other
+// instances refetch and stay consistent.
+const VOCAB_CHANGE_EVENT = 'podbrain:vocabulary-changed'
+
+function broadcastVocabularyChange(showId: string) {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent(VOCAB_CHANGE_EVENT, { detail: { showId } }))
+}
+
 export default function useVocabulary(
   options: UseVocabularyOptions = {}
 ): UseVocabularyResult {
@@ -45,6 +56,19 @@ export default function useVocabulary(
     fetchTerms()
   }, [fetchTerms])
 
+  // Listen for cross-instance changes and refetch
+  useEffect(() => {
+    if (!showId) return
+    const handler = (event: Event) => {
+      const customEvent = event as CustomEvent<{ showId: string }>
+      if (customEvent.detail?.showId === showId) {
+        fetchTerms()
+      }
+    }
+    window.addEventListener(VOCAB_CHANGE_EVENT, handler)
+    return () => window.removeEventListener(VOCAB_CHANGE_EVENT, handler)
+  }, [showId, fetchTerms])
+
   const addTerm = useCallback(async (term: string, alternatives: string[] = []): Promise<VocabularyTerm | null> => {
     if (!showId) return null
     const res = await fetch(`/api/shows/${showId}/vocabulary`, {
@@ -56,6 +80,7 @@ export default function useVocabulary(
     const result = await res.json()
     if (result.data) {
       setTerms(prev => [result.data, ...prev])
+      broadcastVocabularyChange(showId)
     }
     return result.data
   }, [showId])
@@ -67,6 +92,7 @@ export default function useVocabulary(
     })
     if (!res.ok) throw new Error('Failed to delete term')
     setTerms(prev => prev.filter(t => t.id !== termId))
+    broadcastVocabularyChange(showId)
     return true
   }, [showId])
 

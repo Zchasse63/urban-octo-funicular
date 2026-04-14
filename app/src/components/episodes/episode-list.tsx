@@ -939,6 +939,20 @@ export function EpisodeList() {
   }]);
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
   const isLoading = apiLoading;
+
+  // Delay showing skeletons by 200ms so fast requests don't flash a
+  // skeleton before the real content (or empty state) renders. Users
+  // with 0 episodes on a fast connection will see the empty state
+  // directly instead of "skeleton → empty state" flicker.
+  const [showSkeleton, setShowSkeleton] = useState(false);
+  useEffect(() => {
+    if (!isLoading) {
+      setShowSkeleton(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowSkeleton(true), 200);
+    return () => clearTimeout(timer);
+  }, [isLoading]);
   const [undoStack, setUndoStack] = useState<{
     episodes: Episode[];
     count: number;
@@ -1154,7 +1168,7 @@ export function EpisodeList() {
               Episodes
             </h1>
             <p className="font-serif text-[13px] sm:text-[13.5px] text-muted-foreground leading-relaxed">
-              {episodes.length} episodes across your show — manage, review, and publish.
+              {episodes.length} {episodes.length === 1 ? 'episode' : 'episodes'} across your show — manage, review, and publish.
             </p>
           </div>
           <Link href="/upload" className={cn('flex items-center gap-2 px-4 py-2.5 rounded-lg self-start', 'bg-stone-900 text-white text-[12px] font-sans font-semibold', 'hover:bg-stone-800 active:scale-[0.98] transition-all duration-150', 'shadow-[0_2px_8px_-2px_rgba(0,0,0,0.2)]')}>
@@ -1334,8 +1348,8 @@ export function EpisodeList() {
             </button>
           </div>}
 
-        {/* ── Skeleton Loading ── */}
-        {isLoading && <div className="space-y-3">
+        {/* ── Skeleton Loading (delayed 200ms to avoid flicker) ── */}
+        {isLoading && showSkeleton && <div className="space-y-3">
             {[0, 1, 2, 3].map(i => <SkeletonCard key={i} index={i} />)}
           </div>}
 

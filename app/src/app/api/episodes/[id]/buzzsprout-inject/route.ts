@@ -57,10 +57,7 @@ export async function POST(
 
     const rl = await checkRateLimit(`buzzsprout-inject:${userId}`, 10);
     if (!rl.success) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Rate limit exceeded. Please try again shortly.' },
-        { status: 429 }
-      );
+      return errorResponse('Rate limit exceeded. Please try again shortly.', 429);
     }
     const { id: episodeId } = await params;
 

@@ -1,11 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { requireAuth } from '@/lib/auth';
+import { errorResponse } from '@/lib/api/helpers';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { SUPPORTED_AUDIO_FORMATS, PROCESSING } from '@/lib/constants';
 
 const EPISODES_BUCKET = 'episodes';
 
+interface SignedUploadRequest {
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+}
+
+interface SignedUploadResponse {
+  filePath: string;
+  token: string;
+  uploadUrl: string;
+  publicUrl: string;
+}
+
+/**
+ * POST /api/upload
+ *
+ * Returns a Supabase pre-signed upload URL so the browser can upload the file
+ * directly to Storage. This avoids the Netlify Functions request-body size
+ * limit (~6 MB) and execution timeout (10 s) that would otherwise break large
+ * audio uploads.
+ *
+ * The client then uses `supabase.storage.from('episodes').uploadToSignedUrl(...)`
+ * with the returned `filePath` and `token`. After upload completes, the client
+ * calls `POST /api/episodes` with the `publicUrl` to create the episode record
+ * and trigger processing.
+ *
+ * Request body (JSON):
+ * {
+ *   "fileName": "interview.mp3",
+ *   "fileSize": 13421772,
+ *   "mimeType": "audio/mpeg"
+ * }
+ */
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await requireAuth();
@@ -18,85 +52,75 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
+    let body: SignedUploadRequest;
+    try {
+      body = (await request.json()) as SignedUploadRequest;
+    } catch {
+      return errorResponse('Invalid JSON body', 400);
+    }
 
-    if (!file) {
-      return NextResponse.json(
-        { error: 'No file provided' },
-        { status: 400 }
-      );
+    const { fileName, fileSize, mimeType } = body;
+
+    if (!fileName || typeof fileName !== 'string') {
+      return errorResponse('fileName is required', 400);
+    }
+    if (typeof fileSize !== 'number' || fileSize <= 0) {
+      return errorResponse('fileSize is required and must be > 0', 400);
+    }
+    if (!mimeType || typeof mimeType !== 'string') {
+      return errorResponse('mimeType is required', 400);
     }
 
     // Validate file type
-    if (!SUPPORTED_AUDIO_FORMATS.includes(file.type as typeof SUPPORTED_AUDIO_FORMATS[number])) {
-      return NextResponse.json(
-        { error: `Invalid file type. Allowed types: ${SUPPORTED_AUDIO_FORMATS.join(', ')}` },
-        { status: 400 }
+    if (!SUPPORTED_AUDIO_FORMATS.includes(mimeType as typeof SUPPORTED_AUDIO_FORMATS[number])) {
+      return errorResponse(
+        `Invalid file type. Allowed types: ${SUPPORTED_AUDIO_FORMATS.join(', ')}`,
+        400
       );
     }
 
     // Validate file size
-    if (file.size > PROCESSING.maxFileSize) {
-      return NextResponse.json(
-        { error: `File too large. Maximum size: ${PROCESSING.maxFileSize / 1024 / 1024}MB` },
-        { status: 413 }
+    if (fileSize > PROCESSING.maxFileSize) {
+      return errorResponse(
+        `File too large. Maximum size: ${PROCESSING.maxFileSize / 1024 / 1024}MB`,
+        413
       );
     }
 
-    // Generate unique filename
+    // Generate unique storage path. Strip path separators from the filename
+    // to avoid creating unintended subdirectories or escaping the namespace.
+    const safeName = fileName.replace(/[/\\]+/g, '_');
+    const extension = safeName.includes('.') ? safeName.split('.').pop() : 'mp3';
     const timestamp = Date.now();
     const uuid = crypto.randomUUID();
-    const extension = file.name.split('.').pop() || 'mp3';
-    const filePath = `${uuid}-${timestamp}.${extension}`;
+    const filePath = `${userId}/${uuid}-${timestamp}.${extension}`;
 
-    // Upload to Supabase Storage using admin client
     const supabase = createAdminClient();
-    const fileBuffer = await file.arrayBuffer();
 
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    // Generate the signed upload URL — this returns a token the client uses
+    // with `uploadToSignedUrl(path, token, file)`.
+    const { data: signed, error: signedError } = await supabase.storage
       .from(EPISODES_BUCKET)
-      .upload(filePath, fileBuffer, {
-        contentType: file.type,
-        cacheControl: '3600',
-      });
+      .createSignedUploadUrl(filePath);
 
-    if (uploadError) {
-      console.error('Upload error:', uploadError);
-      return NextResponse.json(
-        { error: 'Failed to upload file' },
-        { status: 500 }
-      );
+    if (signedError || !signed) {
+      console.error('createSignedUploadUrl error:', signedError);
+      return errorResponse('Failed to create upload URL', 500);
     }
 
-    // Generate signed URL (valid 24 hours)
-    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-      .from(EPISODES_BUCKET)
-      .createSignedUrl(filePath, 86400);
-
-    if (signedUrlError || !signedUrlData?.signedUrl) {
-      console.error('Signed URL error:', signedUrlError);
-      return NextResponse.json(
-        { error: 'Failed to generate signed URL' },
-        { status: 500 }
-      );
-    }
-
-    // Get public URL for storage
+    // Compute the public URL the client will use after the upload completes.
     const { data: publicUrlData } = supabase.storage
       .from(EPISODES_BUCKET)
       .getPublicUrl(filePath);
 
-    return NextResponse.json({
-      success: true,
+    return NextResponse.json<SignedUploadResponse>({
       filePath,
-      signedUrl: signedUrlData.signedUrl,
+      token: signed.token,
+      uploadUrl: signed.signedUrl,
       publicUrl: publicUrlData.publicUrl,
-      fileSize: file.size,
-      mimeType: file.type,
     });
   } catch (error) {
-    console.error('Upload error:', error);
-return errorResponse('Internal server error', 500)
+    console.error('Upload signed-URL error:', error);
+    return errorResponse('Internal server error', 500);
   }
 }

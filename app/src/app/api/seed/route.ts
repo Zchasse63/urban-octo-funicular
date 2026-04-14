@@ -4,10 +4,19 @@ import { devGuard } from '@/lib/api/dev-guard'
 import { isTaddyAvailable, getTaddyClient } from '@/lib/taddy/client'
 
 // ─── Demo Credentials ───
+//
+// Pulled from environment so credentials are not committed to source. The
+// route is dev-only (gated by NODE_ENV !== 'production' AND devGuard()), but
+// keeping secrets out of git is best practice regardless. Set these in your
+// `.env.local` to enable seeding:
+//
+//   SEED_DEMO_EMAIL=demo@example.test
+//   SEED_DEMO_PASSWORD=<any strong password>
+//   SEED_DEMO_NAME="Alex Morgan"
 
-const DEMO_EMAIL = 'demo@getpodbrain.ai'
-const DEMO_PASSWORD = 'PodBrain2026!'
-const DEMO_NAME = 'Alex Morgan'
+const DEMO_EMAIL = process.env.SEED_DEMO_EMAIL || ''
+const DEMO_PASSWORD = process.env.SEED_DEMO_PASSWORD || ''
+const DEMO_NAME = process.env.SEED_DEMO_NAME || 'Demo User'
 const OLD_PLACEHOLDER_ID = '00000000-0000-0000-0000-000000000001'
 
 // ─── Admin Client (bypasses RLS) ───
@@ -470,6 +479,16 @@ export async function POST() {
 
   const guard = devGuard()
   if (guard) return guard
+
+  if (!DEMO_EMAIL || !DEMO_PASSWORD) {
+    return NextResponse.json(
+      {
+        error:
+          'Seed credentials not configured. Set SEED_DEMO_EMAIL and SEED_DEMO_PASSWORD in .env.local before running this endpoint.',
+      },
+      { status: 500 }
+    )
+  }
 
   try {
     const admin = getAdminClient()

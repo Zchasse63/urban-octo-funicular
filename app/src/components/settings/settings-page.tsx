@@ -10,6 +10,7 @@ import { PRICING_TIERS, type PricingTier } from '@/lib/stripe/products';
 import WebhooksSection from './webhooks-section';
 import TeamSection from './team-section';
 import RssProxySection from './rss-proxy-section';
+import { EmbeddedCheckoutModal } from '@/components/stripe/embedded-checkout-modal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -306,7 +307,7 @@ const SubscriptionTab = ({
   subscription: { id?: string; status: string | null; tier: PricingTier; stripe_subscription_id?: string; current_period_end?: string } | null;
   subLoading: boolean;
   onManageStripe: () => void;
-  onCheckout: (tier: string) => Promise<void>;
+  onCheckout: (tier: string) => void;
   usage: { tier: string; billingPeriod: { start: string; end: string }; audioHours: { used: number; limit: number; percentage: number }; shows: { used: number; limit: number; percentage: number } } | null;
   usageLoading: boolean;
 }) => {
@@ -371,7 +372,7 @@ const SubscriptionTab = ({
                 <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300" />
               </div>
               <div>
-                <h3 className="font-sans font-bold text-base sm:text-lg text-foreground tracking-tight leading-none mb-1">{planName}</h3>
+                <h2 className="font-sans font-bold text-base sm:text-lg text-foreground tracking-tight leading-none mb-1">{planName}</h2>
                 <p className="font-mono text-[11px] text-muted-foreground mb-2.5">
                   {price > 0
                     ? `Billed monthly${renewalDate ? ` · Renews ${renewalDate}` : ''}`
@@ -1021,7 +1022,7 @@ export const SettingsPage = () => {
     addToast,
     dismissToast
   } = useToast();
-  const { subscription, isLoading: subLoading, openPortal, checkout } = useSubscription();
+  const { subscription, isLoading: subLoading, openPortal, startCheckout, checkoutIntent, cancelCheckout } = useSubscription();
   const { usage, isLoading: usageLoading } = useUsage();
 
   const handleManageStripe = async () => {
@@ -1090,7 +1091,7 @@ export const SettingsPage = () => {
           duration: 0.18,
           ease: 'easeOut'
         }}>
-            {activeTab === 'subscription' && <SubscriptionTab addToast={addToast} subscription={subscription} subLoading={subLoading} onManageStripe={handleManageStripe} onCheckout={checkout} usage={usage} usageLoading={usageLoading} />}
+            {activeTab === 'subscription' && <SubscriptionTab addToast={addToast} subscription={subscription} subLoading={subLoading} onManageStripe={handleManageStripe} onCheckout={startCheckout} usage={usage} usageLoading={usageLoading} />}
             {activeTab === 'integrations' && <IntegrationsTab addToast={addToast} />}
             {activeTab === 'api' && <ApiTab addToast={addToast} />}
             {activeTab === 'team' && <TeamSection addToast={addToast} />}
@@ -1102,5 +1103,13 @@ export const SettingsPage = () => {
 
       {/* ── Toast Layer ── */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+
+      {/* ── Embedded Stripe Checkout (no redirect) ── */}
+      <EmbeddedCheckoutModal
+        open={!!checkoutIntent}
+        onOpenChange={(open) => { if (!open) cancelCheckout(); }}
+        tier={checkoutIntent?.tier || 'pro'}
+        interval={checkoutIntent?.interval}
+      />
     </div>;
 };

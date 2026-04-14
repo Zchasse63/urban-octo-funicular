@@ -4,7 +4,6 @@ import { requireAuth } from '@/lib/auth'
 import { errorResponse, successResponse, handleApiError, parsePagination } from '@/lib/api/helpers'
 import { canCreateShow } from '@/lib/tier-limits'
 import { checkRateLimit } from '@/lib/rate-limit'
-import type { Show, PaginatedResponse } from '@/types/database'
 import { CreateShowSchema, parseBody } from '@/lib/validation-schemas'
 import type { Show, ApiResponse, PaginatedResponse } from '@/types/database'
 

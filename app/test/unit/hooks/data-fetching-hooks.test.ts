@@ -338,7 +338,7 @@ describe('useShows', () => {
     )
   })
 
-  it('createShow returns null and sets error on failure', async () => {
+  it('createShow throws and sets error on failure', async () => {
     // Initial fetch
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -354,14 +354,20 @@ describe('useShows', () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
       statusText: 'Bad Request',
+      json: () => Promise.resolve({}),
     })
 
-    let createdShow: unknown
+    let thrown: unknown = null
     await act(async () => {
-      createdShow = await result.current.createShow({ name: '' })
+      try {
+        await result.current.createShow({ name: '' })
+      } catch (err) {
+        thrown = err
+      }
     })
 
-    expect(createdShow).toBeNull()
+    // Re-thrown so dialog/wizard callers can show the specific message
+    expect(thrown).toBeInstanceOf(Error)
     expect(result.current.error).toBe('Failed to create show')
   })
 })

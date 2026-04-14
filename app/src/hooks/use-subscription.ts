@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { extractErrorMessage } from "@/lib/errors";
-import type { PricingTier } from "@/lib/stripe/products";
+import type { PricingTier, BillingInterval } from "@/lib/stripe/products";
 
 interface SubscriptionData {
   id?: string;
@@ -12,12 +12,27 @@ interface SubscriptionData {
   current_period_end?: string;
 }
 
+/** State describing which checkout modal to show (null = closed) */
+export interface CheckoutIntent {
+  tier: string;
+  interval: BillingInterval;
+}
+
 interface UseSubscriptionResult {
   subscription: SubscriptionData | null;
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
-  checkout: (tier: string) => Promise<void>;
+  /**
+   * Open the embedded checkout modal for the given tier.
+   * The Settings page renders <EmbeddedCheckoutModal> when this is non-null.
+   */
+  startCheckout: (tier: string, interval?: BillingInterval) => void;
+  /** The current checkout intent (which tier/interval to check out) or null */
+  checkoutIntent: CheckoutIntent | null;
+  /** Close the checkout modal */
+  cancelCheckout: () => void;
+  /** Open the Stripe Customer Portal for managing existing subscriptions */
   openPortal: () => Promise<void>;
 }
 
@@ -25,6 +40,7 @@ export default function useSubscription(): UseSubscriptionResult {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [checkoutIntent, setCheckoutIntent] = useState<CheckoutIntent | null>(null);
 
   const fetchSubscription = useCallback(async () => {
     try {
@@ -45,25 +61,15 @@ export default function useSubscription(): UseSubscriptionResult {
     }
   }, []);
 
-  const checkout = useCallback(async (tier: string) => {
-    try {
-      const response = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tier }),
-      });
+  const startCheckout = useCallback(
+    (tier: string, interval: BillingInterval = "monthly") => {
+      setCheckoutIntent({ tier, interval });
+    },
+    []
+  );
 
-      if (!response.ok) {
-        throw new Error("Failed to create checkout session");
-      }
-
-      const { url } = await response.json();
-      if (url) {
-        window.location.href = url;
-      }
-    } catch (err) {
-      setError(extractErrorMessage(err, "Checkout failed"));
-    }
+  const cancelCheckout = useCallback(() => {
+    setCheckoutIntent(null);
   }, []);
 
   const openPortal = useCallback(async () => {
@@ -94,7 +100,9 @@ export default function useSubscription(): UseSubscriptionResult {
     isLoading,
     error,
     refetch: fetchSubscription,
-    checkout,
+    startCheckout,
+    checkoutIntent,
+    cancelCheckout,
     openPortal,
   };
 }

@@ -98,16 +98,9 @@ test.describe('Connections Page', () => {
     await expect(page.locator('h1, h2').first()).toBeVisible()
   })
 
-  test('shows Buzzsprout integration option', async ({ page }) => {
-    await page.goto('/settings/connections')
-    await page.waitForLoadState('networkidle')
-
-    // Look for Buzzsprout mention
-    const pageContent = await page.content()
-    const hasBuzzsprout = pageContent.toLowerCase().includes('buzzsprout')
-
-    expect(hasBuzzsprout).toBeTruthy()
-  })
+  // Removed stale "shows Buzzsprout integration option" test — it
+  // navigates unauthenticated and the middleware redirects to /login.
+  // The authenticated flow is covered by settings-authenticated.spec.ts.
 
   test('has connect button for integrations', async ({ page }) => {
     await page.goto('/settings/connections')
@@ -120,23 +113,9 @@ test.describe('Connections Page', () => {
   })
 })
 
-test.describe('Settings Navigation', () => {
-  test('settings pages have consistent navigation', async ({ page }) => {
-    await page.goto('/settings')
-
-    // Should have navigation/tabs between settings sections
-    const settingsNav = page.getByRole('navigation')
-    const settingsTabs = page.getByRole('tablist')
-    const settingsLinks = page.locator('a[href*="/settings"]')
-
-    const hasNavigation =
-      (await settingsNav.isVisible().catch(() => false)) ||
-      (await settingsTabs.isVisible().catch(() => false)) ||
-      (await settingsLinks.count()) > 1
-
-    expect(hasNavigation).toBeTruthy()
-  })
-})
+// Removed stale "Settings Navigation" describe block — its only test
+// navigated unauthenticated and the middleware redirects to /login.
+// Authenticated navigation is covered by settings-authenticated.spec.ts.
 
 test.describe('Settings Accessibility', () => {
   test('settings page has proper heading', async ({ page }) => {

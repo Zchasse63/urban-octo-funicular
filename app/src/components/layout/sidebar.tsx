@@ -9,6 +9,8 @@ import useShows from '@/hooks/use-shows'
 import useEpisodes from '@/hooks/use-episodes'
 import useVocabulary from '@/hooks/use-vocabulary'
 import useSubscription from '@/hooks/use-subscription'
+import { useUsage } from '@/hooks/use-usage'
+import { CreateShowDialog } from '@/components/shows/create-show-dialog'
 import type { Show } from '@/types/database'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -189,11 +191,13 @@ const ShowSelector = ({
   currentShow,
   isCollapsed,
   onSelect,
+  onCreateShow,
 }: {
   shows: Show[]
   currentShow: Show | null
   isCollapsed: boolean
   onSelect: (show: Show) => void
+  onCreateShow: () => void
 }) => {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -206,15 +210,26 @@ const ShowSelector = ({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [open])
 
-  const showName = currentShow?.name || 'Select Show'
-  const initials = showName.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
+  const hasShows = shows.length > 0
+  const showName = currentShow?.name || (hasShows ? 'Select Show' : 'Create your first show')
+  const initials = currentShow
+    ? showName.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
+    : '+'
   const colors = ['bg-orange-400', 'bg-sky-500', 'bg-violet-500', 'bg-emerald-500']
   const colorIndex = currentShow ? shows.indexOf(currentShow) % colors.length : 0
 
   return (
-    <div ref={ref} className="relative px-3 pb-4">
+    <div ref={ref} className="relative px-3 pb-4" data-testid="sidebar-show-selector-container">
       <button
-        onClick={() => !isCollapsed && setOpen((o) => !o)}
+        data-testid="sidebar-show-selector"
+        onClick={() => {
+          if (isCollapsed) return
+          if (!hasShows) {
+            onCreateShow()
+            return
+          }
+          setOpen((o) => !o)
+        }}
         className={cn(
           'w-full flex items-center p-2 rounded-lg bg-muted/50 border border-border hover:border-border/70 hover:bg-accent/80 transition-all duration-150',
           isCollapsed ? 'justify-center' : 'justify-between px-3',
@@ -261,7 +276,15 @@ const ShowSelector = ({
               ))}
             </div>
             <div className="border-t border-border/50 p-1.5">
-              <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-muted-foreground hover:text-accent-foreground hover:bg-accent/50 transition-colors text-[11.5px] font-sans font-medium">
+              <button
+                type="button"
+                data-testid="sidebar-add-show-button"
+                onClick={() => {
+                  onCreateShow()
+                  setOpen(false)
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-muted-foreground hover:text-accent-foreground hover:bg-accent/50 transition-colors text-[11.5px] font-sans font-medium"
+              >
                 <Zap className="w-3.5 h-3.5" />
                 Add new show
               </button>
@@ -286,7 +309,9 @@ function Sidebar({ collapsed, onToggleCollapse, className }: SidebarProps) {
   const pathname = usePathname()
   const { shows } = useShows()
   const { subscription } = useSubscription()
+  const { usage } = useUsage()
   const [currentShow, setCurrentShow] = useState<Show | null>(null)
+  const [createShowOpen, setCreateShowOpen] = useState(false)
 
   const showId = currentShow?.id
   const { total: episodeCount, isLoading: episodesLoading } = useEpisodes({ showId })
@@ -340,7 +365,8 @@ function Sidebar({ collapsed, onToggleCollapse, className }: SidebarProps) {
 
   return (
     <>
-      <motion.div
+      <motion.nav
+        aria-label="Primary"
         animate={{ width: collapsed ? 72 : 240 }}
         transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
         className={cn(
@@ -368,7 +394,13 @@ function Sidebar({ collapsed, onToggleCollapse, className }: SidebarProps) {
         </div>
 
         {/* Show Selector */}
-        <ShowSelector shows={shows} currentShow={currentShow} isCollapsed={collapsed} onSelect={setCurrentShow} />
+        <ShowSelector
+          shows={shows}
+          currentShow={currentShow}
+          isCollapsed={collapsed}
+          onSelect={setCurrentShow}
+          onCreateShow={() => setCreateShowOpen(true)}
+        />
 
         {/* Navigation Sections */}
         <div className="flex-1 overflow-y-auto px-3 space-y-5 scrollbar-none">
@@ -418,18 +450,31 @@ function Sidebar({ collapsed, onToggleCollapse, className }: SidebarProps) {
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-[11px] font-medium">
                       <span className="opacity-80">Monthly Audio</span>
-                      <span className="font-mono">82%</span>
+                      <span className="font-mono">
+                        {usage ? `${Math.round(usage.audioHours.percentage)}%` : '—'}
+                      </span>
                     </div>
                     <div className="h-1 w-full bg-stone-700 rounded-full overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
-                        animate={{ width: '82%' }}
+                        animate={{ width: `${Math.min(100, Math.round(usage?.audioHours.percentage ?? 0))}%` }}
                         transition={{ duration: 0.8, delay: 0.3, ease: 'easeOut' }}
-                        className="h-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)] rounded-full"
+                        className={cn(
+                          'h-full rounded-full',
+                          (usage?.audioHours.percentage ?? 0) >= 90
+                            ? 'bg-rose-400 shadow-[0_0_8px_rgba(251,113,133,0.5)]'
+                            : (usage?.audioHours.percentage ?? 0) >= 70
+                              ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]'
+                              : 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]'
+                        )}
                       />
                     </div>
                   </div>
-                  <button className="w-full py-2 text-[11px] font-bold bg-white/10 hover:bg-white/20 border border-white/5 rounded-md transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/settings')}
+                    className="w-full py-2 text-[11px] font-bold bg-white/10 hover:bg-white/20 border border-white/5 rounded-md transition-colors"
+                  >
                     Upgrade Capacity
                   </button>
                 </div>
@@ -461,12 +506,19 @@ function Sidebar({ collapsed, onToggleCollapse, className }: SidebarProps) {
             </button>
           </div>
         </div>
-      </motion.div>
+      </motion.nav>
 
       {/* Keyboard Shortcuts Modal */}
       <AnimatePresence>
         {showKeyboardModal && <KeyboardShortcutsModal onClose={() => setShowKeyboardModal(false)} />}
       </AnimatePresence>
+
+      {/* Create Show Dialog */}
+      <CreateShowDialog
+        open={createShowOpen}
+        onOpenChange={setCreateShowOpen}
+        onCreated={(show) => setCurrentShow(show)}
+      />
     </>
   )
 }

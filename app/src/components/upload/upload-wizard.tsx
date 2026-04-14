@@ -5,11 +5,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { UploadCloud, Link2, X, FileAudio, Music, Check, Mic2, Youtube, Rss, AlertCircle, ArrowRight, Plus, Trash2, FileText, Twitter, Linkedin, Mail, BookOpen, Volume2, Hash, AlignLeft, Zap, Package, Users, ChevronRight, Sparkles, Brain, Wand2, Target, Globe, ChevronDown, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { extractErrorMessage } from '@/lib/errors';
+import { safeParseError } from '@/lib/api/safe-parse-error';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import useShows from '@/hooks/use-shows';
 import { useUsage } from '@/hooks/use-usage';
 import { UpgradePrompt } from '@/components/ui/upgrade-prompt';
+import { createClient as createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -285,7 +287,7 @@ const DropZone = ({
   hasItems: boolean;
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
-  return <motion.div onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop} onClick={() => inputRef.current?.click()} animate={{
+  return <motion.div data-testid="upload-drop-zone" onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop} onClick={() => inputRef.current?.click()} animate={{
     scale: isDragOver ? 1.015 : 1,
     borderColor: isDragOver ? 'rgba(28,25,23,0.5)' : 'rgba(214,211,209,0.8)'
   }} whileHover={{
@@ -294,7 +296,7 @@ const DropZone = ({
     duration: 0.18,
     ease: 'easeOut'
   }} className={cn('relative cursor-pointer rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-4 transition-colors', hasItems ? 'p-5' : 'p-10', isDragOver ? 'bg-muted/70' : 'bg-card hover:bg-muted/50')}>
-      <input ref={inputRef} type="file" accept=".mp3,.wav,.m4a,audio/mpeg,audio/wav,audio/mp4" multiple className="hidden" onChange={e => {
+      <input data-testid="upload-file-input" ref={inputRef} type="file" accept=".mp3,.wav,.m4a,audio/mpeg,audio/wav,audio/mp4" multiple className="hidden" onChange={e => {
       Array.from(e.target.files ?? []).forEach(f => onFileSelect(f));
       e.target.value = '';
     }} />
@@ -873,77 +875,170 @@ export const UploadWizard = ({
   const audioLimitReached = usage ? usage.audioHours.percentage >= 100 : false;
   const audioLimitApproaching = usage ? usage.audioHours.percentage >= 80 && usage.audioHours.percentage < 100 : false;
   const canProceed = localQueue.length > 0 && !audioLimitReached;
-  const handleFinish = useCallback(async () => {
-    if (localQueue.length === 0 || isSubmitting) return;
-    setIsSubmitting(true);
-
-    try {
-      const item = localQueue[0];
+  /**
+   * Process a single queue item: upload (if file source), create episode
+   * record, trigger processing. Throws on any failure. Returns the created
+   * episode id.
+   */
+  const processQueueItem = useCallback(
+    async (item: QueueItem, showId: string): Promise<string> => {
       let audioUrl = '';
 
-      // Step 1: Upload file to Supabase Storage (if file source)
+      // ── Step 1: For file sources, get a pre-signed upload URL and upload
+      // directly to Supabase Storage. This bypasses Netlify Functions entirely
+      // (which would otherwise impose a 6 MB body size limit and 10 s timeout
+      // that break real podcast audio uploads).
       if (item.sourceType === 'file' && item.rawFile) {
-        const formData = new FormData();
-        formData.append('file', item.rawFile);
+        const file = item.rawFile;
 
-        const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
-        if (!uploadRes.ok) {
-          const err = await uploadRes.json();
-          throw new Error(err.error || 'Upload failed');
+        const signedRes = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fileName: file.name,
+            fileSize: file.size,
+            mimeType: file.type || 'audio/mpeg',
+          }),
+        });
+
+        if (!signedRes.ok) {
+          throw new Error(await safeParseError(signedRes, 'Could not start upload'));
         }
-        const uploadData = await uploadRes.json();
-        audioUrl = uploadData.publicUrl;
+
+        const signed = (await signedRes.json()) as {
+          filePath: string;
+          token: string;
+          uploadUrl: string;
+          publicUrl: string;
+        };
+
+        // Direct browser → Storage upload
+        const supabase = createSupabaseBrowserClient();
+        const { error: uploadError } = await supabase.storage
+          .from('episodes')
+          .uploadToSignedUrl(signed.filePath, signed.token, file, {
+            contentType: file.type || 'audio/mpeg',
+            upsert: false,
+          });
+
+        if (uploadError) {
+          throw new Error(uploadError.message || 'Storage upload failed');
+        }
+
+        audioUrl = signed.publicUrl;
       } else if (item.sourceType === 'url' && item.url) {
         audioUrl = item.url;
       }
 
       if (!audioUrl) throw new Error('No audio source available');
 
-      // Step 2: Create episode record
-      const showId = shows[0]?.id;
-      if (!showId) throw new Error('No show found. Create a show first.');
-
+      // ── Step 2: Create episode record
+      // NOTE: `CreateEpisodeSchema` treats optional string fields with
+      // `.optional()` which accepts `undefined` but NOT `null`. Sending
+      // `null` for empty fields results in a 400 Zod validation error.
+      // For multi-file uploads: the expert context (title/description/guest)
+      // only applies to the first item. Subsequent items use the file name
+      // as the title and leave context fields empty.
+      const fallbackTitle = item.file?.name?.replace(/\.[^.]+$/, '') || 'Untitled Episode';
+      const isFirstItem = localQueue[0]?.localId === item.localId;
       const createRes = await fetch('/api/episodes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           show_id: showId,
-          title: expertContext.episodeTitle || item.file?.name?.replace(/\.[^.]+$/, '') || 'Untitled Episode',
-          description: expertContext.description || null,
+          title: isFirstItem && expertContext.episodeTitle ? expertContext.episodeTitle : fallbackTitle,
+          description: isFirstItem ? expertContext.description || undefined : undefined,
           audio_url: audioUrl,
-          guest_name: expertContext.guestName || null,
-          guest_bio: expertContext.guestBio || null,
+          guest_name: isFirstItem ? expertContext.guestName || undefined : undefined,
+          guest_bio: isFirstItem ? expertContext.guestBio || undefined : undefined,
           language: expertContext.language || 'en',
         }),
       });
       if (!createRes.ok) {
-        const err = await createRes.json();
-        throw new Error(err.error || 'Failed to create episode');
+        throw new Error(await safeParseError(createRes, 'Failed to create episode'));
       }
       const { data: episode } = await createRes.json();
 
-      // Step 3: Trigger processing
+      // ── Step 3: Trigger processing. A failure here is soft — the episode
+      // row exists and the user can retry from the episode page.
       const processRes = await fetch(`/api/episodes/${episode.id}/process`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       });
       if (!processRes.ok) {
-        // Episode created but processing failed — still navigate to it
-        toast.error('Episode created but processing could not start. You can retry from the episode page.');
-      } else {
-        toast.success('Episode uploaded! Processing has started.');
+        console.warn(`Processing dispatch failed for episode ${episode.id}`);
       }
 
-      // Step 4: Navigate to episode
-      if (onComplete) onComplete(episode.id);
-      router.push(`/episodes/${episode.id}`);
-    } catch (err) {
-      toast.error(extractErrorMessage(err, 'Upload failed'));
+      return episode.id as string;
+    },
+    [expertContext, localQueue]
+  );
+
+  const handleFinish = useCallback(async () => {
+    if (localQueue.length === 0 || isSubmitting) return;
+
+    const showId = shows[0]?.id;
+    if (!showId) {
+      toast.error('No show found. Create a show before uploading.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const total = localQueue.length;
+    const createdEpisodeIds: string[] = [];
+    const failures: { localId: string; name: string; error: string }[] = [];
+
+    try {
+      for (let i = 0; i < localQueue.length; i++) {
+        const item = localQueue[i];
+        const itemLabel = item.file?.name || item.url || `item ${i + 1}`;
+        try {
+          const episodeId = await processQueueItem(item, showId);
+          createdEpisodeIds.push(episodeId);
+        } catch (err) {
+          failures.push({
+            localId: item.localId,
+            name: itemLabel,
+            error: extractErrorMessage(err, 'Upload failed'),
+          });
+          // Continue processing remaining items — a single failure should
+          // not block an otherwise-successful batch.
+        }
+      }
+
+      // ── Summary toast ──
+      if (createdEpisodeIds.length === total) {
+        toast.success(
+          total === 1
+            ? 'Episode uploaded! Processing has started.'
+            : `${total} episodes uploaded! Processing has started.`
+        );
+      } else if (createdEpisodeIds.length > 0) {
+        toast.warning(
+          `Uploaded ${createdEpisodeIds.length} of ${total}. ${failures.length} failed — see console for details.`
+        );
+        for (const f of failures) {
+          console.error(`Upload failed for "${f.name}":`, f.error);
+        }
+      } else {
+        toast.error(failures[0]?.error || 'Upload failed');
+      }
+
+      // ── Navigate to the first successfully-created episode ──
+      if (createdEpisodeIds.length > 0) {
+        const firstId = createdEpisodeIds[0];
+        if (onComplete) onComplete(firstId);
+        router.push(`/episodes/${firstId}`);
+      }
     } finally {
+      // CRITICAL: Always reset isSubmitting to avoid the stale-closure trap
+      // where the Start Processing button stays permanently disabled after a
+      // failed upload, requiring a full page reload.
       setIsSubmitting(false);
     }
-  }, [localQueue, expertContext, isSubmitting, shows, onComplete, router]);
+  }, [localQueue, isSubmitting, shows, processQueueItem, onComplete, router]);
   const stepLabels = ['Select Audio', 'Expert Context', 'Style & Assets'];
   return <div className="flex-1 h-full overflow-y-auto relative">
       <div className="max-w-2xl mx-auto px-6 py-10">
@@ -1058,19 +1153,19 @@ export const UploadWizard = ({
 
         {/* ── Navigation ── */}
         <div className="mt-6 flex items-center gap-3">
-          {currentStep > 1 && <button onClick={() => setCurrentStep(s => s - 1)} className="flex items-center gap-2 px-5 py-3.5 rounded-xl text-sm font-sans font-semibold text-muted-foreground hover:text-foreground bg-card border border-border hover:border-border transition-all shadow-sm">
+          {currentStep > 1 && <button data-testid="upload-back-button" onClick={() => setCurrentStep(s => s - 1)} className="flex items-center gap-2 px-5 py-3.5 rounded-xl text-sm font-sans font-semibold text-muted-foreground hover:text-foreground bg-card border border-border hover:border-border transition-all shadow-sm">
               <ChevronRight className="w-4 h-4 rotate-180" />
               Back
             </button>}
 
-          {currentStep < STEPS.length ? <motion.button disabled={currentStep === 1 && !canProceed} onClick={() => setCurrentStep(s => s + 1)} whileHover={currentStep === 1 && !canProceed ? {} : {
+          {currentStep < STEPS.length ? <motion.button data-testid="upload-next-button" disabled={currentStep === 1 && !canProceed} onClick={() => setCurrentStep(s => s + 1)} whileHover={currentStep === 1 && !canProceed ? {} : {
           scale: 1.01
         }} whileTap={currentStep === 1 && !canProceed ? {} : {
           scale: 0.99
         }} className={cn('flex-1 flex items-center justify-center gap-3 py-3.5 rounded-xl text-sm font-sans font-semibold transition-all duration-200', currentStep === 1 && !canProceed ? 'bg-muted text-muted-foreground cursor-not-allowed border border-border' : 'bg-stone-900 text-white hover:bg-stone-800 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.3)]')}>
               <span>Continue to {stepLabels[currentStep]}</span>
               <ArrowRight className="w-4 h-4" />
-            </motion.button> : <motion.button onClick={handleFinish} disabled={isSubmitting} whileHover={{
+            </motion.button> : <motion.button data-testid="upload-submit-button" onClick={handleFinish} disabled={isSubmitting} whileHover={{
           scale: isSubmitting ? 1 : 1.01
         }} whileTap={{
           scale: isSubmitting ? 1 : 0.99

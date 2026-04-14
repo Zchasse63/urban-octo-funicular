@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth, isValidUUID } from '@/lib/auth';
 import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers';
@@ -86,9 +86,7 @@ export async function GET(
       },
     };
 
-    console.error('Error getting SEO analysis:', error);
-return errorResponse('Internal server error', 500)
-    );
+    return successResponse<SEOResponse>(response);
   } catch (error) {
     return handleApiError(error, 'getting SEO analysis');
   }
@@ -107,10 +105,7 @@ export async function POST(
 
     const rl = await checkRateLimit(`seo-fix:${userId}`, 20);
     if (!rl.success) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Rate limit exceeded. Please try again shortly.' },
-        { status: 429 }
-      );
+      return errorResponse('Rate limit exceeded. Please try again shortly.', 429);
     }
     const { id: episodeId } = await params;
 

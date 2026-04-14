@@ -71,9 +71,14 @@ export async function GET(
     const { data: assets, error: assetsError } = await query;
 
     if (assetsError) {
-console.error('Error fetching assets:', assetsError);
-return errorResponse('Internal server error', 500)
-    );
+      console.error('Error fetching assets:', assetsError);
+      return errorResponse('Internal server error', 500);
+    }
+
+    return successResponse<AssetsResponse>({
+      assets: (assets || []) as unknown as GeneratedAsset[],
+      episodeId,
+    });
   } catch (error) {
     return handleApiError(error, 'fetching assets');
   }

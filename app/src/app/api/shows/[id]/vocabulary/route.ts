@@ -60,10 +60,7 @@ export async function POST(
 
     const rl = await checkRateLimit(`create-vocab:${userId}`, 30)
     if (!rl.success) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Rate limit exceeded. Please try again shortly.' },
-        { status: 429 }
-      )
+      return errorResponse('Rate limit exceeded. Please try again shortly.', 429)
     }
 
     const supabase = await createClient()

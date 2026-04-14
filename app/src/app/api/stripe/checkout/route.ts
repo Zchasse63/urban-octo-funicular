@@ -96,6 +96,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Use embedded UI mode so the checkout form renders inline on the
+    // settings page via <EmbeddedCheckout> — no redirect to Stripe.com.
+    // The `return_url` is where Stripe sends the user after payment
+    // completes inside the embed. The `{CHECKOUT_SESSION_ID}` template
+    // variable is replaced by Stripe with the real session id.
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       client_reference_id: userId,
@@ -106,14 +111,14 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: 'subscription',
-      success_url: `${APP_URL}/settings?tab=billing&success=true`,
-      cancel_url: `${APP_URL}/settings?tab=billing&canceled=true`,
+      ui_mode: 'embedded',
+      return_url: `${APP_URL}/settings?tab=billing&success=true&session_id={CHECKOUT_SESSION_ID}`,
       metadata: {
         user_id: userId,
       },
     });
 
-    return NextResponse.json({ url: session.url });
+    return NextResponse.json({ clientSecret: session.client_secret });
   } catch (error) {
     return handleApiError(error, 'Checkout');
   }

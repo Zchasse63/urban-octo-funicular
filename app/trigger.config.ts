@@ -2,7 +2,7 @@ import { defineConfig } from "@trigger.dev/sdk";
 
 export default defineConfig({
   // Project reference from the Trigger.dev dashboard
-  project: "podbrain",
+  project: "proj_zrzknejolkmpntdfpgiq",
 
   // Directory containing the job files
   dirs: ["./src/trigger/jobs"],

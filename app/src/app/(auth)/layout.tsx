@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
+    <main className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
       <div className="w-full max-w-md">
         {/* Logo / Brand */}
         <div className="text-center mb-8">
@@ -30,6 +30,6 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           &copy; {new Date().getFullYear()} PodBrain. All rights reserved.
         </p>
       </div>
-    </div>
+    </main>
   )
 }

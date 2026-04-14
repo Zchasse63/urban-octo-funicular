@@ -517,23 +517,20 @@ describe('useSubscription', () => {
       configurable: true,
     })
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({ url: 'https://checkout.stripe.com/session_123' }),
+    // startCheckout is synchronous — it just sets checkoutIntent state
+    // for the EmbeddedCheckoutModal to render. No fetch, no redirect.
+    act(() => {
+      result.current.startCheckout('pro')
     })
 
-    await act(async () => {
-      await result.current.checkout('pro')
+    expect(result.current.checkoutIntent).toEqual({ tier: 'pro', interval: 'monthly' })
+
+    // cancelCheckout clears the intent
+    act(() => {
+      result.current.cancelCheckout()
     })
 
-    // Verify POST body
-    const postCall = mockFetch.mock.calls.find(
-      (c) => typeof c[0] === 'string' && c[0].includes('/stripe/checkout')
-    )
-    expect(postCall).toBeDefined()
-    expect(JSON.parse(postCall![1].body)).toEqual({ tier: 'pro' })
-    expect(hrefSetter).toHaveBeenCalledWith('https://checkout.stripe.com/session_123')
+    expect(result.current.checkoutIntent).toBeNull()
 
     // Restore
     Object.defineProperty(window, 'location', {
@@ -543,7 +540,7 @@ describe('useSubscription', () => {
     })
   })
 
-  it('checkout sets error on failure', async () => {
+  it('startCheckout supports annual interval', async () => {
     // Initial fetch
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -556,16 +553,11 @@ describe('useSubscription', () => {
       expect(result.current.isLoading).toBe(false)
     })
 
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      statusText: 'Error',
+    act(() => {
+      result.current.startCheckout('agency', 'annual')
     })
 
-    await act(async () => {
-      await result.current.checkout('agency')
-    })
-
-    expect(result.current.error).toBe('Failed to create checkout session')
+    expect(result.current.checkoutIntent).toEqual({ tier: 'agency', interval: 'annual' })
   })
 
   it('openPortal sends POST and redirects', async () => {

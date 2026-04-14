@@ -10,11 +10,13 @@ import useEpisode from '@/hooks/use-episode';
 import useEpisodeAssets from '@/hooks/use-episode-assets';
 import useEpisodeSeo from '@/hooks/use-episode-seo';
 import type { Episode, GeneratedAsset, SEOAnalysis } from '@/types/database';
+import { toast } from 'sonner';
 import RSSTagsPanel from './rss-tags-panel';
 import PreInterviewPanel from './pre-interview-panel';
 import { AssetEditor } from './asset-editor';
 import RelatedEpisodes from './related-episodes';
 import LearningInsights from './learning-insights';
+import { sanitizeHtmlForDisplay } from '@/lib/sanitize-html';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -301,25 +303,6 @@ interface ShowNotesTabProps {
   onSaved: () => Promise<void>;
 }
 
-// ─── Mock fallback data for show notes ──────────────────────────────────────
-// TODO: Replace with real data when API returns structured show notes fields
-const MOCK_SHOW_NOTES_TITLE = 'The Stoic Entrepreneur — Lessons from Marcus Aurelius';
-const MOCK_SHOW_NOTES_DESCRIPTION = 'What happens when you apply 2,000-year-old Stoic philosophy to the chaos of modern startup culture? In this episode, we dive deep into <em>Meditations</em> by Marcus Aurelius and extract surprisingly actionable frameworks for founders navigating uncertainty, pressure, and rapid change.';
-const MOCK_SHOW_NOTES_LEARNINGS = [
-  'The "obstacle is the way" reframe for startup setbacks and pivots',
-  'Marcus Aurelius\'s daily journaling practice and how to adapt it for founder reflection',
-  'Why Stoic indifference to outcomes can paradoxically improve decision-making',
-  'How to apply the Dichotomy of Control to team management and investor relationships',
-  'The role of <em>memento mori</em> thinking in long-term product vision',
-];
-const MOCK_RESOURCES = [
-  { title: 'Meditations — Marcus Aurelius', url: '#', type: 'Book' },
-  { title: 'The Obstacle Is The Way — Ryan Holiday', url: '#', type: 'Book' },
-  { title: 'Daily Stoic Newsletter', url: '#', type: 'Newsletter' },
-];
-const MOCK_KEYWORDS = ['stoic philosophy', 'entrepreneur mindset', 'Marcus Aurelius', 'startup resilience', 'mental models', 'meditations', 'decision making'];
-const MOCK_SEO_SUGGESTIONS = ['Add 2 more internal links to related episodes', 'Consider a FAQ section for featured snippet targeting'];
-
 type NotesFormat = 'html' | 'markdown' | 'plain';
 
 function stripHtmlTags(html: string): string {
@@ -406,45 +389,50 @@ const ShowNotesTab = ({ episode, episodeId, seoScore, seoAnalysis, onSaved }: Sh
     }
   }, [editContent, episodeId, isSaving, onSaved]);
 
-  // Derive SEO keywords from analysis if available
-  const keywords = useMemo(() => {
-    if (seoAnalysis?.keyword_density) {
-      const entries = Object.entries(seoAnalysis.keyword_density);
-      if (entries.length > 0) {
-        return entries
-          .sort(([, a], [, b]) => b - a)
-          .slice(0, 10)
-          .map(([keyword]) => keyword);
-      }
-    }
-    return MOCK_KEYWORDS; // TODO: Replace with real data when API returns this field
+  // Derive SEO keywords from analysis. When `seoAnalysis` is not yet available
+  // (episode hasn't been processed) we return an empty list — the keywords
+  // panel renders an empty-state message.
+  const keywords = useMemo<string[]>(() => {
+    if (!seoAnalysis?.keyword_density) return [];
+    const entries = Object.entries(seoAnalysis.keyword_density);
+    if (entries.length === 0) return [];
+    return entries
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .map(([keyword]) => keyword);
   }, [seoAnalysis]);
 
-  // Derive SEO suggestions from analysis if available
-  const suggestions = useMemo(() => {
-    if (seoAnalysis?.suggestions && seoAnalysis.suggestions.length > 0) {
-      return seoAnalysis.suggestions.map(s =>
-        typeof s === 'string' ? s : (s as { text?: string })?.text ?? String(s)
-      );
+  // Derive SEO suggestions from analysis. Empty list when not yet available.
+  const suggestions = useMemo<string[]>(() => {
+    if (!seoAnalysis?.suggestions || seoAnalysis.suggestions.length === 0) {
+      return [];
     }
-    return MOCK_SEO_SUGGESTIONS; // TODO: Replace with real data when API returns this field
+    return seoAnalysis.suggestions.map(s =>
+      typeof s === 'string' ? s : (s as { text?: string })?.text ?? String(s)
+    );
   }, [seoAnalysis]);
 
-  // Derive SEO metrics from analysis if available
+  // Derive SEO metrics from analysis. Only the two metrics the pipeline
+  // actually produces are shown. When `seoAnalysis` is null we return an
+  // empty list — the SEO panel falls back to "Awaiting analysis" copy.
   const seoMetrics: SEOMetric[] = useMemo(() => {
-    if (seoAnalysis) {
-      const realMetrics: SEOMetric[] = [
-        { label: 'Readability', score: seoAnalysis.readability_score ?? 0, icon: BookOpen, note: seoAnalysis.readability_score ? `Score: ${seoAnalysis.readability_score}` : 'No data' },
-        { label: 'Header Structure', score: seoAnalysis.header_structure ? 100 : 0, icon: Hash, note: seoAnalysis.header_structure ? 'Headers well structured' : 'Needs improvement' },
-      ];
-      const realLabels = new Set(realMetrics.map(m => m.label));
-      // TODO: Replace remaining mock metrics with real data when API returns detailed breakdowns
-      return [
-        ...realMetrics,
-        ...SEO_METRICS.filter(m => !realLabels.has(m.label)),
-      ];
-    }
-    return SEO_METRICS;
+    if (!seoAnalysis) return [];
+    return [
+      {
+        label: 'Readability',
+        score: seoAnalysis.readability_score ?? 0,
+        icon: BookOpen,
+        note: seoAnalysis.readability_score
+          ? `Score: ${seoAnalysis.readability_score}`
+          : 'No data',
+      },
+      {
+        label: 'Header Structure',
+        score: seoAnalysis.header_structure ? 100 : 0,
+        icon: Hash,
+        note: seoAnalysis.header_structure ? 'Headers well structured' : 'Needs improvement',
+      },
+    ];
   }, [seoAnalysis]);
 
   const resolvedScore = seoScore ?? 0;
@@ -536,10 +524,24 @@ const ShowNotesTab = ({ episode, episodeId, seoScore, seoAnalysis, onSaved }: Sh
             /* Render real show notes in the selected format */
             notesFormat === 'html' ? (
               episode?.show_notes_html ? (
-                <div dangerouslySetInnerHTML={{ __html: episode.show_notes_html }} className="prose prose-stone max-w-none" />
+                <div
+                  // eslint-disable-next-line react/no-danger
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtmlForDisplay(episode.show_notes_html) }}
+                  className="prose prose-stone max-w-none"
+                />
               ) : (
-                <div className="whitespace-pre-wrap text-[14.5px] leading-[1.8] text-muted-foreground">
-                  {showNotesContent}
+                /* No HTML available — show the raw markdown source with a
+                   one-line notice so users understand why it looks raw. */
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200/60">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                    <span className="font-sans text-[11px] text-amber-700">
+                      HTML version not yet generated. Showing markdown source.
+                    </span>
+                  </div>
+                  <pre className="whitespace-pre-wrap font-mono text-[13px] leading-[1.75] text-foreground/70 bg-muted/30 rounded-lg p-4 border border-border overflow-x-auto">
+                    {episode?.show_notes ?? showNotesContent}
+                  </pre>
                 </div>
               )
             ) : notesFormat === 'markdown' ? (
@@ -552,56 +554,20 @@ const ShowNotesTab = ({ episode, episodeId, seoScore, seoAnalysis, onSaved }: Sh
               </div>
             )
           ) : (
-            /* Fallback: mock show notes structure */
-            <>
-              <h2 className="font-sans font-bold text-xl text-foreground tracking-tight leading-tight">
-                {episode?.title || MOCK_SHOW_NOTES_TITLE}
-              </h2>
-
-              <p className="text-[14.5px] leading-[1.8] text-muted-foreground" dangerouslySetInnerHTML={{ __html: MOCK_SHOW_NOTES_DESCRIPTION }} />
-
-              <div>
-                <h3 className="font-sans font-semibold text-sm text-foreground uppercase tracking-widest mb-3 flex items-center gap-2">
-                  <span className="w-4 h-[2px] bg-border rounded-full inline-block" />
-                  What You&apos;ll Learn
-                </h3>
-                <ul className="space-y-2.5 text-[14px] text-muted-foreground">
-                  {MOCK_SHOW_NOTES_LEARNINGS.map((item, i) => <li key={i} className="flex items-start gap-3">
-                      <span className="font-mono text-[10px] text-muted-foreground mt-1 select-none">{String(i + 1).padStart(2, '0')}</span>
-                      <span dangerouslySetInnerHTML={{ __html: item }} />
-                    </li>)}
-                </ul>
+            /* Empty state — episode hasn't been processed yet */
+            <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                <FileText className="w-6 h-6 text-muted-foreground" />
               </div>
-
               <div>
-                <h3 className="font-sans font-semibold text-sm text-foreground uppercase tracking-widest mb-3 flex items-center gap-2">
-                  <span className="w-4 h-[2px] bg-border rounded-full inline-block" />
-                  Key Quotes
-                </h3>
-                <blockquote className="border-l-[3px] border-border pl-4 py-1 my-4">
-                  <p className="text-[14px] italic text-muted-foreground leading-relaxed">
-                    &quot;You have power over your mind — not outside events. Realise this and you will find strength.&quot;
-                  </p>
-                  <cite className="font-mono text-[10px] text-muted-foreground not-italic mt-1 block">— Marcus Aurelius, Meditations</cite>
-                </blockquote>
+                <p className="font-sans font-semibold text-sm text-foreground mb-1">
+                  No show notes yet
+                </p>
+                <p className="font-sans text-[12px] text-muted-foreground max-w-xs">
+                  Show notes are generated automatically when this episode finishes processing.
+                </p>
               </div>
-
-              <div>
-                <h3 className="font-sans font-semibold text-sm text-foreground uppercase tracking-widest mb-3 flex items-center gap-2">
-                  <span className="w-4 h-[2px] bg-border rounded-full inline-block" />
-                  Resources Mentioned
-                </h3>
-                <div className="space-y-2">
-                  {MOCK_RESOURCES.map((res, i) => <div key={i} className="flex items-center gap-2.5 py-1.5 group cursor-pointer">
-                      <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-accent-foreground transition-colors flex-shrink-0" />
-                      <span className="text-[13px] text-muted-foreground group-hover:text-foreground transition-colors">{res.title}</span>
-                      <span className="font-mono text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full border border-border">{res.type}</span>
-                    </div>)}
-                </div>
-              </div>
-
-              <div className="h-4" />
-            </>
+            </div>
           )}
         </div>
       </div>
@@ -618,19 +584,33 @@ const ShowNotesTab = ({ episode, episodeId, seoScore, seoAnalysis, onSaved }: Sh
         <div className="flex justify-center mb-4">
           <SEOGauge score={resolvedScore} />
         </div>
-        <div className="space-y-0">
-          {seoMetrics.map(m => <SEOMetricRow key={m.label} metric={m} />)}
-        </div>
+        {seoMetrics.length > 0 ? (
+          <div className="space-y-0">
+            {seoMetrics.map(m => <SEOMetricRow key={m.label} metric={m} />)}
+          </div>
+        ) : (
+          <p className="font-sans text-[11px] text-muted-foreground italic text-center">
+            SEO breakdown will appear after this episode is processed.
+          </p>
+        )}
       </div>
 
       {/* Keywords card */}
       <div className="bg-card border border-border rounded-lg p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
         <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-3">Top Keywords</span>
-        <div className="flex flex-wrap gap-1.5">
-          {keywords.map(kw => <span key={kw} className="font-sans text-[10px] text-muted-foreground bg-muted/80 border border-border px-2 py-0.5 rounded-full">
-              {kw}
-            </span>)}
-        </div>
+        {keywords.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {keywords.map(kw => (
+              <span key={kw} className="font-sans text-[10px] text-muted-foreground bg-muted/80 border border-border px-2 py-0.5 rounded-full">
+                {kw}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="font-sans text-[11px] text-muted-foreground italic">
+            Keywords are extracted after the episode is processed.
+          </p>
+        )}
       </div>
 
       {/* Suggestions card */}
@@ -690,7 +670,7 @@ const ASSET_CATEGORIES: AssetCategory[] = [{
   countColor: 'text-sky-600 bg-sky-50 border-sky-200/60',
   assets: [{
     id: 'twitter-thread',
-    label: 'Twitter/X Thread',
+    label: 'X Thread',
     icon: Twitter,
     description: '8-tweet thread with key insights',
     status: 'generated',
@@ -796,147 +776,6 @@ const ASSET_CATEGORIES: AssetCategory[] = [{
   }]
 }];
 
-// ─── Generate All Progress Overlay ───────────────────────────────────────────
-
-const IDLE_ASSETS_BY_CAT = ASSET_CATEGORIES.filter(cat => cat.assets.some(a => a.status === 'idle')).map(cat => ({
-  id: cat.id,
-  label: cat.label,
-  dot: cat.dot,
-  idleCount: cat.assets.filter(a => a.status === 'idle').length
-}));
-interface GenerateAllOverlayProps {
-  onComplete: () => void;
-  onDismiss: () => void;
-}
-const GenerateAllOverlay = ({
-  onComplete,
-  onDismiss
-}: GenerateAllOverlayProps) => {
-  const [completedIds, setCompletedIds] = useState<string[]>([]);
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const [done, setDone] = useState(false);
-  const total = IDLE_ASSETS_BY_CAT.reduce((sum, c) => sum + c.idleCount, 0);
-  const completedAssets = IDLE_ASSETS_BY_CAT.filter(c => completedIds.includes(c.id)).reduce((sum, c) => sum + c.idleCount, 0);
-  useEffect(() => {
-    if (currentIdx >= IDLE_ASSETS_BY_CAT.length) {
-      setTimeout(() => {
-        setDone(true);
-        setTimeout(() => onComplete(), 900);
-      }, 400);
-      return;
-    }
-    const cat = IDLE_ASSETS_BY_CAT[currentIdx];
-    // stagger per-asset delay within each category
-    const delay = 600 + cat.idleCount * 280;
-    const timer = setTimeout(() => {
-      setCompletedIds(prev => [...prev, cat.id]);
-      setCurrentIdx(i => i + 1);
-    }, delay);
-    return () => clearTimeout(timer);
-  }, [currentIdx]);
-  const progress = total > 0 ? completedAssets / total * 100 : 0;
-  return <motion.div initial={{
-    opacity: 0,
-    y: 8,
-    scale: 0.98
-  }} animate={{
-    opacity: 1,
-    y: 0,
-    scale: 1
-  }} exit={{
-    opacity: 0,
-    y: -6,
-    scale: 0.98
-  }} transition={{
-    duration: 0.22,
-    ease: 'easeOut' as const
-  }} className="bg-stone-900 rounded-xl border border-stone-700/60 shadow-[0_8px_32px_rgba(0,0,0,0.22)] overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-stone-700/50">
-        <div className="flex items-center gap-2.5">
-          <div className="relative">
-            {done ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />}
-          </div>
-          <span className="font-sans text-[13px] font-semibold text-stone-100">
-            {done ? 'All assets generated!' : 'Generating remaining assets\u2026'}
-          </span>
-        </div>
-        <button onClick={onDismiss} aria-label="Dismiss" className="p-1 rounded-md text-muted-foreground hover:text-muted-foreground/60 hover:bg-stone-800 transition-colors">
-          <X className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      {/* Progress bar */}
-      <div className="px-5 pt-4 pb-2">
-        <div className="flex items-center gap-1 mb-2">
-          <span className="font-mono text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-            Progress
-          </span>
-          <span className="font-mono text-[11px] text-muted-foreground/60 font-bold">
-            {completedAssets}/{total} assets
-          </span>
-        </div>
-        <div className="h-1.5 w-full bg-stone-700/60 rounded-full overflow-hidden">
-          <motion.div animate={{
-          width: `${progress}%`
-        }} transition={{
-          duration: 0.5,
-          ease: 'easeOut' as const
-        }} className={cn('h-full rounded-full', done ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.4)]')} />
-        </div>
-      </div>
-
-      {/* Category checklist */}
-      <div className="px-5 py-3 space-y-1.5">
-        {IDLE_ASSETS_BY_CAT.map((cat, i) => {
-        const isCompleted = completedIds.includes(cat.id);
-        const isRunning = i === currentIdx;
-        return <motion.div key={cat.id} initial={{
-          opacity: 0,
-          x: -6
-        }} animate={{
-          opacity: 1,
-          x: 0
-        }} transition={{
-          delay: i * 0.06,
-          duration: 0.2
-        }} className={cn('flex items-center gap-3 px-3 py-2 rounded-lg transition-colors', isRunning && !isCompleted ? 'bg-stone-800/80' : 'bg-transparent')}>
-              <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
-                {isCompleted ? <motion.div initial={{
-              scale: 0
-            }} animate={{
-              scale: 1
-            }} transition={{
-              type: 'spring',
-              stiffness: 400,
-              damping: 20
-            }}>
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  </motion.div> : isRunning ? <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin" /> : <div className="w-3.5 h-3.5 rounded-full border border-stone-600" />}
-              </div>
-              <div className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', cat.dot)} />
-              <span className={cn('font-sans text-[12px] font-medium flex-1', isCompleted ? 'text-muted-foreground/80 line-through decoration-stone-600' : isRunning ? 'text-stone-100' : 'text-muted-foreground')}>
-                {cat.label}
-              </span>
-              <span className="font-mono text-[10px] text-muted-foreground">
-                {cat.idleCount} asset{cat.idleCount > 1 ? 's' : ''}
-              </span>
-            </motion.div>;
-      })}
-      </div>
-
-      {done && <motion.div initial={{
-      opacity: 0
-    }} animate={{
-      opacity: 1
-    }} className="px-5 pb-4 pt-1">
-          <p className="font-sans text-[11px] text-emerald-400/80 text-center">
-            All {total} assets are ready to use
-          </p>
-        </motion.div>}
-    </motion.div>;
-};
-
 // ─── Asset Row (with category-colored icon bg) ───────────────────────────────
 
 const AssetRow = ({
@@ -946,6 +785,7 @@ const AssetRow = ({
   episodeId,
   realAssetId,
   realAssetContent,
+  onGenerate,
 }: {
   asset: AssetItem;
   iconBg: string;
@@ -953,22 +793,90 @@ const AssetRow = ({
   episodeId?: string;
   realAssetId?: string;
   realAssetContent?: string;
+  /** Called with the UI asset id when the user clicks Generate */
+  onGenerate: (uiAssetId: string) => Promise<void>;
 }) => {
   const [status, setStatus] = useState<AssetStatus>(realAssetContent ? 'generated' : asset.status);
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const Icon = asset.icon;
-  const handleGenerate = () => {
+  const handleGenerate = useCallback(async () => {
     if (status !== 'idle') return;
     setStatus('generating');
-    setTimeout(() => setStatus('generated'), 2200);
-  };
+    try {
+      await onGenerate(asset.id);
+      setStatus('generated');
+    } catch {
+      setStatus('idle');
+    }
+  }, [status, onGenerate, asset.id]);
+  const contentText = realAssetContent || asset.content || '';
   const handleCopy = () => {
-    const text = realAssetContent || asset.content || `${asset.label}: ${asset.description}`;
-    navigator.clipboard.writeText(text);
+    navigator.clipboard.writeText(contentText);
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
   };
+  const handleDownload = () => {
+    if (!contentText) return;
+    const blob = new Blob([contentText], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${asset.label.toLowerCase().replace(/\s+/g, '-')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // One-click sharing via platform intent URLs.
+  // These open the platform's native compose/share window with content
+  // pre-filled. No API keys or OAuth needed — the user posts from their
+  // own account. Each asset type gets the platforms that make sense for it.
+  const shareLinks = useMemo<Array<{ url: string; label: string; copyFirst?: boolean }>>(() => {
+    if (!contentText) return [];
+    const pageUrl = typeof window !== 'undefined' ? window.location.href : '';
+    const summary = contentText.slice(0, 280);
+    const links: Array<{ url: string; label: string; copyFirst?: boolean }> = [];
+
+    switch (asset.id) {
+      case 'twitter-thread': {
+        const firstTweet = contentText.split(/\n\n|\n\d+[./)]/)[0]?.slice(0, 280) || summary;
+        links.push({ url: `https://x.com/intent/post?text=${encodeURIComponent(firstTweet)}`, label: 'Post on X' });
+        links.push({ url: `https://www.facebook.com/sharer/sharer.php?quote=${encodeURIComponent(firstTweet)}&u=${encodeURIComponent(pageUrl)}`, label: 'Facebook' });
+        links.push({ url: `https://reddit.com/submit?title=${encodeURIComponent('Check out this episode')}&text=${encodeURIComponent(firstTweet)}`, label: 'Reddit' });
+        break;
+      }
+      case 'linkedin-post':
+        links.push({ url: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(pageUrl)}`, label: 'LinkedIn', copyFirst: true });
+        links.push({ url: `https://www.facebook.com/sharer/sharer.php?quote=${encodeURIComponent(summary)}&u=${encodeURIComponent(pageUrl)}`, label: 'Facebook' });
+        break;
+      case 'blog-post':
+        links.push({ url: `https://reddit.com/submit?title=${encodeURIComponent(asset.label)}&text=${encodeURIComponent(summary)}`, label: 'Reddit' });
+        links.push({ url: `https://www.facebook.com/sharer/sharer.php?quote=${encodeURIComponent(summary)}&u=${encodeURIComponent(pageUrl)}`, label: 'Facebook' });
+        break;
+      case 'newsletter':
+        // mailto: opens their email client with subject + body pre-filled
+        links.push({
+          url: `mailto:?subject=${encodeURIComponent('New episode: ' + (asset.label || 'Newsletter'))}&body=${encodeURIComponent(contentText)}`,
+          label: 'Send as email',
+        });
+        break;
+      case 'guest-email':
+        // Guest promo kit — email is the primary action
+        links.push({
+          url: `mailto:?subject=${encodeURIComponent('Thanks for joining the show!')}&body=${encodeURIComponent(contentText)}`,
+          label: 'Send as email',
+        });
+        break;
+      case 'instagram-captions':
+        links.push({ url: `https://www.facebook.com/sharer/sharer.php?quote=${encodeURIComponent(summary)}&u=${encodeURIComponent(pageUrl)}`, label: 'Facebook' });
+        break;
+      // YouTube, TikTok, etc. — no web intent, copy-only is the right UX
+    }
+    return links;
+  }, [asset.id, asset.label, contentText]);
+
   const hasRealContent = !!realAssetId && !!realAssetContent && !!episodeId;
   return <motion.div variants={listItemVariants} className="flex flex-col">
       <div className="flex items-center gap-4 py-2.5 px-4 rounded-lg hover:bg-accent/50 transition-colors group cursor-pointer" onClick={() => hasRealContent && setExpanded(!expanded)}>
@@ -988,14 +896,54 @@ const AssetRow = ({
           </div>
           <p className="font-sans text-[11px] text-muted-foreground">{asset.description}</p>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
           {(status === 'generated' || hasRealContent) && <>
-              <button onClick={handleCopy} aria-label={copied ? 'Copied!' : `Copy ${asset.label}`} className={cn('p-1.5 rounded-md transition-all opacity-0 group-hover:opacity-100', copied ? 'text-emerald-500 bg-emerald-50' : 'text-muted-foreground hover:text-accent-foreground hover:bg-accent')}>
-                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              {/* Copy — always visible so users don't have to discover it */}
+              <button
+                onClick={handleCopy}
+                aria-label={copied ? 'Copied!' : `Copy ${asset.label}`}
+                title="Copy to clipboard"
+                className={cn(
+                  'flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-sans font-medium transition-all',
+                  copied
+                    ? 'text-emerald-600 bg-emerald-50 border border-emerald-200/60'
+                    : 'text-muted-foreground hover:text-foreground bg-muted/50 border border-border hover:border-border/80'
+                )}
+              >
+                {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                <span className="hidden sm:inline">{copied ? 'Copied' : 'Copy'}</span>
               </button>
-              <button aria-label={`Download ${asset.label}`} className="p-1.5 rounded-md text-muted-foreground hover:text-accent-foreground hover:bg-accent transition-all opacity-0 group-hover:opacity-100">
-                <Download className="w-3.5 h-3.5" />
+              {/* Download as .txt */}
+              <button
+                onClick={handleDownload}
+                aria-label={`Download ${asset.label}`}
+                title="Download as text file"
+                className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-sans font-medium text-muted-foreground hover:text-foreground bg-muted/50 border border-border hover:border-border/80 transition-all"
+              >
+                <Download className="w-3 h-3" />
+                <span className="hidden sm:inline">.txt</span>
               </button>
+              {/* Share links — X, Facebook, Reddit, Email, LinkedIn */}
+              {shareLinks.map((link) => (
+                <a
+                  key={link.label}
+                  href={link.url}
+                  target={link.url.startsWith('mailto:') ? undefined : '_blank'}
+                  rel={link.url.startsWith('mailto:') ? undefined : 'noopener noreferrer'}
+                  title={link.label}
+                  onClick={() => {
+                    // For platforms that can't pre-fill body text (LinkedIn),
+                    // copy the content to clipboard so the user can paste.
+                    if (link.copyFirst) {
+                      navigator.clipboard.writeText(contentText);
+                    }
+                  }}
+                  className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-sans font-medium text-muted-foreground hover:text-foreground bg-muted/50 border border-border hover:border-border/80 transition-all"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  <span className="hidden sm:inline">{link.label}</span>
+                </a>
+              ))}
             </>}
           {status === 'generating' && !hasRealContent && <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-50 border border-amber-200/60 text-[10px] font-sans font-semibold text-amber-600">
               <Loader2 className="w-3 h-3 animate-spin" />
@@ -1035,11 +983,13 @@ const CategoryCard = ({
   catIndex,
   episodeId,
   assetMap,
+  onGenerate,
 }: {
   cat: AssetCategory;
   catIndex: number;
   episodeId?: string;
   assetMap?: Map<string, GeneratedAsset>;
+  onGenerate: (uiAssetId: string) => Promise<void>;
 }) => {
   const readyCount = cat.assets.filter(a => {
     if (assetMap) {
@@ -1074,6 +1024,7 @@ const CategoryCard = ({
             episodeId={episodeId}
             realAssetId={realAsset?.id}
             realAssetContent={realAsset?.content}
+            onGenerate={onGenerate}
           />;
         })}
       </motion.div>
@@ -1101,11 +1052,12 @@ const UI_ID_TO_DB_TYPE: Record<string, string> = {
 interface AssetsTabProps {
   episodeId: string;
   apiAssets: GeneratedAsset[];
+  generateAsset: (assetType: string) => Promise<void>;
 }
 
-const AssetsTab = ({ episodeId, apiAssets }: AssetsTabProps) => {
-  const [showOverlay, setShowOverlay] = useState(false);
-  const [allGenerated, setAllGenerated] = useState(false);
+const AssetsTab = ({ episodeId, apiAssets, generateAsset }: AssetsTabProps) => {
+  const [isBatchRunning, setIsBatchRunning] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0 });
 
   // Build a map from UI asset IDs to real API assets
   const assetMap = useMemo(() => {
@@ -1131,103 +1083,171 @@ const AssetsTab = ({ episodeId, apiAssets }: AssetsTabProps) => {
   const generatedCount = ASSET_CATEGORIES.reduce((sum, cat) => {
     return sum + cat.assets.filter(a => {
       if (assetMap.has(a.id)) return true;
-      return a.status === 'generated';
+      return false;
     }).length;
   }, 0);
 
-  const handleGenerateAll = () => {
-    setShowOverlay(true);
-    setAllGenerated(false);
-  };
-  return <div className="space-y-4">
+  // Resolve a single UI asset id and call the real generation API
+  const handleGenerateOne = useCallback(
+    async (uiAssetId: string) => {
+      const dbType = UI_ID_TO_DB_TYPE[uiAssetId];
+      if (!dbType) {
+        toast.error(`No backend type for "${uiAssetId}"`);
+        throw new Error(`Unmapped UI asset id: ${uiAssetId}`);
+      }
+      try {
+        await generateAsset(dbType);
+      } catch (err) {
+        toast.error('Generation failed. Please try again.');
+        throw err;
+      }
+    },
+    [generateAsset]
+  );
+
+  // Generate every missing asset, with concurrency=3 so we don't hammer the
+  // backend or trip the per-IP rate limit (20 req/min). Batch progress is
+  // tracked in state so the overlay can show real progress, not fake bars.
+  const handleGenerateAll = useCallback(async () => {
+    if (isBatchRunning) return;
+    const missing = ASSET_CATEGORIES.flatMap((cat) => cat.assets).filter(
+      (a) => !assetMap.has(a.id)
+    );
+    const dbTypes = missing
+      .map((a) => UI_ID_TO_DB_TYPE[a.id])
+      .filter((t): t is string => !!t);
+
+    if (dbTypes.length === 0) {
+      toast.success('All assets already generated.');
+      return;
+    }
+
+    setIsBatchRunning(true);
+    setBatchProgress({ done: 0, total: dbTypes.length });
+
+    const concurrency = 3;
+    let completed = 0;
+    let failures = 0;
+
+    try {
+      for (let i = 0; i < dbTypes.length; i += concurrency) {
+        const batch = dbTypes.slice(i, i + concurrency);
+        const results = await Promise.allSettled(
+          batch.map((dbType) => generateAsset(dbType))
+        );
+        for (const r of results) {
+          completed += 1;
+          if (r.status === 'rejected') failures += 1;
+        }
+        setBatchProgress({ done: completed, total: dbTypes.length });
+      }
+
+      if (failures === 0) {
+        toast.success(`Generated ${dbTypes.length} ${dbTypes.length === 1 ? 'asset' : 'assets'}.`);
+      } else if (failures === dbTypes.length) {
+        toast.error('Generation failed for all assets.');
+      } else {
+        toast.warning(
+          `Generated ${dbTypes.length - failures} of ${dbTypes.length}. ${failures} failed — try regenerating individually.`
+        );
+      }
+    } finally {
+      // Always reset, even if the loop or a state setter throws — otherwise
+      // the button stays permanently disabled until the user reloads.
+      setIsBatchRunning(false);
+    }
+  }, [assetMap, generateAsset, isBatchRunning]);
+
+  const batchPercent =
+    batchProgress.total > 0 ? Math.round((batchProgress.done / batchProgress.total) * 100) : 0;
+
+  return (
+    <div className="space-y-4">
       {/* Header row */}
       <div className="flex items-center justify-between px-1">
         <div>
           <p className="font-sans text-sm text-muted-foreground">
-            <span className="font-semibold text-foreground">{generatedCount} of {totalAssets}</span> assets generated
+            <span className="font-semibold text-foreground">
+              {generatedCount} of {totalAssets}
+            </span>{' '}
+            assets generated
           </p>
         </div>
-        <button onClick={handleGenerateAll} disabled={showOverlay} className={cn('flex items-center gap-2 px-4 py-2 rounded-lg text-[12px] font-sans font-semibold transition-all shadow-sm', showOverlay ? 'bg-stone-700 text-muted-foreground/80 cursor-not-allowed' : 'bg-stone-900 text-white hover:bg-stone-800')}>
-          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-          Generate All Remaining
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Download All as ZIP */}
+          {generatedCount > 0 && (
+            <a
+              href={`/api/episodes/${episodeId}/assets/download`}
+              download
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-sans font-semibold text-muted-foreground hover:text-foreground bg-card border border-border hover:border-border/80 transition-all"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Download ZIP
+            </a>
+          )}
+          <button
+            type="button"
+            onClick={handleGenerateAll}
+            disabled={isBatchRunning || generatedCount === totalAssets}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 rounded-lg text-[12px] font-sans font-semibold transition-all shadow-sm',
+              isBatchRunning || generatedCount === totalAssets
+                ? 'bg-stone-700 text-muted-foreground/80 cursor-not-allowed'
+                : 'bg-stone-900 text-white hover:bg-stone-800'
+            )}
+          >
+            {isBatchRunning ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Generating ({batchProgress.done}/{batchProgress.total})
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                Generate All Remaining
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
-      {/* Generate All Progress Overlay */}
-      <AnimatePresence>
-        {showOverlay && <GenerateAllOverlay onComplete={() => {
-        setAllGenerated(true);
-        setShowOverlay(false);
-      }} onDismiss={() => setShowOverlay(false)} />}
-      </AnimatePresence>
+      {/* Real progress bar replacing the fake animated overlay */}
+      {isBatchRunning && (
+        <div className="bg-card border border-border rounded-lg p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Generating assets
+            </span>
+            <span className="font-mono text-[10px] text-muted-foreground">{batchPercent}%</span>
+          </div>
+          <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+            <motion.div
+              animate={{ width: `${batchPercent}%` }}
+              transition={{ duration: 0.3, ease: 'easeOut' as const }}
+              className="h-full bg-emerald-400 rounded-full"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Category Cards with stagger */}
       <motion.div className="space-y-4" variants={listVariants} initial="hidden" animate="visible">
-        {ASSET_CATEGORIES.map((cat, i) => <CategoryCard key={cat.id} cat={cat} catIndex={i} episodeId={episodeId} assetMap={assetMap} />)}
+        {ASSET_CATEGORIES.map((cat, i) => (
+          <CategoryCard
+            key={cat.id}
+            cat={cat}
+            catIndex={i}
+            episodeId={episodeId}
+            assetMap={assetMap}
+            onGenerate={handleGenerateOne}
+          />
+        ))}
       </motion.div>
-    </div>;
+    </div>
+  );
 };
 
 // ─── Transcript Tab ───────────────────────────────────────────────────────────
-
-// TODO: Replace with real data when API returns this field
-const MOCK_TRANSCRIPT: TranscriptSegment[] = [{
-  id: 't1',
-  speaker: 'Host',
-  speakerInitial: 'H',
-  speakerColor: 'bg-stone-800 text-stone-100',
-  timestamp: '00:00',
-  text: "Welcome back to The Daily Focus. I'm your host, and today we're doing something a little different — instead of a guest interview, I want to walk you through something I've been personally obsessing over for the past three months."
-}, {
-  id: 't2',
-  speaker: 'Host',
-  speakerInitial: 'H',
-  speakerColor: 'bg-stone-800 text-stone-100',
-  timestamp: '00:22',
-  text: "That thing is Marcus Aurelius. Specifically, his private journal — which we now call Meditations. A Roman emperor who never intended his writing to be published, just talking to himself about how to be better. How to think clearer. How to lead without losing himself."
-}, {
-  id: 't3',
-  speaker: 'Host',
-  speakerInitial: 'H',
-  speakerColor: 'bg-stone-800 text-stone-100',
-  timestamp: '01:04',
-  text: "And I've been thinking — what would Marcus do with a startup? With a team of twelve people burning through runway? With a launch that just flopped? Let's get into it."
-}, {
-  id: 't4',
-  speaker: 'Marcus [AI Voice]',
-  speakerInitial: 'M',
-  speakerColor: 'bg-amber-600 text-white',
-  timestamp: '03:17',
-  text: "\"You have power over your mind — not outside events. Realise this and you will find strength.\" This was not a motivational poster. This was a man reminding himself, daily, that the only domain he truly controlled was his own rational faculty."
-}, {
-  id: 't5',
-  speaker: 'Host',
-  speakerInitial: 'H',
-  speakerColor: 'bg-stone-800 text-stone-100',
-  timestamp: '04:01',
-  text: "And this is directly applicable. Because as a founder, as a creator, as anyone building something — you are surrounded by things you cannot control. Algorithms. Investor moods. Co-founder disagreements. Platform changes. The market."
-}, {
-  id: 't6',
-  speaker: 'Host',
-  speakerInitial: 'H',
-  speakerColor: 'bg-stone-800 text-stone-100',
-  timestamp: '05:44',
-  text: "The Stoic move is not detachment — it's discernment. Knowing what's yours to act on, and what you release. This is the dichotomy of control. And it's not passive. It's surgical. You focus all your energy on the slice that matters."
-}, {
-  id: 't7',
-  speaker: 'Marcus [AI Voice]',
-  speakerInitial: 'M',
-  speakerColor: 'bg-amber-600 text-white',
-  timestamp: '08:33',
-  text: "\"The impediment to action advances action. What stands in the way becomes the way.\" This is perhaps the most startup-relevant line in all of Meditations. The obstacle isn't a detour from the path. It is the path."
-}, {
-  id: 't8',
-  speaker: 'Host',
-  speakerInitial: 'H',
-  speakerColor: 'bg-stone-800 text-stone-100',
-  timestamp: '09:12',
-  text: "Ryan Holiday built an entire movement around this one idea. And rightly so. Because when you're building — you will hit walls. Not occasionally. Constantly. And the Stoic reframe is: what is this teaching me? How does solving this sharpen the product?"
-}];
 
 // ─── Highlight matched text ───────────────────────────────────────────────────
 
@@ -1289,14 +1309,38 @@ const mapApiSegments = (apiSegments: import('@/types/database').TranscriptSegmen
 };
 
 const TranscriptTab = ({ episode }: TranscriptTabProps) => {
-  const segments = useMemo(() => {
+  const segments = useMemo<TranscriptSegment[]>(() => {
     if (episode?.transcript_segments && episode.transcript_segments.length > 0) {
       return mapApiSegments(episode.transcript_segments);
     }
-    return MOCK_TRANSCRIPT; // fallback to mock data
+    return [];
   }, [episode]);
 
   const [searchQ, setSearchQ] = useState('');
+
+  // No transcript yet — show a clear empty state instead of an empty toolbar
+  if (segments.length === 0) {
+    return (
+      <div className="bg-card border border-border rounded-lg p-10 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+        <div className="flex flex-col items-center justify-center gap-4 text-center">
+          <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+            <AlignLeft className="w-6 h-6 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="font-sans font-semibold text-sm text-foreground mb-1">
+              Transcript not yet available
+            </p>
+            <p className="font-sans text-[12px] text-muted-foreground max-w-sm">
+              {episode?.status === 'processing'
+                ? 'Transcription is in progress. This view will populate automatically when ready.'
+                : 'The transcript will appear here once this episode is processed.'}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const filtered = segments.filter(s => !searchQ || s.text.toLowerCase().includes(searchQ.toLowerCase()) || s.speaker.toLowerCase().includes(searchQ.toLowerCase()));
   const matchCount = searchQ.trim() ? filtered.reduce((acc, seg) => {
     const re = new RegExp(searchQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
@@ -1389,235 +1433,335 @@ const TranscriptTab = ({ episode }: TranscriptTabProps) => {
 
 interface GuestPackageTabProps {
   episode: Episode | null;
+  episodeId: string;
+  generateAsset: (assetType: string) => Promise<void>;
+  apiAssets: GeneratedAsset[];
 }
 
-const GuestPackageTab = ({ episode }: GuestPackageTabProps) => {
-  const guestName = episode?.guest_name || 'Marcus Aurelius';
+interface GuestAssetItem {
+  label: string;
+  icon: React.ElementType;
+  description: string;
+  assetType: string;
+}
+
+const GUEST_PACKAGE_ITEMS: GuestAssetItem[] = [
+  {
+    label: 'Guest Bio',
+    icon: User,
+    description: 'Formatted bio for show notes and website',
+    assetType: 'guest_bio_short',
+  },
+  {
+    label: 'Post-show Email',
+    icon: Mail,
+    description: 'Personalised thank-you email template with episode link',
+    assetType: 'guest_promo_kit',
+  },
+  {
+    label: 'Social Mention Copy',
+    icon: MessageSquare,
+    description: 'X/LinkedIn mention text tagging the guest',
+    assetType: 'linkedin_post_guest',
+  },
+  {
+    label: 'Guest Audiogram',
+    icon: Volume2,
+    description: 'Best quote clip formatted for guest to share',
+    assetType: 'audiogram_clips',
+  },
+];
+
+const GuestPackageTab = ({ episode, episodeId, generateAsset, apiAssets }: GuestPackageTabProps) => {
+  const guestName = episode?.guest_name || 'Unknown Guest';
   const guestBio = episode?.guest_bio || null;
   const guestInitials = guestName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
   const isSoloEpisode = !episode?.guest_name;
 
-  return <div className="space-y-4">
-    <div className="grid grid-cols-2 gap-4">
-      {/* Guest Card */}
-      <div className="bg-card border border-border rounded-lg p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)] col-span-2">
-        <div className="flex items-start gap-5">
-          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-stone-700 to-stone-900 flex items-center justify-center text-white font-mono font-bold text-lg shadow-lg flex-shrink-0">
-            {guestInitials}
-          </div>
-          <div className="flex-1">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="font-sans font-bold text-base text-foreground tracking-tight">{guestName}</h3>
-                {guestBio ? (
-                  <p className="font-sans text-sm text-muted-foreground">{guestBio}</p>
-                ) : !isSoloEpisode ? (
-                  <p className="font-sans text-sm text-muted-foreground">Guest</p>
-                ) : (
-                  <p className="font-sans text-sm text-muted-foreground">Roman Emperor &middot; Stoic Philosopher &middot; Author</p>
+  // Track which assets are currently being generated so the buttons show
+  // a loading state instead of fake setTimeout animations.
+  const [generatingTypes, setGeneratingTypes] = useState<Set<string>>(new Set());
+
+  // Index existing assets by type so we can mark already-generated items as Ready
+  const generatedTypes = useMemo(() => {
+    const set = new Set<string>();
+    for (const asset of apiAssets || []) {
+      set.add(asset.asset_type);
+    }
+    return set;
+  }, [apiAssets]);
+
+  const handleGenerate = useCallback(
+    async (assetType: string) => {
+      if (generatingTypes.has(assetType)) return;
+      setGeneratingTypes((prev) => new Set(prev).add(assetType));
+      try {
+        await generateAsset(assetType);
+        toast.success('Asset generated.');
+      } catch {
+        toast.error('Generation failed. Please try again.');
+      } finally {
+        setGeneratingTypes((prev) => {
+          const next = new Set(prev);
+          next.delete(assetType);
+          return next;
+        });
+      }
+    },
+    [generateAsset, generatingTypes]
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        {/* Guest Card */}
+        <div className="bg-card border border-border rounded-lg p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)] col-span-2">
+          <div className="flex items-start gap-5">
+            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-stone-700 to-stone-900 flex items-center justify-center text-white font-mono font-bold text-lg shadow-lg flex-shrink-0">
+              {isSoloEpisode ? <Mic2 className="w-5 h-5" /> : guestInitials}
+            </div>
+            <div className="flex-1">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="font-sans font-bold text-base text-foreground tracking-tight">
+                    {isSoloEpisode ? 'Solo Episode' : guestName}
+                  </h3>
+                  {!isSoloEpisode && !guestBio && (
+                    <p className="font-sans text-sm text-muted-foreground">Guest</p>
+                  )}
+                </div>
+                {isSoloEpisode && (
+                  <span className="font-mono text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200/60 px-2 py-1 rounded-full">
+                    Solo
+                  </span>
                 )}
               </div>
-              {isSoloEpisode && (
-                <span className="font-mono text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200/60 px-2 py-1 rounded-full">Solo Episode</span>
+              {isSoloEpisode ? (
+                <p className="font-serif text-[13px] text-muted-foreground leading-relaxed mt-3">
+                  This is a solo episode — no guest was featured. Guest-specific
+                  content (bio, promo kit, social mentions) is disabled below.
+                </p>
+              ) : guestBio ? (
+                <p className="font-serif text-[13px] text-muted-foreground leading-relaxed mt-3">
+                  {guestBio}
+                </p>
+              ) : (
+                <p className="font-serif text-[12.5px] text-muted-foreground/80 leading-relaxed mt-3 italic">
+                  No bio yet — generate one with the &ldquo;Guest Bio&rdquo; button below.
+                </p>
               )}
             </div>
-            {isSoloEpisode && (
-              <p className="font-serif text-[13px] text-muted-foreground leading-relaxed mt-3">
-                This was a solo episode exploring Marcus Aurelius&apos;s <em>Meditations</em>. No live guest — AI voice synthesis used for direct quotes.
-              </p>
-            )}
-            {!isSoloEpisode && guestBio && (
-              <p className="font-serif text-[13px] text-muted-foreground leading-relaxed mt-3">
-                {guestBio}
-              </p>
-            )}
           </div>
         </div>
       </div>
-    </div>
 
-    {[{
-    label: 'Guest Bio',
-    icon: User,
-    description: 'Formatted bio for show notes and website',
-    status: 'idle' as AssetStatus
-  }, {
-    label: 'Post-show Email',
-    icon: Mail,
-    description: 'Personalised thank-you email template with episode link',
-    status: 'idle' as AssetStatus
-  }, {
-    label: 'Social Mention Copy',
-    icon: MessageSquare,
-    description: 'Twitter/LinkedIn mention text tagging the guest',
-    status: 'idle' as AssetStatus
-  }, {
-    label: 'Guest Audiogram',
-    icon: Volume2,
-    description: 'Best quote clip formatted for guest to share',
-    status: 'idle' as AssetStatus
-  }].map(item => {
-    const Icon = item.icon;
-    return <div key={item.label} className="flex items-center gap-4 bg-card border border-border rounded-lg p-4 shadow-[0_1px_4px_rgba(0,0,0,0.03)]">
-          <div className="w-9 h-9 rounded-lg bg-muted border border-border flex items-center justify-center flex-shrink-0">
-            <Icon className="w-4 h-4 text-muted-foreground" />
+      {/* Pre-interview research panel — only relevant when there's a guest */}
+      {!isSoloEpisode && episode?.guest_name && (
+        <PreInterviewPanel episodeId={episodeId} guestName={episode.guest_name} />
+      )}
+
+      {GUEST_PACKAGE_ITEMS.map((item) => {
+        const Icon = item.icon;
+        const isGenerated = generatedTypes.has(item.assetType);
+        const isGenerating = generatingTypes.has(item.assetType);
+        return (
+          <div
+            key={item.assetType}
+            className="flex items-center gap-4 bg-card border border-border rounded-lg p-4 shadow-[0_1px_4px_rgba(0,0,0,0.03)]"
+          >
+            <div className="w-9 h-9 rounded-lg bg-muted border border-border flex items-center justify-center flex-shrink-0">
+              <Icon className="w-4 h-4 text-muted-foreground" />
+            </div>
+            <div className="flex-1">
+              <span className="font-sans text-sm font-medium text-foreground block">
+                {item.label}
+              </span>
+              <span className="font-sans text-[11px] text-muted-foreground">
+                {item.description}
+              </span>
+            </div>
+            {isGenerated ? (
+              <span className="flex items-center gap-1 font-mono text-[9px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-2 py-1 rounded-full uppercase tracking-wider">
+                <CheckCircle2 className="w-2.5 h-2.5" />
+                Ready
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleGenerate(item.assetType)}
+                disabled={isGenerating || isSoloEpisode}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-stone-900 text-white text-[10px] font-sans font-semibold hover:bg-stone-800 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Generating…
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="w-3 h-3" />
+                    Generate
+                  </>
+                )}
+              </button>
+            )}
           </div>
-          <div className="flex-1">
-            <span className="font-sans text-sm font-medium text-foreground block">{item.label}</span>
-            <span className="font-sans text-[11px] text-muted-foreground">{item.description}</span>
-          </div>
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-stone-900 text-white text-[10px] font-sans font-semibold hover:bg-stone-800 transition-colors shadow-sm">
-            <Wand2 className="w-3 h-3" />
-            Generate
-          </button>
-        </div>;
-  })}
-  </div>;
+        );
+      })}
+    </div>
+  );
 };
 
 // ─── Intelligence Tab ─────────────────────────────────────────────────────────
 
-// TODO: Replace with real data when API returns intelligence/analysis fields
-const IntelligenceTab = () => <div className="space-y-4">
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      {[{
+interface IntelligenceTabProps {
+  episode: Episode | null;
+}
+
+const TOPIC_CLUSTER_COLORS = [
+  'bg-sky-400',
+  'bg-violet-400',
+  'bg-emerald-400',
+  'bg-amber-400',
+  'bg-rose-400',
+  'bg-muted-foreground/70',
+];
+
+const IntelligenceTab = ({ episode }: IntelligenceTabProps) => {
+  // Real metrics derived from `seo_analysis.keyword_density`. Anything the
+  // pipeline doesn't currently produce (entity count, sentiment score,
+  // sentiment arc, engagement scores) is rendered as an empty state instead
+  // of being faked.
+  const keywordEntries = useMemo(() => {
+    return Object.entries(episode?.seo_analysis?.keyword_density ?? {});
+  }, [episode?.seo_analysis?.keyword_density]);
+
+  const topicCount = keywordEntries.length;
+  const hasAnalysis = !!episode?.seo_analysis;
+
+  const topicClusters = useMemo(() => {
+    if (keywordEntries.length === 0) return [];
+    const sorted = [...keywordEntries].sort(([, a], [, b]) => b - a).slice(0, 6);
+    const max = sorted[0][1] || 1;
+    return sorted.map(([topic, density], i) => ({
+      topic,
+      weight: Math.max(1, Math.round((density / max) * 100)),
+      color: TOPIC_CLUSTER_COLORS[i % TOPIC_CLUSTER_COLORS.length],
+    }));
+  }, [keywordEntries]);
+
+  const stats = [
+    {
       label: 'Topics Detected',
-      value: '14',
+      value: hasAnalysis ? String(topicCount) : '—',
+      subtext: hasAnalysis ? `${topicCount} keyword themes` : 'Awaiting analysis',
       icon: Hash,
       accent: 'text-sky-600',
-      bg: 'bg-sky-50 border-sky-200/60'
-    }, {
+      bg: 'bg-sky-50 border-sky-200/60',
+    },
+    {
       label: 'Entities Found',
-      value: '23',
+      value: '—',
+      subtext: 'Not yet computed',
       icon: Users,
       accent: 'text-violet-600',
-      bg: 'bg-violet-50 border-violet-200/60'
-    }, {
+      bg: 'bg-violet-50 border-violet-200/60',
+    },
+    {
       label: 'Sentiment Score',
-      value: '+0.82',
+      value: '—',
+      subtext: 'Not yet computed',
       icon: TrendingUp,
       accent: 'text-emerald-600',
-      bg: 'bg-emerald-50 border-emerald-200/60'
-    }].map(stat => {
-      const Icon = stat.icon;
-      return <div key={stat.label} className={cn('bg-card border rounded-lg p-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1),0_1px_0_rgba(255,255,255,1)_inset] border-border')}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-sans text-[11px] text-muted-foreground font-medium">{stat.label}</span>
-              <div className={cn('w-6 h-6 rounded-md border flex items-center justify-center', stat.bg)}>
-                <Icon className={cn('w-3 h-3', stat.accent)} />
+      bg: 'bg-emerald-50 border-emerald-200/60',
+    },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {stats.map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <div
+              key={stat.label}
+              className={cn(
+                'bg-card border rounded-lg p-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1),0_1px_0_rgba(255,255,255,1)_inset] border-border'
+              )}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-sans text-[11px] text-muted-foreground font-medium">
+                  {stat.label}
+                </span>
+                <div className={cn('w-6 h-6 rounded-md border flex items-center justify-center', stat.bg)}>
+                  <Icon className={cn('w-3 h-3', stat.accent)} />
+                </div>
+              </div>
+              <span className="font-mono text-2xl font-bold text-foreground">{stat.value}</span>
+              <div className="font-sans text-[10px] text-muted-foreground mt-0.5">
+                {stat.subtext}
               </div>
             </div>
-            <span className="font-mono text-2xl font-bold text-foreground">{stat.value}</span>
-          </div>;
-    })}
-    </div>
-
-    {/* Topics */}
-    <div className="bg-card border border-border rounded-lg p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-      <div className="flex items-center justify-between mb-4">
-        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Topic Clusters</span>
-        <span className="font-mono text-[10px] text-muted-foreground">by prominence</span>
+          );
+        })}
       </div>
-      <div className="space-y-2.5">
-        {[{
-        topic: 'Stoic Philosophy',
-        weight: 94,
-        color: 'bg-sky-400'
-      }, {
-        topic: 'Startup Culture',
-        weight: 78,
-        color: 'bg-violet-400'
-      }, {
-        topic: 'Mental Resilience',
-        weight: 71,
-        color: 'bg-emerald-400'
-      }, {
-        topic: 'Decision Making',
-        weight: 65,
-        color: 'bg-amber-400'
-      }, {
-        topic: 'Leadership',
-        weight: 58,
-        color: 'bg-rose-400'
-      }, {
-        topic: 'Ancient History',
-        weight: 43,
-        color: 'bg-muted-foreground/70'
-      }].map(t => <div key={t.topic} className="flex items-center gap-3">
-            <span className="font-sans text-[12px] text-foreground/80 w-36 flex-shrink-0 truncate">{t.topic}</span>
-            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-              <motion.div initial={{
-            width: 0
-          }} animate={{
-            width: `${t.weight}%`
-          }} transition={{
-            duration: 0.7,
-            ease: 'easeOut' as const,
-            delay: 0.3
-          }} className={cn('h-full rounded-full', t.color)} />
-            </div>
-            <span className="font-mono text-[10px] text-muted-foreground w-6 text-right">{t.weight}</span>
-          </div>)}
-      </div>
-    </div>
 
-    {/* Sentiment + Engagement */}
-    <div className="grid grid-cols-2 gap-3">
-      <div className="bg-card border border-border rounded-lg p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-3">Sentiment Arc</span>
-        <div className="flex items-end gap-1 h-12">
-          {[0.6, 0.72, 0.65, 0.85, 0.9, 0.82, 0.88, 0.95, 0.78, 0.92, 0.85, 0.8].map((v, i) => <motion.div key={i} initial={{
-          height: 0
-        }} animate={{
-          height: `${v * 100}%`
-        }} transition={{
-          delay: i * 0.05,
-          duration: 0.4,
-          ease: 'easeOut' as const
-        }} className="flex-1 bg-emerald-400 rounded-t-sm opacity-80" />)}
+      {/* Topic Clusters — derived from real keyword density when present */}
+      <div className="bg-card border border-border rounded-lg p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+        <div className="flex items-center justify-between mb-4">
+          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Topic Clusters
+          </span>
+          <span className="font-mono text-[10px] text-muted-foreground">by keyword density</span>
         </div>
-        <div className="flex justify-between mt-1.5">
-          <span className="font-mono text-[9px] text-muted-foreground">00:00</span>
-          <span className="font-mono text-[9px] text-muted-foreground">1:12:44</span>
-        </div>
-      </div>
-
-      <div className="bg-card border border-border rounded-lg p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-3">Predicted Engagement</span>
-        <div className="space-y-2">
-          {[{
-          label: 'Hook Strength',
-          value: 91,
-          color: 'bg-emerald-400'
-        }, {
-          label: 'Retention Score',
-          value: 84,
-          color: 'bg-sky-400'
-        }, {
-          label: 'Share Potential',
-          value: 78,
-          color: 'bg-violet-400'
-        }].map(m => <div key={m.label}>
-              <div className="flex justify-between mb-0.5">
-                <span className="font-sans text-[10px] text-muted-foreground">{m.label}</span>
-                <span className="font-mono text-[10px] text-muted-foreground font-bold">{m.value}</span>
+        {topicClusters.length > 0 ? (
+          <div className="space-y-2.5">
+            {topicClusters.map((t) => (
+              <div key={t.topic} className="flex items-center gap-3">
+                <span className="font-sans text-[12px] text-foreground/80 w-36 flex-shrink-0 truncate">
+                  {t.topic}
+                </span>
+                <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${t.weight}%` }}
+                    transition={{ duration: 0.7, ease: 'easeOut' as const, delay: 0.3 }}
+                    className={cn('h-full rounded-full', t.color)}
+                  />
+                </div>
+                <span className="font-mono text-[10px] text-muted-foreground w-6 text-right">
+                  {t.weight}
+                </span>
               </div>
-              <div className="h-1 bg-muted rounded-full overflow-hidden">
-                <motion.div initial={{
-              width: 0
-            }} animate={{
-              width: `${m.value}%`
-            }} transition={{
-              duration: 0.6,
-              ease: 'easeOut' as const,
-              delay: 0.5
-            }} className={cn('h-full rounded-full', m.color)} />
-              </div>
-            </div>)}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-8 gap-2 text-center">
+            <Brain className="w-7 h-7 text-muted-foreground/40" />
+            <p className="font-sans text-[12.5px] text-muted-foreground">
+              Topic analysis will appear after the episode is processed.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Sentiment Arc + Predicted Engagement — both unified empty state.
+          The processing pipeline does not currently produce these metrics,
+          so we show a single explanatory panel instead of fabricating bars. */}
+      <div className="bg-muted/40 border border-border rounded-lg p-6 text-center">
+        <Brain className="w-8 h-8 text-muted-foreground/50 mx-auto mb-3" />
+        <p className="font-sans text-sm font-medium text-foreground mb-1">
+          Sentiment & engagement analysis
+        </p>
+        <p className="font-sans text-xs text-muted-foreground max-w-sm mx-auto">
+          Sentiment arc, hook strength, retention, and share potential are not yet
+          generated by the processing pipeline. They&apos;ll appear here once the
+          analysis service is enabled for your tier.
+        </p>
       </div>
     </div>
-  </div>;
+  );
+};
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -1747,7 +1891,7 @@ export const EpisodeDetail = () => {
 
   // ── Data hooks ──
   const { episode, isLoading: episodeLoading, error: episodeError, processingStep, refetch } = useEpisode(episodeId);
-  const { assets: apiAssets, isLoading: assetsLoading } = useEpisodeAssets(episodeId);
+  const { assets: apiAssets, isLoading: assetsLoading, generateAsset } = useEpisodeAssets(episodeId);
   const { seoData, isLoading: _seoLoading } = useEpisodeSeo(episodeId);
   void assetsLoading; void _seoLoading; // used indirectly via seoData
 
@@ -1913,12 +2057,12 @@ export const EpisodeDetail = () => {
         </div>
 
         {/* ── Tab Bar ── */}
-        <div className="relative mb-5">
+        <div className="relative mb-5" data-testid="episode-detail-tabs">
           <div className="flex items-stretch bg-muted/40 rounded-xl p-1 border border-border gap-1 overflow-x-auto scrollbar-none">
             {TAB_CONFIG.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
-            return <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn('relative flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-[12px] font-sans font-medium transition-all duration-150 flex-1 justify-center whitespace-nowrap flex-shrink-0 sm:flex-shrink', isActive ? 'bg-card text-foreground shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1),0_1px_0_rgba(255,255,255,1)_inset] border border-border' : 'text-muted-foreground hover:text-foreground/80 hover:bg-muted/50')}>
+            return <button data-testid={`episode-tab-${tab.id}`} key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn('relative flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-[12px] font-sans font-medium transition-all duration-150 flex-1 justify-center whitespace-nowrap flex-shrink-0 sm:flex-shrink', isActive ? 'bg-card text-foreground shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1),0_1px_0_rgba(255,255,255,1)_inset] border border-border' : 'text-muted-foreground hover:text-foreground/80 hover:bg-muted/50')}>
                   <Icon className={cn('w-3.5 h-3.5 flex-shrink-0', isActive ? 'text-foreground' : 'text-muted-foreground')} />
                   <span className="hidden sm:block">{tab.label}</span>
                   {isActive && <motion.div layoutId="tabUnderline" className="absolute bottom-[5px] left-1/2 -translate-x-1/2 w-4 h-[2px] bg-foreground rounded-full" />}
@@ -1943,10 +2087,25 @@ export const EpisodeDetail = () => {
           ease: 'easeOut' as const
         }}>
             {activeTab === 'show-notes' && <ShowNotesTab episode={episode} episodeId={episodeId} seoScore={seoScore} seoAnalysis={seoAnalysis} onSaved={refetch} />}
-            {activeTab === 'assets' && <AssetsTab episodeId={episodeId} apiAssets={apiAssets} />}
+            {activeTab === 'assets' && (
+              <AssetsTab episodeId={episodeId} apiAssets={apiAssets} generateAsset={generateAsset} />
+            )}
             {activeTab === 'transcript' && <TranscriptTab episode={episode} />}
-            {activeTab === 'guest' && <GuestPackageTab episode={episode} />}
-            {activeTab === 'intelligence' && <><IntelligenceTab /><div className="mt-6"><RelatedEpisodes episodeId={episodeId} /></div><div className="mt-6"><LearningInsights episodeId={episodeId} /></div><div className="mt-6"><PreInterviewPanel episodeId={episodeId} guestName={episode?.guest_name} /></div></>}
+            {activeTab === 'guest' && (
+              <GuestPackageTab
+                episode={episode}
+                episodeId={episodeId}
+                generateAsset={generateAsset}
+                apiAssets={apiAssets}
+              />
+            )}
+            {activeTab === 'intelligence' && (
+              <>
+                <IntelligenceTab episode={episode} />
+                <div className="mt-6"><RelatedEpisodes episodeId={episodeId} /></div>
+                <div className="mt-6"><LearningInsights episodeId={episodeId} /></div>
+              </>
+            )}
             {activeTab === 'rss-tags' && <RSSTagsPanel episodeId={episodeId} />}
           </motion.div>
         </AnimatePresence>

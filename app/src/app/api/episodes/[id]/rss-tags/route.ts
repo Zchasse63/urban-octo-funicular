@@ -170,8 +170,20 @@ export async function GET(
       .order('start_time', { ascending: true });
 
     // ── Generate person tags ──
+    // Prefer:
+    //   1. episode metadata.host_name (set explicitly per episode)
+    //   2. shows.style_preferences.host_name (set per show)
+    //   3. null — DO NOT fall back to the show name. A show named "The
+    //      Founder's Notebook" is not the host's name, and emitting it as a
+    //      <podcast:person role="host"> tag would be incorrect podcast
+    //      metadata that podcast directories would index as the host's name.
+    const stylePreferences = (showData?.style_preferences || {}) as Record<string, unknown>;
+    const showLevelHost =
+      typeof stylePreferences.host_name === 'string' && stylePreferences.host_name.length > 0
+        ? stylePreferences.host_name
+        : null;
     const hostName =
-      getMetaString(metadata, 'host_name') || showData?.name || null;
+      getMetaString(metadata, 'host_name') || showLevelHost || null;
     let guestImageUrl = getMetaString(metadata, 'guest_image_url');
     let guestProfileUrl = getMetaString(metadata, 'guest_url');
 
@@ -275,22 +287,26 @@ export async function GET(
     const chaptersJsonData = generateChaptersJson(sectionData);
     const hasChapters = chaptersJsonData.chapters.length > 0;
 
-    // Chapters tag points to where the JSON would be hosted.
-    // In practice the user would host this file. We provide the JSON content
-    // and a placeholder URL they can replace.
+    // Chapters tag points to where the JSON would be hosted. We expose it via
+    // a public proxy on the user's app domain so the URL is real and stable.
+    // The user can override it with their own host URL when copying the snippet.
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ||
+      request.nextUrl.origin ||
+      'https://podbrain.app';
+
     const chaptersTag: ChaptersTag | null = hasChapters
       ? {
-          url: `https://example.com/episodes/${episodeId}/chapters.json`,
+          url: `${baseUrl}/api/episodes/${episodeId}/chapters.json`,
           type: 'application/json+chapters',
         }
       : null;
 
     // ── Transcript tag placeholder ──
     // The VTT can be generated client-side or served from storage.
-    // Provide a placeholder the user can update with their hosted URL.
     const transcriptTag: TranscriptTag | null = ep.transcript
       ? {
-          url: `https://example.com/episodes/${episodeId}/transcript.vtt`,
+          url: `${baseUrl}/api/episodes/${episodeId}/transcript.vtt`,
           type: 'text/vtt',
           language: ep.language || 'en',
           rel: 'captions',

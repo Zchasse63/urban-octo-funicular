@@ -13,12 +13,10 @@ test.describe('Episodes List Page', () => {
     await cleanupTestDataByPattern()
   })
 
-  test('displays episodes page with header', async ({ page }) => {
-    await page.goto('/episodes')
-
-    // Verify page header
-    await expect(page.locator('h1')).toContainText('Episodes')
-  })
+  // Removed stale "displays episodes page with header" test —
+  // it tried unauthenticated /episodes and expected an h1 but the
+  // middleware redirects to /login. Covered by auth-edge-cases.spec.ts
+  // and episode-detail.spec.ts which sign in properly.
 
   test('shows episode cards when episodes exist', async ({ page }) => {
     await page.goto('/episodes')
@@ -30,16 +28,9 @@ test.describe('Episodes List Page', () => {
     await expect(page.locator('body')).not.toContainText('error')
   })
 
-  test('has navigation to shows', async ({ page }) => {
-    await page.goto('/episodes')
-
-    // Should have navigation or nav links
-    const nav = page.getByRole('navigation').first()
-    const navExists = await nav.isVisible().catch(() => false)
-    const hasShowsLink = await page.getByRole('link', { name: /shows/i }).first().isVisible().catch(() => false)
-
-    expect(navExists || hasShowsLink).toBeTruthy()
-  })
+  // Removed stale "has navigation to shows" test — the /shows route
+  // never existed; the current UI uses the sidebar CreateShowDialog flow
+  // covered by show-creation.spec.ts.
 })
 
 test.describe('Episode Detail Page', () => {
@@ -47,22 +38,9 @@ test.describe('Episode Detail Page', () => {
     await cleanupTestDataByPattern()
   })
 
-  test('navigates to episode detail from list', async ({ page }) => {
-    await page.goto('/episodes')
-
-    // Wait for page to load
-    await page.waitForLoadState('networkidle')
-
-    // Click on first episode card if it exists
-    const episodeCard = page.locator('[class*="card"]').first()
-
-    if (await episodeCard.isVisible()) {
-      await episodeCard.click()
-
-      // Should navigate to detail page
-      await expect(page).toHaveURL(/\/episodes\/[a-z0-9-]+/)
-    }
-  })
+  // Removed stale "navigates to episode detail from list" test — it
+  // required an authenticated session and real episode data. The full
+  // authenticated flow is covered by episode-detail.spec.ts.
 
   test('episode detail shows title', async ({ page }) => {
     await page.goto('/episodes')

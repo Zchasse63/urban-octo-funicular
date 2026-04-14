@@ -1,0 +1,20 @@
+"use client"
+
+import { ErrorFallback } from '@/components/error-fallback'
+
+export default function EpisodesError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string }
+  reset: () => void
+}) {
+  return (
+    <ErrorFallback
+      error={error}
+      reset={reset}
+      segmentLabel="the episodes view"
+      homeHref="/episodes"
+    />
+  )
+}

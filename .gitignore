@@ -39,3 +39,8 @@ coverage/
 
 # Misc
 *.log
+
+# Local runtime artifacts
+.playwright-mcp/
+app/.trigger/
+test-results/

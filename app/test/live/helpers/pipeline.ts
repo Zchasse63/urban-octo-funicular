@@ -168,14 +168,14 @@ export async function transcribeEpisode(
     .update({
       transcript: result.text,
       status: 'processing',
-      audio_duration_seconds: result.utterances.length > 0
+      audio_duration_seconds: result.utterances?.length
         ? Math.ceil(result.utterances[result.utterances.length - 1].end / 1000)
         : null,
       metadata: {
         live_test: true,
         transcription_id: result.id,
         word_count: result.text.split(/\s+/).length,
-        speaker_count: new Set(result.utterances.map(u => u.speaker)).size,
+        speaker_count: result.utterances ? new Set(result.utterances.map(u => u.speaker)).size : 0,
         transcribed_at: new Date().toISOString(),
       },
     })

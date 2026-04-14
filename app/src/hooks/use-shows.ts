@@ -15,7 +15,18 @@ interface UseShowsResult {
     description?: string;
     default_language?: string;
     artwork_url?: string;
+    style_preferences?: Record<string, unknown>;
   }) => Promise<Show | null>;
+}
+
+// ─── Cross-instance sync ─────────────────────────────────────────────────────
+// Multiple components mount this hook independently. When one creates or
+// deletes a show, broadcast a custom event so all other instances refetch.
+const SHOWS_CHANGE_EVENT = "podbrain:shows-changed";
+
+function broadcastShowsChange() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(SHOWS_CHANGE_EVENT));
 }
 
 export default function useShows(): UseShowsResult {
@@ -45,12 +56,24 @@ export default function useShows(): UseShowsResult {
     }
   }, []);
 
+  useEffect(() => {
+    fetchShows();
+  }, [fetchShows]);
+
+  // Sync across hook instances (sidebar + page-level usages of this hook)
+  useEffect(() => {
+    const handler = () => fetchShows();
+    window.addEventListener(SHOWS_CHANGE_EVENT, handler);
+    return () => window.removeEventListener(SHOWS_CHANGE_EVENT, handler);
+  }, [fetchShows]);
+
   const createShow = useCallback(
     async (data: {
       name: string;
       description?: string;
       default_language?: string;
       artwork_url?: string;
+      style_preferences?: Record<string, unknown>;
     }) => {
       try {
         const response = await fetch("/api/shows", {
@@ -60,23 +83,32 @@ export default function useShows(): UseShowsResult {
         });
 
         if (!response.ok) {
-          throw new Error("Failed to create show");
+          let message = "Failed to create show";
+          try {
+            const errorBody = await response.json();
+            if (errorBody?.error) message = errorBody.error;
+          } catch {
+            // Non-JSON body — keep generic message
+          }
+          throw new Error(message);
         }
 
         const result = await response.json();
         await fetchShows();
+        broadcastShowsChange();
         return result.data || result;
       } catch (err) {
-        setError(extractErrorMessage(err, "Failed to create show"));
-        return null;
+        const message = extractErrorMessage(err, "Failed to create show");
+        setError(message);
+        // Re-throw so dialog/wizard callers can show the *specific* error
+        // (e.g. "A show with this name already exists") instead of a generic
+        // "Show creation failed" fallback. The hook's `error` state remains
+        // populated for any consumers that read it instead of using try/catch.
+        throw err instanceof Error ? err : new Error(message);
       }
     },
     [fetchShows]
   );
-
-  useEffect(() => {
-    fetchShows();
-  }, [fetchShows]);
 
   return { shows, total, isLoading, error, refetch: fetchShows, createShow };
 }

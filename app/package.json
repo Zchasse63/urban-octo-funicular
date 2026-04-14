@@ -22,7 +22,11 @@
     "test:live:stress": "vitest run --config vitest.live.config.ts test/live/stress.test.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:e2e:full-matrix": "PLAYWRIGHT_FULL_MATRIX=true playwright test",
+    "test:a11y": "playwright test test/e2e/flows/accessibility.spec.ts",
     "test:cleanup": "tsx test/scripts/cleanup-test-data.ts",
+    "test:lighthouse": "lhci autorun",
+    "test:load": "k6 run test/load/upload-signed-url.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -32,9 +36,11 @@
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-slot": "^1.2.4",
     "@sentry/nextjs": "^10.40.0",
+    "@stripe/react-stripe-js": "^6.1.0",
+    "@stripe/stripe-js": "^9.1.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.93.3",
-    "@trigger.dev/sdk": "^4.3.3",
+    "@trigger.dev/sdk": "^4.4.4",
     "@upstash/redis": "^1.34.0",
     "assemblyai": "^4.8.0",
     "class-variance-authority": "^0.7.1",
@@ -59,6 +65,8 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.1",
+    "@lhci/cli": "^0.15.1",
     "@netlify/plugin-nextjs": "^5.15.8",
     "@playwright/test": "^1.58.1",
     "@tailwindcss/postcss": "^4",

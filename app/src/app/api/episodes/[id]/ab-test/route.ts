@@ -2,10 +2,9 @@ import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth, isValidUUID } from '@/lib/auth';
 import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers';
-import type { Episode } from '@/types/database';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { sanitizeForAI } from '@/lib/sanitize';
-import type { ApiResponse, Episode } from '@/types/database';
+import type { Episode } from '@/types/database';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -112,10 +111,7 @@ export async function POST(
 
     const rl = await checkRateLimit(`ab-test:${userId}`, 20);
     if (!rl.success) {
-      return NextResponse.json<ApiResponse<null>>(
-        { data: null, error: 'Rate limit exceeded. Please try again shortly.' },
-        { status: 429 }
-      );
+      return errorResponse('Rate limit exceeded. Please try again shortly.', 429);
     }
 
     const { id: episodeId } = await params;
@@ -178,7 +174,7 @@ Respond ONLY with valid JSON in this format:
     const userPrompt = `Podcast: ${safeShowName}
 Current ${field}: ${safeCurrentValue}
 ${ep.description && field === 'title' ? `Description: ${sanitizeForAI(ep.description)}` : ''}
-${ep.show_notes ? `Show notes excerpt: ${ep.show_notes.slice(0, 500)}` : ''}
+${ep.show_notes ? `Show notes excerpt: ${sanitizeForAI(ep.show_notes).slice(0, 500)}` : ''}
 ${safeGuestName ? `Guest: ${safeGuestName}` : ''}
 
 Generate ${clampedCount} ${field} variants.`;

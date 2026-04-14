@@ -4,7 +4,6 @@ import { requireAuth } from '@/lib/auth'
 import { errorResponse, successResponse, handleApiError, parsePagination } from '@/lib/api/helpers'
 import { canProcessEpisode } from '@/lib/tier-limits'
 import { checkRateLimit } from '@/lib/rate-limit'
-import type { EpisodeListItem, PaginatedResponse } from '@/types/database'
 import { CreateEpisodeSchema, parseBody } from '@/lib/validation-schemas'
 import type { EpisodeListItem, ApiResponse, PaginatedResponse, Episode } from '@/types/database'
 
