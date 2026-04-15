@@ -295,7 +295,9 @@ describe('TaddyClient', () => {
       expect(body.variables.term).toBe('technology')
       expect(body.variables.page).toBe(1)
       expect(body.variables.limitPerPage).toBe(25)
-      expect(body.variables.sortBy).toBe('RELEVANCE')
+      // Taddy schema drift fix (audit BUG #34): default sortBy migrated from
+      // the deprecated 'RELEVANCE' to the current 'EXACTNESS' enum value.
+      expect(body.variables.sortBy).toBe('EXACTNESS')
     })
 
     it('getEpisode sends correct UUID variable', async () => {

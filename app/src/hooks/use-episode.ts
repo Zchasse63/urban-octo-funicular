@@ -90,9 +90,22 @@ export default function useEpisode(id: string): UseEpisodeResult {
         clearInterval(pollIntervalRef.current);
         pollIntervalRef.current = null;
       }
-      // Reset processing state when not processing
-      setProcessingStep(null);
-      setProcessingProgress(null);
+      // BUG #19 fix: for FAILED episodes we still need processingStep so the
+      // Signal Chain can render the correct red marker. The Trigger.dev jobs
+      // write `processing_step` to `episodes.metadata` at the start of every
+      // step, so when the job throws, the most-recent step name is still in
+      // the episode row we already fetched. Read it directly instead of
+      // resetting to null. For completed/pending/scheduled, reset.
+      if (episode?.status === 'failed') {
+        const meta = episode?.metadata as Record<string, unknown> | undefined;
+        const step = typeof meta?.processing_step === 'string' ? meta.processing_step : null;
+        const progress = typeof meta?.processing_progress === 'number' ? meta.processing_progress : null;
+        setProcessingStep(step);
+        setProcessingProgress(progress);
+      } else {
+        setProcessingStep(null);
+        setProcessingProgress(null);
+      }
     }
 
     return () => {
@@ -101,7 +114,7 @@ export default function useEpisode(id: string): UseEpisodeResult {
         pollIntervalRef.current = null;
       }
     };
-  }, [episode?.status, pollProcessingStatus]);
+  }, [episode?.status, episode?.metadata, pollProcessingStatus]);
 
   return { episode, isLoading, error, processingStep, processingProgress, refetch: fetchEpisode };
 }

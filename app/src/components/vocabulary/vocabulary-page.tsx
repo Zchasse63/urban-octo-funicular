@@ -1150,12 +1150,17 @@ export const VocabularyPage = () => {
       }
     }
 
-    // Fallback to local-only if no show is active
+    // BUG #33 fix: previously every new vocabulary term was assigned a
+    // RANDOM accuracy boost between 8% and 23% via Math.random(). The
+    // number was displayed to the user as if it were a real measurement,
+    // but it had nothing to do with whether the term actually improved
+    // transcription. Default to 0 until a real backend metric exists.
+    // Fallback to local-only if no show is active.
     const term: VocabTerm = {
       ...newTerm,
       id: `v${Date.now()}`,
       usageCount: 0,
-      accuracyBoost: Math.floor(Math.random() * 15) + 8,
+      accuracyBoost: 0,
       addedDate: new Date().toISOString().slice(0, 10),
       usageTrend: [0, 0, 0, 0, 0, 0, 0]
     };
@@ -1490,27 +1495,33 @@ export const VocabularyPage = () => {
                 </div>
 
                 <div className="p-3">
+                  {/*
+                    BUG #33 fix: there is no backend that populates AI
+                    suggestions today (the audit confirmed `suggestions` is
+                    initialized to `[]` and never written to from any data
+                    source). The previous empty state hinted that suggestions
+                    "appear after next transcription" which is misleading.
+                    Show an honest "Coming Soon" placeholder until a real
+                    suggestions endpoint exists.
+                  */}
                   {filteredSuggestions.length === 0 ? <motion.div initial={{
                   opacity: 0
                 }} animate={{
                   opacity: 1
                 }} className="flex flex-col items-center py-8 gap-2">
-                      <CheckCircle2 className="w-7 h-7 text-emerald-400" />
+                      <CheckCircle2 className="w-7 h-7 text-amber-400" />
                       <p className="font-sans text-[11px] text-muted-foreground text-center leading-relaxed">
-                        {suggestions.length > 0 ? `${suggestions.length - filteredSuggestions.length} hidden by confidence filter.` : 'All suggestions reviewed!'}
-                        <br /><span className="text-muted-foreground/80">New terms appear after next transcription.</span>
+                        <span className="font-mono text-[9px] font-bold text-amber-700 bg-amber-100 border border-amber-200/60 px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                          Coming Soon
+                        </span>
+                        <br /><br />
+                        <span className="text-muted-foreground/80">Automatic vocabulary suggestions from your transcripts are on the roadmap.</span>
                       </p>
                     </motion.div> : <motion.div className="space-y-2" variants={listVariants} initial="hidden" animate="visible">
                       <AnimatePresence>
                         {filteredSuggestions.map(s => <SuggestionCard key={s.id} suggestion={s} onAccept={handleAcceptSuggestion} onDismiss={handleDismissSuggestion} />)}
                       </AnimatePresence>
                     </motion.div>}
-                </div>
-
-                <div className="px-3 pb-3">
-                  <p className="font-sans text-[9px] text-muted-foreground text-center leading-relaxed">
-                    Identified from recent transcripts using NLP entity detection.
-                  </p>
                 </div>
               </div>
 

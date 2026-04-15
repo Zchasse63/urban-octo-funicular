@@ -215,8 +215,17 @@ which is misleading but not actionable by us.
    list of the top 10k breached passwords. Less comprehensive but
    unblocked.
 
-**Status:** DISCOVERED, NOT YET FIXED. Blocked by plan tier — not an
-engineering bug.
+**Status:** ✅ **FIXED 2026-04-15** (round 2). User upgraded to Supabase
+Pro mid-session. Enabled via:
+```bash
+curl -X PATCH -H "Authorization: Bearer $TOKEN" \
+  https://api.supabase.com/v1/projects/$PROJECT/config/auth \
+  -d '{"password_hibp_enabled": true}'
+```
+The auth config response confirmed `password_hibp_enabled: true`. The
+Supabase security advisor for `auth_leaked_password_protection` is now
+gone (`/v1/projects/$PROJECT/advisors?type=security` returns 0 lints,
+down from 7 at audit start).
 
 ---
 

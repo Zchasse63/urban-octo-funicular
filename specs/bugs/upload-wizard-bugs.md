@@ -129,7 +129,13 @@ support.
 
 Recommend option (a) for the audit.
 
-**Status:** DISCOVERED, NOT YET FIXED.
+**Status:** ✅ **FIXED 2026-04-15** (round 2). Two-line label fix in
+`upload-wizard.tsx`: "Whisper v3 → AssemblyAI Universal" (lines 775 + 1131
+in original numbering) and "End-to-end encrypted → Encrypted in transit +
+at rest" (line 1136). Added a comment block explaining the rationale.
+End-to-end verified: the page no longer contains the strings "Whisper" or
+"End-to-end encrypted", and instead shows "AssemblyAI Universal" and
+"Encrypted in transit + at rest".
 
 ---
 
@@ -226,6 +232,13 @@ YouTube URL:
 **Recommended:** Option A for the product-quality audit window. Option
 B/C as future features if the product direction prioritizes them.
 
-**Status:** DISCOVERED, NOT YET FIXED.
+**Status:** ✅ **FIXED 2026-04-15** (round 2). Option A applied: removed
+YouTube and RSS detection from `UrlImportPanel`. The panel now only
+accepts direct audio file URLs, the placeholder reads
+`https://example.com/episode.mp3`, the badge row only shows "Direct Link
+to .mp3 / .wav / .m4a", and `handleSubmit` explicitly rejects YouTube and
+RSS URLs with a clear error message instead of silently failing later.
+End-to-end verified: navigating to `/upload` → URL Import tab shows no
+YouTube or RSS Feed badges anywhere.
 
 ---

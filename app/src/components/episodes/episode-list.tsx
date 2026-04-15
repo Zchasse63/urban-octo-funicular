@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, Reorder } from 'motion/react';
-import { Plus, Search, FileAudio, Clock, UploadCloud, BarChart2, Loader2, CheckCircle2, FileEdit, AlertCircle, ChevronRight, MoreHorizontal, Pencil, Copy, Trash2, ExternalLink, Download, X, CheckSquare, Square, Zap, SlidersHorizontal, ArrowUpDown, ChevronUp, ChevronDown, GripVertical, Tag, Bookmark, BookmarkCheck, RotateCcw, Save, CalendarDays, Hash } from 'lucide-react';
+import { Plus, Search, FileAudio, Clock, UploadCloud, BarChart2, Loader2, CheckCircle2, FileEdit, AlertCircle, ChevronRight, MoreHorizontal, Pencil, Copy, Trash2, ExternalLink, Download, X, CheckSquare, Square, Zap, SlidersHorizontal, ArrowUpDown, ChevronUp, ChevronDown, GripVertical, Tag, Bookmark, BookmarkCheck, RotateCcw, Save, CalendarDays, Hash, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -11,7 +11,7 @@ import useShows from '@/hooks/use-shows';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type EpisodeStatus = 'completed' | 'processing' | 'draft';
+type EpisodeStatus = 'completed' | 'processing' | 'draft' | 'failed';
 type FilterType = 'all' | EpisodeStatus;
 type SortField = 'date' | 'title' | 'seoScore' | 'duration' | 'manual';
 type SortDir = 'asc' | 'desc';
@@ -104,6 +104,12 @@ const STATUS_CONFIG: Record<EpisodeStatus, {
     dot: 'bg-stone-300',
     badge: 'bg-muted border-border text-muted-foreground',
     icon: FileEdit
+  },
+  failed: {
+    label: 'Failed',
+    dot: 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]',
+    badge: 'bg-red-50 border-red-200/60 text-red-700',
+    icon: XCircle
   }
 };
 
@@ -557,7 +563,7 @@ const BatchEditPanel = ({
         <div>
           <label className="block text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground mb-1.5">Change Status</label>
           <div className="flex flex-col gap-1">
-            {(['', 'completed', 'processing', 'draft'] as const).map(s => <button key={s || 'none'} onClick={() => setStatus(s)} className={cn('flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-[11.5px] font-sans font-medium transition-colors', status === s ? 'bg-stone-900 text-white' : 'text-muted-foreground hover:text-accent-foreground hover:bg-accent')}>
+            {(['', 'completed', 'processing', 'draft', 'failed'] as const).map(s => <button key={s || 'none'} onClick={() => setStatus(s)} className={cn('flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-[11.5px] font-sans font-medium transition-colors', status === s ? 'bg-stone-900 text-white' : 'text-muted-foreground hover:text-accent-foreground hover:bg-accent')}>
                 {s === '' ? <><span className="w-2 h-2 rounded-full bg-stone-300 flex-shrink-0" />No change</> : <><span className={cn('w-2 h-2 rounded-full flex-shrink-0', STATUS_CONFIG[s].dot)} />{STATUS_CONFIG[s].label}</>}
               </button>)}
           </div>
@@ -888,6 +894,9 @@ const FILTERS: {
 }, {
   id: 'draft',
   label: 'Draft'
+}, {
+  id: 'failed',
+  label: 'Failed'
 }];
 
 // ─── Main Component ────────────────────────────────────────────────────────────
@@ -904,7 +913,11 @@ export function EpisodeList() {
       number: apiEpisodes.length - i,
       title: ep.title || 'Untitled Episode',
       description: ep.description || '',
-      status: (ep.status === 'failed' || ep.status === 'pending' ? 'draft' : ep.status) as Episode['status'],
+      // Map DB statuses to UI EpisodeStatus.
+      // - 'failed' is now a first-class state with its own filter tab + red pill.
+      // - 'pending' (pre-processing) is shown as 'draft' since the user hasn't kicked off a run yet.
+      // Anything else (completed | processing | draft) passes through unchanged.
+      status: (ep.status === 'pending' ? 'draft' : ep.status) as Episode['status'],
       date: ep.created_at ? new Date(ep.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
       duration: ep.audio_duration_seconds ? formatDuration(ep.audio_duration_seconds) : '0:00',
       seoScore: ep.seo_score ?? undefined,
@@ -1046,7 +1059,8 @@ export function EpisodeList() {
     all: episodes.length,
     completed: episodes.filter(e => e.status === 'completed').length,
     processing: episodes.filter(e => e.status === 'processing').length,
-    draft: episodes.filter(e => e.status === 'draft').length
+    draft: episodes.filter(e => e.status === 'draft').length,
+    failed: episodes.filter(e => e.status === 'failed').length
   }), [episodes]);
 
   // ── Total duration of selected ──

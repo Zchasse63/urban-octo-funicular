@@ -258,4 +258,19 @@ All four bugs above (#13, #14, #15, #16) collapse into a single structural refac
 
 After that refactor, the Assets tab is a thin view over the registry and the generated_assets table. The drift class of bugs becomes structurally impossible.
 
-**Status:** DISCOVERED, NOT YET FIXED.
+**Status:** ✅ **PARTIALLY FIXED 2026-04-15** (round 2). Surgical fix
+landed for #13/#14/#15. Removed `status` field from `AssetItem` interface;
+removed all `status: 'generated' | 'idle'` literals from `ASSET_CATEGORIES`;
+fixed `instagram-captions → instagram-carousel` slug mismatch; removed the
+two orphan rows (`audiogram-script`, `1-liner`) that had no backend
+writer. Updated `AssetRow` to derive status purely from `realAssetContent`
+(removed the hardcoded fallback). Updated `CategoryCard.readyCount` to
+count only assetMap matches. End-to-end verified: header now reads "0 of
+12 assets generated" with 0 phantom Ready badges; after inserting 3 real
+generated_assets rows, header reads "3 of 12" and exactly 3 Ready pills
+render — counter and badges agree. The `instagram_carousel` row now lights
+up correctly. The full structural refactor (delete ASSET_CATEGORIES,
+iterate over the registry, etc.) is deferred — the surgical fix
+eliminates the user-visible bugs without the larger blast radius. BUG #16
+(30+ marketing claim vs 14 visible) is unchanged — flagged as low-pri
+marketing copy in the launch report.

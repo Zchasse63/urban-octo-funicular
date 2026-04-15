@@ -21,7 +21,12 @@ type NavItemProps = {
   label: string
   isActive?: boolean
   count?: number
-  status?: 'active' | 'warning' | 'idle'
+  // BUG #18 fix: previously every status= prop on NavItem was a hardcoded
+  // string with no connection to real state. The 'active' / 'warning' /
+  // 'idle' values are still here for direct callers, but the Episodes
+  // sidebar item now derives a real status from useEpisodes() data and
+  // uses the new 'failed' value when at least one episode failed.
+  status?: 'active' | 'warning' | 'idle' | 'failed'
   isCollapsed?: boolean
   shortcut?: string
   onClick: () => void
@@ -35,6 +40,7 @@ const StatusDot = ({ status }: { status?: NavItemProps['status'] }) => {
     active: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]',
     warning: 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]',
     idle: 'bg-stone-300',
+    failed: 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]',
   }
   return <div className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', colors[status])} />
 }
@@ -315,8 +321,23 @@ function Sidebar({ collapsed, onToggleCollapse, className }: SidebarProps) {
   const [createShowOpen, setCreateShowOpen] = useState(false)
 
   const showId = currentShow?.id
-  const { total: episodeCount, isLoading: episodesLoading } = useEpisodes({ showId })
+  const { episodes, total: episodeCount, isLoading: episodesLoading } = useEpisodes({ showId })
   const { terms, isLoading: vocabularyLoading } = useVocabulary({ showId })
+
+  // BUG #18 fix: derive a real status for the Episodes sidebar dot from the
+  // actual episode list. Priority order:
+  //   1. Any failed episode → red "failed" (most urgent)
+  //   2. Any processing episode → amber "warning"
+  //   3. Any completed episode → green "active"
+  //   4. Otherwise → no dot at all
+  // Previously this was hardcoded to "active" with no connection to data.
+  const episodesStatus: NonNullable<NavItemProps['status']> | undefined = (() => {
+    if (episodesLoading || !episodes || episodes.length === 0) return undefined
+    if (episodes.some((e) => e.status === 'failed')) return 'failed'
+    if (episodes.some((e) => e.status === 'processing')) return 'warning'
+    if (episodes.some((e) => e.status === 'completed')) return 'active'
+    return undefined
+  })()
   const [isDark, setIsDark] = useState(false)
   const [showKeyboardModal, setShowKeyboardModal] = useState(false)
 
@@ -382,7 +403,10 @@ function Sidebar({ collapsed, onToggleCollapse, className }: SidebarProps) {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-stone-800 to-black flex items-center justify-center shadow-lg">
               <Mic2 className="w-[18px] h-[18px] text-stone-100" />
             </div>
-            <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-orange-500 rounded-full border-2 border-background shadow-sm animate-pulse" />
+            {/* BUG #18 fix: removed the decorative pulsing orange dot.
+                It pretended to be a "new feature" or notification ping but
+                was a hardcoded JSX element with no connection to any real
+                application state. */}
           </div>
           <AnimatePresence>
             {!collapsed && (
@@ -414,7 +438,7 @@ function Sidebar({ collapsed, onToggleCollapse, className }: SidebarProps) {
                 </motion.h3>
               )}
             </AnimatePresence>
-            <NavItem icon={LayoutDashboard} label="Episodes" isActive={isActive('/episodes')} count={episodesLoading ? undefined : episodeCount} onClick={() => navigate('/episodes')} status="active" isCollapsed={collapsed} shortcut="⌘1" />
+            <NavItem icon={LayoutDashboard} label="Episodes" isActive={isActive('/episodes')} count={episodesLoading ? undefined : episodeCount} onClick={() => navigate('/episodes')} status={episodesStatus} isCollapsed={collapsed} shortcut="⌘1" />
             <NavItem icon={UploadCloud} label="Upload" isActive={isActive('/upload')} onClick={() => navigate('/upload')} isCollapsed={collapsed} shortcut="⌘U" />
           </div>
 
@@ -428,7 +452,7 @@ function Sidebar({ collapsed, onToggleCollapse, className }: SidebarProps) {
               )}
             </AnimatePresence>
             <NavItem icon={BookOpen} label="Vocabulary" isActive={isActive('/vocabulary')} count={vocabularyLoading ? undefined : terms.length} onClick={() => navigate('/vocabulary')} isCollapsed={collapsed} shortcut="⌘3" />
-            <NavItem icon={Users} label="Experts" isActive={isActive('/experts')} onClick={() => navigate('/experts')} status="warning" isCollapsed={collapsed} />
+            <NavItem icon={Users} label="Experts" isActive={isActive('/experts')} onClick={() => navigate('/experts')} isCollapsed={collapsed} />
             <NavItem icon={Search} label="Search" isActive={isActive('/search')} onClick={() => navigate('/search')} isCollapsed={collapsed} shortcut="⌘F" />
             <NavItem icon={BarChart3} label="Analytics" isActive={isActive('/analytics')} onClick={() => navigate('/analytics')} isCollapsed={collapsed} />
           </div>

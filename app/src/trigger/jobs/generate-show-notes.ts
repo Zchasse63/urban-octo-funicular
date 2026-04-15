@@ -121,8 +121,19 @@ export const generateShowNotesTask = task({
       showStylePreferences
     );
 
+    // BUG #11 fix: Grok was rendering timestamps as broken markdown link
+    // syntax (`[0:53](53)`) inside `show_notes_markdown`. We now strip any
+    // timestamps section Grok may have self-rendered and replace it with
+    // a clean, deterministic block built from the structured `timestamps`
+    // array (which is correct because it's Zod-validated upstream).
+    const strippedMarkdown = _stripTimestampsSection(grokResponse.show_notes_markdown);
+    const timestampsBlock = _renderTimestampsMarkdown(grokResponse.timestamps);
+    const cleanMarkdown = timestampsBlock
+      ? `${strippedMarkdown}\n\n${timestampsBlock}`
+      : strippedMarkdown;
+
     // Convert markdown to HTML
-    const showNotesHtml = markdownToHtml(grokResponse.show_notes_markdown);
+    const showNotesHtml = markdownToHtml(cleanMarkdown);
 
     // Generate schema markup for SEO
     const schemaMarkup = generateSchemaMarkup(grokResponse, guestName);
@@ -138,7 +149,7 @@ export const generateShowNotesTask = task({
     }));
 
     const result: ShowNotesResult = {
-      showNotes: grokResponse.show_notes_markdown,
+      showNotes: cleanMarkdown,
       showNotesHtml,
       schemaMarkup,
       summary: grokResponse.summary,
@@ -295,6 +306,8 @@ You MUST respond with a JSON object matching this exact schema. Every field is r
   "suggested_description": "string — a compelling episode description between 150 and 200 words"
 }
 
+IMPORTANT: Do NOT include a "Timestamps" or "Chapter Markers" section inside show_notes_markdown. The timestamps array will be rendered into a clean Timestamps section programmatically after we receive your response. Any timestamp lines you put inside show_notes_markdown will be stripped and replaced.
+
 Provide 5-10 items in key_topics. Provide 5-15 timestamps that cover the main beats of the episode. Provide 3-8 viral_moments that represent the most shareable moments.
 
 For viral_moments, look for:
@@ -402,6 +415,99 @@ function markdownToHtml(markdown: string): string {
     .join("\n");
 
   return html;
+}
+
+/**
+ * BUG #11 helpers: Grok was rendering timestamps as broken markdown link
+ * syntax inside `show_notes_markdown` (e.g. `[0:53](53)` and `[2:10](130)`).
+ * These three helpers pull the timestamps section out of Grok's markdown
+ * and replace it with a server-rendered version built from the structured
+ * `timestamps` array (which is Zod-validated upstream and therefore safe).
+ */
+
+/**
+ * Strip any timestamps section Grok may have injected into show_notes_markdown.
+ * Handles every heading variant we've observed in the wild plus a backstop
+ * regex that catches stray broken `[MM:SS](N)` link-syntax lines outside any
+ * heading.
+ *
+ * Exported as `_stripTimestampsSection` for unit tests only.
+ */
+export function _stripTimestampsSection(markdown: string): string {
+  // Remove full sections starting with a timestamps/chapters heading. Stops at
+  // the next ##-level heading, the next bold-text "header" line, or end of
+  // string — whichever comes first.
+  //
+  // CRITICAL: JavaScript regex does NOT support `\z` (Perl/Ruby end-of-string
+  // anchor). The previous version used `\z` which silently matched the literal
+  // character `z`, so a Timestamps section at the very end of the markdown
+  // (with no following heading and no trailing `z` in the content) would not
+  // be stripped. We use a negative-lookahead-of-anything `(?![\s\S])` instead,
+  // which is the canonical JavaScript "absolute end of string" anchor and
+  // works regardless of multiline mode.
+  let result = markdown.replace(
+    /^(#{1,3}\s*time\s*stamps?|#{1,3}\s*chapters?|#{1,3}\s*chapter\s+markers?|\*\*time\s*stamps?\*\*|\*\*TIMESTAMPS\*\*)[^\n]*\n([\s\S]*?)(?=\n#{1,3}\s|\n\*\*[A-Z]|(?![\s\S]))/gim,
+    ''
+  );
+
+  // Backstop: remove individual lines that are broken timestamp link syntax
+  // sitting outside any explicit Timestamps section. Matches:
+  //   [0:53](53) Description
+  //   - [2:10](130) Description
+  //   * [12:34:56](45296) Description
+  result = result.replace(
+    /^[-*]?\s*\[\d{1,2}:\d{2}(?::\d{2})?\]\(\d+(?::\d{2}(?::\d{2})?)?\)[^\n]*\n?/gm,
+    ''
+  );
+
+  // Collapse 3+ consecutive blank lines left by the removals.
+  result = result.replace(/\n{3,}/g, '\n\n');
+
+  return result.trim();
+}
+
+/**
+ * Render a clean ## Timestamps section from the validated structured array.
+ * Returns an empty string if there are no timestamps so callers can skip
+ * appending the section header.
+ *
+ * Exported as `_renderTimestampsMarkdown` for unit tests only.
+ */
+export function _renderTimestampsMarkdown(
+  timestamps: Array<{ time: string; time_seconds: number; topic: string }>
+): string {
+  if (timestamps.length === 0) return '';
+
+  const lines = timestamps
+    .filter((t) => t.time && t.topic) // guard against malformed entries
+    .map((t) => {
+      // Use Grok's `time` field if it parses as MM:SS or H:MM:SS; otherwise
+      // fall back to formatting `time_seconds` ourselves so we never render
+      // a malformed time string to the user.
+      const timeDisplay = /^\d{1,2}:\d{2}(:\d{2})?$/.test(t.time)
+        ? t.time
+        : _formatSecondsToTime(t.time_seconds);
+      return `- **${timeDisplay}** — ${t.topic}`;
+    });
+
+  if (lines.length === 0) return '';
+  return `## Timestamps\n\n${lines.join('\n')}`;
+}
+
+/**
+ * Format a non-negative integer count of seconds into MM:SS or H:MM:SS.
+ *
+ * Exported as `_formatSecondsToTime` for unit tests only.
+ */
+export function _formatSecondsToTime(seconds: number): string {
+  const safeSeconds = Math.max(0, Math.floor(seconds));
+  const h = Math.floor(safeSeconds / 3600);
+  const m = Math.floor((safeSeconds % 3600) / 60);
+  const s = safeSeconds % 60;
+  if (h > 0) {
+    return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+  return `${m}:${String(s).padStart(2, '0')}`;
 }
 
 /**

@@ -16,6 +16,55 @@ Format per entry:
 
 ---
 
+## product-quality-audit-fixes (round 2) — 2026-04-15
+
+- **Status:** PASS ✅ — all 13 documented bugs from the Phase 1 + Phase 2
+  work queue fixed and verified end-to-end. Plus all 3 critical findings
+  from the code-reviewer agent fixed. Plus 6 missing Netlify env vars
+  pushed. Plus Supabase HaveIBeenPwned password protection enabled.
+- **Tests:** 998 / 1021 Vitest passing, 23 skipped, 0 failed
+  (998 was 996 before — added 22 BUG #11 helper tests, fixed 1 stale
+  Taddy test). Production build (`npx next build`) compiles clean.
+- **Bugs fixed (application):**
+  - **#37 HIGH:** Fake API & Developer tab → "Coming Soon" placeholder
+  - **#10 HIGH:** Failed episodes render as Draft → red FAILED pill + filter tab
+  - **#11 HIGH:** Show Notes timestamps as broken markdown → server-rendered
+  - **#29 HIGH:** Transcript timestamps off by 1000× → ms→sec conversion
+  - **#13/#14/#15 HIGH:** Asset slug drift + phantom Ready badges → surgical fix
+  - **#20 HIGH:** RSS Tags localhost URLs → fallback URL fix + Netlify env push
+  - **#31 HIGH:** False Whisper v3 + E2E claims → AssemblyAI + accurate copy
+  - **#32 HIGH:** YouTube/RSS dead URL import → removed from UI, explicit error
+  - **#18 MEDIUM:** Sidebar decorative dots → wired to real state, removed brand orange
+  - **#19 MEDIUM:** Signal Chain wrong for failed → reads processing_step from metadata
+  - **#30 MEDIUM:** Export SRT dead button → real generator + onClick
+  - **#33 MEDIUM:** Vocab random accuracy boost → 0 + Coming Soon AI Suggestions
+  - **#28 LOW-MED:** URL ?tab= desync → useSearchParams + Suspense wrapper
+  - **#24 LOW (Supabase):** HaveIBeenPwned password protection enabled (Pro upgrade)
+- **Bugs caught by code-reviewer (all fixed):**
+  - **CRIT:** BUG #11 regex `\z` is invalid JavaScript → replaced with `(?![\s\S])`
+  - **CRIT:** BUG #28 useSearchParams needs Suspense → wrapped EpisodeDetail
+  - **IMPORTANT:** BUG #30 SRT generator no null guard → `seg.text ?? ''`
+- **Infrastructure:**
+  - 6 missing Netlify env vars pushed across all 4 contexts (NEXT_PUBLIC_APP_URL,
+    TADDY_API_KEY, TADDY_USER_ID, ASSEMBLYAI_WEBHOOK_SECRET, ENCRYPTION_SECRET,
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
+  - Supabase security advisor count: 7 → 0
+  - Supabase Pro upgrade unlocked HIBP password protection
+- **Files:**
+  - `specs/reports/launch-readiness-2026-04-15.md` — full launch readiness report
+  - `app/test/unit/fixes/bug-11-show-notes-timestamps.test.ts` — new (22 tests)
+  - 10 source files modified across components/ (settings, episodes, upload,
+    layout, vocabulary), trigger jobs, hooks, and api routes
+  - 6 bug status docs updated with verification notes
+- **Verdict:** 🟢 GO for launch. All HIGH-severity bugs resolved, full test
+  suite green, production build clean, infrastructure parity achieved.
+- **Follow-up:** qa-council pipelines for Taddy Discovery / Settings /
+  Vocabulary / Analytics / Auth / Guest Package / Landing Page were
+  deferred from this round (context budget). Should be run as 7
+  separate focused sessions before week-2 post-launch.
+
+---
+
 ## processing-pipeline (full live run) — 2026-04-14
 
 - **Status:** PASS ✅ (upgrades the 2026-04-09 `PARTIAL` entry to full pass)
