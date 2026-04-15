@@ -519,6 +519,63 @@ None — this is a standing backlog.
 
 ---
 
+### BUG-LP-1 — Trigger.dev worker not deployed / running in any environment
+- **Discovered in:** Pre-merge Phase B sanity test (2026-04-15)
+- **Severity:** **P0 (blocks launch)** — without an active Trigger.dev worker, the entire audio processing pipeline is frozen; every upload sits indefinitely in `status: 'processing'`
+- **Evidence:**
+  - First upload attempt `a48a54ae-f382-43e5-a565-654c692614c7` stuck at `step: null, progress: null` for 3+ min with no trigger run metadata changes
+  - `ps aux | grep trigger` showed no local `trigger.dev dev` process
+  - After starting `npx trigger.dev dev` locally, the SECOND upload `d9d33571-942b-4c7e-ae02-479118a7e5a6` ran to completion in ~2 min (transcribe-audio 2.8s + generate-show-notes 13.3s + generate-assets 1m 8.5s)
+- **Root cause:** The Trigger.dev project (`proj_zrzknejolkmpntdfpgiq`) has no deployed version and no `trigger.dev dev` worker attached. Calling `.trigger()` from the API route succeeds (returns a runId) but nothing consumes the queue.
+- **Proposed fix:**
+  - Dev: user keeps `npx trigger.dev dev` running in a terminal during any session that needs upload testing (or I start it in background with `run_in_background: true`).
+  - Prod: run `npx trigger.dev deploy` from `app/` directory to push the compiled jobs to Trigger.dev Cloud BEFORE any production traffic hits the `/api/upload` endpoint.
+- **Status:** OPEN — must fix before Phase A merge can safely land OR must be the very first post-merge action in Phase H.
+
+---
+
+### BUG-LP-2 — Asset slug drift round 2: pipeline writes `newsletter`/`tiktok_hook`/`quote_card`, UI expects `newsletter_email` (and has no slots for the latter two)
+- **Discovered in:** Pre-merge Phase B smoke test — real pipeline completed with 8 generated_assets rows, only 5 matched UI slots
+- **Severity:** **P1** — content is being generated correctly but 3 assets are orphaned in the DB and invisible in the Assets tab. Users will see a "Generate" button on the Newsletter row even though content already exists.
+- **Evidence:**
+  - DB query shows `generated_assets.asset_type` values: `linkedin_post`, `twitter_thread`, `instagram_carousel`, `newsletter`, `blog_post`, `youtube_description`, `tiktok_hook`, `quote_card`
+  - UI `UI_ID_TO_DB_TYPE` map (episode-detail.tsx:1035 post-fix) expects: `linkedin_post`, `twitter_thread`, `instagram_carousel`, **`newsletter_email`**, `blog_post`, `youtube_description`, `seo_description`, `show_notes`, `chapter_markers`, `key_takeaways`, `guest_bio_short`, `guest_promo_kit`
+  - Result: header shows "5 of 12 assets generated", Newsletter row shows Generate button despite `generated_assets` row existing
+- **Proposed fix options:**
+  - **A.** Align the UI map to the pipeline output (change `'newsletter' → 'newsletter'`, add `tiktok_hook` and `quote_card` slots)
+  - **B.** Align the pipeline output to the UI map (rename in `asset-prompts.ts` keys)
+  - **C.** Structural: replace the `UI_ID_TO_DB_TYPE` map entirely with a single source of truth (asset-types.ts registry) — this was the deferred full fix from the round 2 audit
+- **Status:** OPEN — Phase C addition or new Phase C5
+
+---
+
+### BUG-LP-3 — Core content (show_notes, chapter_markers, seo_description, key_takeaways) is never written to `generated_assets` — always shows as "Generate" in Assets tab
+- **Discovered in:** Pre-merge Phase B smoke test — Show Notes row shows Generate button despite `episodes.show_notes` having 1937 chars of real content
+- **Severity:** **P1** — same class of bug as LP-2 but structurally different. The Assets tab's `assetMap` only reads from `generated_assets`, but the pipeline stores Show Notes, Chapter Markers, Episode Description, and TL;DR Bullets in their own columns on `episodes` (e.g. `show_notes`, `schema_markup.hasPart`, `seo_analysis.description`). Users who click the Show Notes row's Generate button would trigger a redundant regeneration.
+- **Evidence:**
+  - `episodes.show_notes` length: 1937 chars (verified via DB query)
+  - `generated_assets` has 0 rows with `asset_type='show_notes'` for this episode
+  - Assets tab shows "Show Notes ... Generate" button
+- **Proposed fix:**
+  - **A.** Have the Assets tab's `assetMap` also seed from `episodes.show_notes` / `episodes.schema_markup` where applicable
+  - **B.** Have the pipeline additionally write these 4 types into `generated_assets` as well as the episode columns (denormalized duplication)
+  - **C.** Remove these 4 rows from the Assets tab entirely and direct users to the dedicated Show Notes / Intelligence / RSS Tags tabs instead (simplest)
+- **Status:** OPEN — Phase C addition or merge with LP-2
+
+---
+
+### BUG-LP-4 — Audio duration stored correctly but `transcript_segments` only has 1 segment for a 2:50 monologue
+- **Discovered in:** Pre-merge Phase B smoke test
+- **Severity:** **P3** (not a regression — expected AssemblyAI behavior on single-speaker audio with no diarization events)
+- **Evidence:**
+  - `audio_duration_seconds: 170` ✓
+  - `jsonb_array_length(transcript_segments): 1`
+  - The single segment covers `start: 800, end: 168950` (the entire audio)
+- **Analysis:** AssemblyAI produces one utterance per continuous speech block. A 2:50 monologue with no pauses / no speaker change produces 1 segment. This is correct behavior — just means the Transcript tab and SRT export have only one row, which is fine.
+- **Status:** OBSERVED, NOT A BUG — confirming as expected behavior.
+
+---
+
 ## Phase J — Final launch gate
 
 **Goal:** The unambiguous go/no-go decision before public launch.
