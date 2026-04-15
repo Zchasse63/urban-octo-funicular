@@ -92,7 +92,12 @@ status: ep.status as Episode['status'],
 Consider also adding a "retry processing" CTA on the failed row since
 retry is the obvious next action.
 
-**Status:** DISCOVERED, NOT YET FIXED.
+**Status:** ✅ **FIXED 2026-04-15** (round 2). Added `'failed'` to the
+`EpisodeStatus` union, the `STATUS_CONFIG` map, the `FILTERS` list, and the
+`counts` reducer. Removed the `failed → draft` rewrite at line 907 and
+mapped pending → draft instead. End-to-end verified by inserting a temp
+failed episode against the test user's show — the new "Failed" filter tab
+shows the count, and the row renders a red "FAILED" pill.
 
 ---
 

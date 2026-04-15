@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { CreditCard, Zap, Download, Check, Copy, RefreshCw, Key, Clock, Eye, EyeOff, Plus, Trash2, ExternalLink, CheckCircle2, XCircle, AlertCircle, ChevronRight, Wifi, Radio, Youtube, Rss, Slack, Music, TrendingUp, Shield, ArrowUpRight, Package, ChevronDown, Webhook, Bell, AlertTriangle, X, Link2 } from 'lucide-react';
+import { CreditCard, Zap, Download, Check, Copy, RefreshCw, Key, ExternalLink, CheckCircle2, XCircle, AlertCircle, ChevronRight, Wifi, Radio, Youtube, Rss, Slack, Music, TrendingUp, Shield, ArrowUpRight, Package, ChevronDown, Webhook, Bell, AlertTriangle, X, Link2, Construction, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import useSubscription from '@/hooks/use-subscription';
 import { useUsage } from '@/hooks/use-usage';
@@ -26,14 +26,6 @@ interface Integration {
   connected: boolean;
   connectedSince?: string;
   badge?: string;
-}
-interface ApiKey {
-  id: string;
-  name: string;
-  key: string;
-  lastUsed: string;
-  created: string;
-  status: 'active' | 'expired';
 }
 interface Toast {
   id: string;
@@ -96,30 +88,6 @@ const INTEGRATIONS: Integration[] = [{
   iconColor: 'text-red-500',
   connected: false,
   badge: 'Coming Soon'
-}];
-// Placeholder API keys for UI demonstration — will be replaced with
-// real user API key management backed by the database.
-const API_KEYS: ApiKey[] = [{
-  id: 'key1',
-  name: 'Production Studio',
-  key: 'pb_live_sk_••••••••••••••••••••',
-  lastUsed: '2 minutes ago',
-  created: 'Mar 15, 2024',
-  status: 'active'
-}, {
-  id: 'key2',
-  name: 'Zapier Integration',
-  key: 'pb_live_sk_••••••••••••••••••••',
-  lastUsed: '3 hours ago',
-  created: 'Feb 2, 2024',
-  status: 'active'
-}, {
-  id: 'key3',
-  name: 'Dev / Staging',
-  key: 'pb_test_sk_••••••••••••••••••••',
-  lastUsed: '14 days ago',
-  created: 'Jan 10, 2024',
-  status: 'expired'
 }];
 const TAB_CONFIG: {
   id: SettingsTab;
@@ -697,318 +665,65 @@ const IntegrationsTab = ({
     </div>;
 };
 
-// ─── API Key Row ──────────────────────────────────────────────────────────────
-
-const ApiKeyRow = ({
-  apiKey,
-  onDelete,
-  addToast
-}: {
-  apiKey: ApiKey;
-  onDelete: (id: string) => void;
-  addToast: (msg: string, type?: Toast['type'], icon?: React.ElementType) => void;
-}) => {
-  const [visible, setVisible] = useState(false);
-  const isExpired = apiKey.status === 'expired';
-
-  // Always show partially masked key; reveal full key only when toggled
-  const maskedKey = apiKey.key.slice(0, 14) + '••••••••••••';
-  const displayKey = visible ? apiKey.key : maskedKey;
-  const handleCopy = () => {
-    if (isExpired) return;
-    navigator.clipboard.writeText(apiKey.key);
-    addToast(`Key "${apiKey.name}" copied to clipboard`, 'success', Copy);
-  };
-  const handleDelete = () => {
-    onDelete(apiKey.id);
-    addToast(`Key "${apiKey.name}" revoked`, 'info', Trash2);
-  };
-  return <div className={cn('flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4 transition-colors', isExpired ? 'bg-muted/30 opacity-70' : 'hover:bg-muted/30')}>
-      <div className={cn('w-2 h-2 rounded-full flex-shrink-0', isExpired ? 'bg-muted-foreground/50' : 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]')} />
-
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span className={cn('font-sans text-[13px] font-semibold truncate', isExpired ? 'text-muted-foreground' : 'text-foreground')}>
-            {apiKey.name}
-          </span>
-          {isExpired && <span className="font-mono text-[9px] font-bold text-red-600 bg-red-50 border border-red-200/60 px-1.5 py-0.5 rounded-full uppercase tracking-wider flex-shrink-0">
-              Expired
-            </span>}
-        </div>
-        <div className="flex items-center gap-2">
-          <code className={cn('font-mono text-[11px] px-2 py-0.5 rounded border tracking-tight select-all truncate', isExpired ? 'text-muted-foreground bg-muted/60 border-border' : 'text-muted-foreground bg-muted border-border')}>
-            {displayKey}
-          </code>
-        </div>
-      </div>
-
-      <div className="hidden sm:flex flex-col items-end gap-0.5 flex-shrink-0 text-right">
-        <div className="flex items-center gap-1 text-muted-foreground">
-          <Clock className="w-3 h-3" />
-          <span className="font-mono text-[10px]">{apiKey.lastUsed}</span>
-        </div>
-        <span className="font-mono text-[10px] text-muted-foreground/80">Created {apiKey.created}</span>
-      </div>
-
-      {/* Action buttons — always visible (not only on hover) */}
-      <div className="flex items-center gap-1 flex-shrink-0">
-        {!isExpired && <button onClick={() => setVisible(v => !v)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground/80 hover:bg-accent transition-all" title={visible ? 'Hide key' : 'Reveal full key'}>
-            {visible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-          </button>}
-        {!isExpired && <button onClick={handleCopy} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground/80 hover:bg-accent transition-all" title="Copy key">
-            <Copy className="w-3.5 h-3.5" />
-          </button>}
-        <button onClick={handleDelete} className={cn('p-1.5 rounded-md transition-all', isExpired ? 'text-muted-foreground/80 hover:text-red-500 hover:bg-red-50' : 'text-muted-foreground hover:text-red-600 hover:bg-red-50')} title={isExpired ? 'Remove expired key' : 'Revoke key'}>
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
-      </div>
-    </div>;
-};
-
 // ─── API Tab ──────────────────────────────────────────────────────────────────
 
-const ApiTab = ({
-  addToast
-}: {
-  addToast: (msg: string, type?: Toast['type'], icon?: React.ElementType) => void;
-}) => {
-  const [keys, setKeys] = useState<ApiKey[]>(API_KEYS);
-  const [creatingKey, setCreatingKey] = useState(false);
-  const [newKeyName, setNewKeyName] = useState('');
-  const [baseUrlCopied, setBaseUrlCopied] = useState(false);
-  const handleDelete = (id: string) => {
-    setKeys(prev => prev.filter(k => k.id !== id));
-  };
-  const handleCreate = () => {
-    if (!newKeyName.trim()) return;
-    const newKey: ApiKey = {
-      id: `key${Date.now()}`,
-      name: newKeyName.trim(),
-      key: `pb_live_sk_${Math.random().toString(36).slice(2, 22)}`,
-      lastUsed: 'Never',
-      created: new Date().toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-      }),
-      status: 'active'
-    };
-    setKeys(prev => [newKey, ...prev]);
-    setNewKeyName('');
-    setCreatingKey(false);
-    addToast(`API key "${newKey.name}" created`, 'success', Key);
-  };
-  const handleCancelCreate = () => {
-    setCreatingKey(false);
-    setNewKeyName('');
-  };
-  const handleCopyBaseUrl = () => {
-    navigator.clipboard.writeText('https://api.podbrain.io/v2');
-    setBaseUrlCopied(true);
-    addToast('Base URL copied to clipboard', 'success', Copy);
-    setTimeout(() => setBaseUrlCopied(false), 1800);
-  };
-  const activeKeys = keys.filter(k => k.status === 'active');
-  const expiredKeys = keys.filter(k => k.status === 'expired');
+// PodBrain does not yet ship a public REST API. This tab is intentionally a
+// placeholder until the API ships (see docs/planning/FUTURE-IMPROVEMENTS.md).
+// The previous implementation displayed mocked API keys, fake usage meters,
+// and a fictional `api.podbrain.io` base URL — that has been removed.
+const ApiTab = () => {
+  const plannedFeatures = [
+    'Programmatic episode upload',
+    'Asset retrieval (transcripts, show notes, RSS tags)',
+    'Webhook subscriptions for processing events',
+    'Per-key rate limiting and audit logs',
+  ];
   return <div className="space-y-5">
-      {/* API info banner */}
+      {/* Coming soon banner */}
       <div className="bg-stone-900 text-stone-100 rounded-xl p-5 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.18)] border border-stone-800/50">
         <div className="flex items-start gap-4">
           <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0 border border-white/10">
-            <Shield className="w-5 h-5 text-amber-300" />
+            <Construction className="w-5 h-5 text-amber-300" />
           </div>
           <div className="flex-1">
-            <h4 className="font-sans font-bold text-[13px] tracking-tight mb-1">Studio API — v2</h4>
-            <p className="font-sans text-[12px] text-muted-foreground/80 leading-relaxed">
-              Use API keys to authenticate requests from your apps, automation tools, or integrations. Keys are shown
-              partially masked — reveal and copy them securely.
-            </p>
-            <div className="flex items-center gap-3 mt-3">
-              <a href="#" className="flex items-center gap-1.5 font-sans text-[11px] text-muted-foreground/60 hover:text-white transition-colors">
-                <ExternalLink className="w-3 h-3" />
-                API Reference Docs
-              </a>
-              <span className="w-1 h-1 rounded-full bg-stone-700" />
-              <a href="#" className="flex items-center gap-1.5 font-sans text-[11px] text-muted-foreground/60 hover:text-white transition-colors">
-                <ChevronRight className="w-3 h-3" />
-                Rate limits & quotas
-              </a>
+            <div className="flex items-center gap-2 mb-1">
+              <h4 className="font-sans font-bold text-[13px] tracking-tight">Public API</h4>
+              <span className="font-mono text-[9px] font-bold text-amber-200 bg-amber-500/10 border border-amber-400/30 px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                Coming Soon
+              </span>
             </div>
+            <p className="font-sans text-[12px] text-stone-300 leading-relaxed">
+              We&apos;re building a developer API for PodBrain. It&apos;s not yet available — the access controls,
+              billing, and rate limits ship together so we can hold the experience to the same bar as the rest
+              of the studio.
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Keys table */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/50 bg-muted/30">
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              API Keys
-            </span>
-            <span className="font-mono text-[10px] font-bold text-muted-foreground bg-muted border border-border px-1.5 py-0.5 rounded-full">
-              {activeKeys.length} active
-            </span>
-          </div>
-          <button onClick={() => setCreatingKey(true)} disabled={creatingKey} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-stone-900 text-white text-[11px] font-sans font-semibold hover:bg-stone-800 disabled:opacity-50 transition-colors shadow-sm">
-            <Plus className="w-3 h-3" />
-            New Key
-          </button>
-        </div>
-
-        {/* Create key form */}
-        <AnimatePresence>
-          {creatingKey && <motion.div initial={{
-          height: 0,
-          opacity: 0
-        }} animate={{
-          height: 'auto',
-          opacity: 1
-        }} exit={{
-          height: 0,
-          opacity: 0
-        }} transition={{
-          duration: 0.2,
-          ease: 'easeOut'
-        }} className="overflow-hidden">
-              <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border/50">
-                <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse flex-shrink-0" />
-                <input autoFocus type="text" placeholder="Key name (e.g. Production App)" value={newKeyName} onChange={e => setNewKeyName(e.target.value)} onKeyDown={e => {
-              if (e.key === 'Enter') handleCreate();
-              if (e.key === 'Escape') handleCancelCreate();
-            }} className="flex-1 px-3 py-2 rounded-lg text-[13px] font-sans text-foreground placeholder:text-muted-foreground bg-card border border-border focus:outline-none focus:border-stone-400 focus:shadow-[0_0_0_3px_rgba(120,113,108,0.1)] transition-all" />
-                <button onClick={handleCreate} disabled={!newKeyName.trim()} className="px-3 py-2 rounded-lg text-[12px] font-sans font-semibold bg-stone-900 text-white hover:bg-stone-800 disabled:opacity-40 transition-colors">
-                  Create
-                </button>
-                <button onClick={handleCancelCreate} className="px-3 py-2 rounded-lg text-[12px] font-sans text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
-                  Cancel
-                </button>
-              </div>
-            </motion.div>}
-        </AnimatePresence>
-
-        {/* Active keys */}
-        <div className="divide-y divide-border/50">
-          <AnimatePresence>
-            {activeKeys.map(key => <motion.div key={key.id} initial={{
-            opacity: 0,
-            x: -8
-          }} animate={{
-            opacity: 1,
-            x: 0
-          }} exit={{
-            opacity: 0,
-            x: 8,
-            height: 0
-          }} transition={{
-            duration: 0.2
-          }}>
-                <ApiKeyRow apiKey={key} onDelete={handleDelete} addToast={addToast} />
-              </motion.div>)}
-          </AnimatePresence>
-
-          {/* Expired keys section */}
-          {expiredKeys.length > 0 && <>
-              <div className="px-5 py-2 bg-muted/30">
-                <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground/80">
-                  Expired — read only
-                </span>
-              </div>
-              <AnimatePresence>
-                {expiredKeys.map(key => <motion.div key={key.id} initial={{
-              opacity: 0,
-              x: -8
-            }} animate={{
-              opacity: 1,
-              x: 0
-            }} exit={{
-              opacity: 0,
-              x: 8,
-              height: 0
-            }} transition={{
-              duration: 0.2
-            }}>
-                    <ApiKeyRow apiKey={key} onDelete={handleDelete} addToast={addToast} />
-                  </motion.div>)}
-              </AnimatePresence>
-            </>}
-
-          {/* Empty state */}
-          {keys.length === 0 && <div className="px-5 py-12 text-center">
-              <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center mx-auto mb-3">
-                <Key className="w-5 h-5 text-muted-foreground/80" />
-              </div>
-              <p className="font-sans text-[13px] font-medium text-muted-foreground mb-1">No API keys yet</p>
-              <p className="font-sans text-[11px] text-muted-foreground mb-4">
-                Create a key to start making authenticated requests to the PodBrain API.
-              </p>
-              <button onClick={() => setCreatingKey(true)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-sans font-semibold bg-stone-900 text-white hover:bg-stone-800 transition-colors">
-                <Plus className="w-3.5 h-3.5" />
-                Create your first key
-              </button>
-            </div>}
-        </div>
+      {/* What's planned */}
+      <div className="bg-card border border-border rounded-xl p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-3">
+          What&apos;s planned
+        </span>
+        <ul className="space-y-2">
+          {plannedFeatures.map(feature => <li key={feature} className="flex items-start gap-2.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 mt-1.5 flex-shrink-0" />
+              <span className="font-sans text-[12px] text-foreground/80 leading-relaxed">{feature}</span>
+            </li>)}
+        </ul>
       </div>
 
-      {/* Base URL */}
+      {/* In the meantime */}
       <div className="bg-card border border-border rounded-xl p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-3">Base URL</span>
-        <div className="flex items-center gap-3 bg-muted/60 border border-border rounded-lg px-4 py-3">
-          <code className="font-mono text-[12px] text-foreground/80 flex-1 select-all">https://api.podbrain.io/v2</code>
-          <button onClick={handleCopyBaseUrl} className={cn('flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-sans font-medium transition-all border', baseUrlCopied ? 'text-emerald-700 bg-emerald-50 border-emerald-200/60' : 'text-muted-foreground hover:text-foreground/80 bg-muted/60 hover:bg-muted border-border')}>
-            {baseUrlCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-            {baseUrlCopied ? 'Copied' : 'Copy'}
-          </button>
-        </div>
-      </div>
-
-      {/* Rate limits — linked to usage */}
-      <div className="bg-card border border-border rounded-xl p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-        <div className="flex items-center justify-between mb-4">
-          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            {/* TODO: Wire rate limits to real API and display tier-specific limits */}
-            Rate Limits
-          </span>
-          <button className="flex items-center gap-1 font-sans text-[10px] text-muted-foreground hover:text-foreground/80 transition-colors">
-            <ArrowUpRight className="w-3 h-3" />
-            View current usage
-          </button>
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-          {[{
-          label: 'Requests / minute',
-          value: '120',
-          icon: Zap,
-          current: 43,
-          max: 120
-        }, {
-          label: 'Requests / day',
-          value: '10,000',
-          icon: RefreshCw,
-          current: 3240,
-          max: 10000
-        }, {
-          label: 'Concurrent jobs',
-          value: '5',
-          icon: Package,
-          current: 2,
-          max: 5
-        }].map(stat => {
-          const StatIcon = stat.icon;
-          const pct = Math.round(stat.current / stat.max * 100);
-          return <div key={stat.label} className="bg-muted/30 border border-border/50 rounded-lg p-3.5 text-center">
-                <StatIcon className="w-4 h-4 text-muted-foreground/80 mx-auto mb-2" />
-                <span className="font-mono text-lg font-bold text-foreground block leading-none mb-1">{stat.value}</span>
-                <span className="font-sans text-[10px] text-muted-foreground block mb-2">{stat.label}</span>
-                {/* Mini usage bar */}
-                <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
-                  <div className="h-full bg-muted-foreground rounded-full transition-all" style={{
-                width: `${pct}%`
-              }} />
-                </div>
-                <span className="font-mono text-[9px] text-muted-foreground mt-1 block">{pct}% in use</span>
-              </div>;
-        })}
-        </div>
+        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-3">
+          In the meantime
+        </span>
+        <p className="font-sans text-[12px] text-foreground/80 leading-relaxed">
+          You can already automate a lot through the <strong>Integrations</strong> tab — Buzzsprout sync,
+          webhooks for processing events, and the public RSS proxy each cover the most common automations
+          podcasters ask for.
+        </p>
       </div>
     </div>;
 };
@@ -1093,7 +808,7 @@ export const SettingsPage = () => {
         }}>
             {activeTab === 'subscription' && <SubscriptionTab addToast={addToast} subscription={subscription} subLoading={subLoading} onManageStripe={handleManageStripe} onCheckout={startCheckout} usage={usage} usageLoading={usageLoading} />}
             {activeTab === 'integrations' && <IntegrationsTab addToast={addToast} />}
-            {activeTab === 'api' && <ApiTab addToast={addToast} />}
+            {activeTab === 'api' && <ApiTab />}
             {/* Team section hidden for launch — team collaboration deferred to Phase 2 */}
           </motion.div>
         </AnimatePresence>

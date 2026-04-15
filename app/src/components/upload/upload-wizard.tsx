@@ -129,25 +129,18 @@ const UrlImportPanel = ({
 }) => {
   const [url, setUrl] = useState('');
   const [urlError, setUrlError] = useState('');
-  const detectUrlType = (val: string) => {
-    if (val.includes('youtube.com') || val.includes('youtu.be')) return {
-      type: 'YouTube',
-      icon: Youtube,
-      color: 'text-red-500'
-    };
-    if (val.includes('rss') || val.includes('.xml') || val.includes('feed')) return {
-      type: 'RSS Feed',
-      icon: Rss,
-      color: 'text-orange-500'
-    };
-    if (val.startsWith('http')) return {
-      type: 'Direct Link',
-      icon: Link2,
-      color: 'text-sky-500'
-    };
-    return null;
-  };
-  const detected = url ? detectUrlType(url) : null;
+
+  // BUG #32 fix: removed YouTube and RSS Feed detection from this panel.
+  // The pipeline has no YouTube downloader (no `ytdl-core`/`yt-dlp` anywhere
+  // in the codebase) and no RSS parsing on this code path — the wizard was
+  // happily passing the raw URL straight to AssemblyAI, which would receive
+  // an HTML or XML response and silently fail. Combined with BUG #10
+  // (failed-as-draft) the user had no way of knowing the import had broken.
+  //
+  // Until proper YouTube/RSS ingestion is implemented we only accept direct
+  // links to audio files. The placeholder, helper text, and badge row are
+  // updated below to match.
+
   const handleSubmit = () => {
     if (!url.trim()) {
       setUrlError('Please enter a URL');
@@ -157,26 +150,32 @@ const UrlImportPanel = ({
       setUrlError('Please enter a valid URL starting with http:// or https://');
       return;
     }
+    // Reject YouTube/RSS URLs explicitly with a clear error so users know
+    // why their paste isn't accepted, instead of silently failing later.
+    const lowered = url.trim().toLowerCase();
+    if (lowered.includes('youtube.com') || lowered.includes('youtu.be')) {
+      setUrlError('YouTube import is not yet supported. Please download the audio first and upload the file directly.');
+      return;
+    }
+    if (lowered.endsWith('.xml') || lowered.includes('/rss') || lowered.includes('/feed')) {
+      setUrlError('RSS feed import is not yet supported on this screen. Use the show import flow in /shows instead.');
+      return;
+    }
     setUrlError('');
     onUrlSubmit(url.trim());
     setUrl('');
   };
   return <div className="space-y-4">
       <div className="space-y-1.5">
-        <label className="font-sans text-[12px] font-medium text-muted-foreground block">Paste a YouTube video or RSS feed URL</label>
+        <label className="font-sans text-[12px] font-medium text-muted-foreground block">Paste a direct link to an audio file</label>
         <div className="relative">
           <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
-            {detected ? <detected.icon className={cn('w-4 h-4', detected.color)} /> : <Link2 className="w-4 h-4 text-muted-foreground" />}
+            <Link2 className="w-4 h-4 text-muted-foreground" />
           </div>
           <input type="url" value={url} onChange={e => {
           setUrl(e.target.value);
           setUrlError('');
-        }} placeholder="https://youtube.com/watch?v=… or feed URL" className={cn('w-full pl-10 pr-4 py-3 rounded-xl text-sm font-sans text-foreground placeholder:text-muted-foreground', 'bg-card border focus:outline-none transition-all shadow-[0_1px_3px_rgba(0,0,0,0.04)]', urlError ? 'border-red-300 focus:border-red-400 focus:shadow-[0_0_0_3px_rgba(239,68,68,0.08)]' : 'border-border focus:border-stone-400 focus:shadow-[0_0_0_3px_rgba(120,113,108,0.1)]')} />
-          {detected && <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
-              <span className={cn('font-mono text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-full border', detected.color === 'text-red-500' ? 'text-red-600 bg-red-50 border-red-200/60' : detected.color === 'text-orange-500' ? 'text-orange-600 bg-orange-50 border-orange-200/60' : 'text-sky-600 bg-sky-50 border-sky-200/60')}>
-                {detected.type}
-              </span>
-            </div>}
+        }} placeholder="https://example.com/episode.mp3" className={cn('w-full pl-10 pr-4 py-3 rounded-xl text-sm font-sans text-foreground placeholder:text-muted-foreground', 'bg-card border focus:outline-none transition-all shadow-[0_1px_3px_rgba(0,0,0,0.04)]', urlError ? 'border-red-300 focus:border-red-400 focus:shadow-[0_0_0_3px_rgba(239,68,68,0.08)]' : 'border-border focus:border-stone-400 focus:shadow-[0_0_0_3px_rgba(120,113,108,0.1)]')} />
         </div>
         {urlError && <div className="flex items-center gap-1.5 text-red-500">
             <AlertCircle className="w-3 h-3" />
@@ -184,26 +183,10 @@ const UrlImportPanel = ({
           </div>}
       </div>
       <div className="flex items-center gap-3">
-        {[{
-        icon: Youtube,
-        label: 'YouTube',
-        color: 'text-red-500'
-      }, {
-        icon: Rss,
-        label: 'RSS Feed',
-        color: 'text-orange-500'
-      }, {
-        icon: Link2,
-        label: 'Direct Link',
-        color: 'text-sky-500'
-      }].map(({
-        icon: Icon,
-        label,
-        color
-      }) => <div key={label} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/50 border border-border">
-            <Icon className={cn('w-3 h-3', color)} />
-            <span className="font-sans text-[11px] text-muted-foreground">{label}</span>
-          </div>)}
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/50 border border-border">
+          <Link2 className="w-3 h-3 text-sky-500" />
+          <span className="font-sans text-[11px] text-muted-foreground">Direct Link to .mp3 / .wav / .m4a</span>
+        </div>
       </div>
       <button onClick={handleSubmit} disabled={!url.trim()} className={cn('flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-sans font-semibold transition-all', url.trim() ? 'bg-stone-900 text-white hover:bg-stone-800 shadow-sm' : 'bg-muted text-muted-foreground cursor-not-allowed')}>
         <Link2 className="w-4 h-4" />
@@ -789,7 +772,9 @@ const Step3 = ({
         <div className="space-y-2">
           {[{
           icon: Mic2,
-          label: 'Transcription via Whisper v3',
+          // BUG #31 fix: PodBrain transcribes via AssemblyAI Universal,
+          // not OpenAI Whisper. The codebase has no Whisper integration.
+          label: 'Transcription via AssemblyAI Universal',
           detail: '~2–4 min'
         }, {
           icon: Brain,
@@ -1140,15 +1125,22 @@ export const UploadWizard = ({
         </AnimatePresence>
 
         {/* ── Info strip (step 1 only) ── */}
+        {/*
+          BUG #31 fix: the previous strip claimed "Whisper v3" + "End-to-end
+          encrypted". Both were false — the pipeline transcribes via
+          AssemblyAI and audio passes through 4+ vendors (Supabase storage,
+          AssemblyAI, xAI, OpenAI) that all hold their own keys and can read
+          the data, so this is encryption in transit + at rest, not E2EE.
+        */}
         {currentStep === 1 && <div className="mt-4 flex items-center gap-2 px-1">
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
-              <span className="font-mono text-[10px]">Transcription via Whisper v3</span>
+              <span className="font-mono text-[10px]">Transcription via AssemblyAI Universal</span>
             </div>
             <span className="text-muted-foreground/80">·</span>
             <span className="font-mono text-[10px] text-muted-foreground">~2–4 min processing</span>
             <span className="text-muted-foreground/80">·</span>
-            <span className="font-mono text-[10px] text-muted-foreground">End-to-end encrypted</span>
+            <span className="font-mono text-[10px] text-muted-foreground">Encrypted in transit + at rest</span>
           </div>}
 
         {/* ── Navigation ── */}

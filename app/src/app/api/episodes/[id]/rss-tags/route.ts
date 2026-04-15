@@ -287,13 +287,22 @@ export async function GET(
     const chaptersJsonData = generateChaptersJson(sectionData);
     const hasChapters = chaptersJsonData.chapters.length > 0;
 
-    // Chapters tag points to where the JSON would be hosted. We expose it via
-    // a public proxy on the user's app domain so the URL is real and stable.
-    // The user can override it with their own host URL when copying the snippet.
+    // BUG #20 fix: the chapters/transcript URLs in the RSS snippet must point
+    // to a real, publicly resolvable hostname. The previous fallback
+    // `https://podbrain.app` was a typo (the production domain is
+    // `getpodbrain.ai`) and the previous lack of an explicit
+    // NEXT_PUBLIC_APP_URL in Netlify production meant prod was relying on
+    // `request.nextUrl.origin`, which can return the deploy-preview URL or a
+    // backend Lambda host on Netlify Functions.
+    //
+    // Resolution order:
+    //   1. NEXT_PUBLIC_APP_URL          ← canonical, set per-context in Netlify
+    //   2. request.nextUrl.origin       ← Next.js request origin (works in dev)
+    //   3. 'https://getpodbrain.ai'     ← hardcoded last-resort production URL
     const baseUrl =
       process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ||
       request.nextUrl.origin ||
-      'https://podbrain.app';
+      'https://getpodbrain.ai';
 
     const chaptersTag: ChaptersTag | null = hasChapters
       ? {

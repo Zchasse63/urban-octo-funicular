@@ -109,7 +109,19 @@ broken timestamps. Affects HTML, MD, and TXT exports. The Copy button
 will copy broken markdown into whatever the user pastes it into
 (Buzzsprout, Transistor, email draft, etc.).
 
-**Status:** DISCOVERED, NOT YET FIXED.
+**Status:** ✅ **FIXED 2026-04-15** (round 2). Added 3 helpers in
+`generate-show-notes.ts`: `_stripTimestampsSection` (regex-strips Grok's
+broken markdown link timestamps + multiple section header variants),
+`_renderTimestampsMarkdown` (renders clean `- **MM:SS** — topic` lines from
+the structured timestamps array), `_formatSecondsToTime` (MM:SS / H:MM:SS
+fallback). Splice happens after Zod validation, before markdownToHtml.
+Updated buildSystemPrompt with a defense-in-depth instruction. 22 unit
+tests added (`test/unit/fixes/bug-11-show-notes-timestamps.test.ts`)
+including a regression test for the end-of-document edge case (the
+reviewer caught `\z` not being a valid JS regex anchor — replaced with
+`(?![\s\S])`). Future episodes will render correctly; existing 7
+completed episodes still have broken markdown until the user clicks the
+existing Regenerate button on the Show Notes tab.
 
 ---
 
@@ -308,7 +320,17 @@ case 'failed': {
 This requires adding a `'failed'` variant to `StepStatus` and a red dot
 config in `stepStatusConfig`.
 
-**Status:** DISCOVERED, NOT YET FIXED.
+**Status:** ✅ **FIXED 2026-04-15** (round 2). Added `'failed'` variant to
+`StepStatus` and red config to `stepStatusConfig`. Rewrote `case 'failed':`
+in `statusToSignalSteps` to read `processingStep` (already wired from
+`metadata.processing_step`) and bucket-map it to upload/transcribe/generate
+indices. Updated `useEpisode` to read `processing_step` from the episode
+metadata for failed episodes too (it was previously only polled while the
+episode was processing, so failed episodes had `processingStep === null`).
+End-to-end verified with two test failed episodes — one with
+`processing_step: 'transcribing'` shows transcribe red + generate/ready
+pending; one with `processing_step: 'generating_show_notes'` shows
+upload/transcribe done + generate red + ready pending.
 
 ---
 
@@ -360,7 +382,16 @@ Anchor, etc.) will publish broken transcript URLs to their listeners.
 Podcast app parsers that fail to load the URL will either silently drop
 the transcript, show an error, or break the feed entirely.
 
-**Status:** DISCOVERED, NOT YET FIXED.
+**Status:** ✅ **FIXED 2026-04-15** (round 2). Two-part fix:
+(a) Code: fixed the hardcoded fallback URL `podbrain.app → getpodbrain.ai`
+typo in `app/src/app/api/episodes/[id]/rss-tags/route.ts:298`. Added a doc
+comment explaining the env contract.
+(b) Infra: pushed `NEXT_PUBLIC_APP_URL=https://getpodbrain.ai` to all 4
+Netlify contexts (production, deploy-preview, branch-deploy, dev) with
+all 4 scopes (builds, runtime, post-processing, functions). Verified via
+the Management API that the value is set across all contexts. The next
+Netlify deploy will pick up the env change and the RSS tags will use the
+canonical production domain instead of leaking dev values.
 
 ---
 
@@ -416,7 +447,19 @@ useEffect(() => {
 }, [activeTab, pathname, router, searchParams]);
 ```
 
-**Status:** DISCOVERED, NOT YET FIXED.
+**Status:** ✅ **FIXED 2026-04-15** (round 2). Added `useSearchParams` and
+`usePathname` imports. `activeTab` initial state reads from `?tab=` URL
+param against a `VALID_TABS` allowlist (defaults to 'show-notes' if missing
+or invalid). Added a useEffect that writes `activeTab` back to the URL via
+`router.replace` with `scroll: false` whenever it changes. Added a current-
+param guard to prevent infinite loops. Wrapped EpisodeDetail in a
+`<Suspense>` boundary at the page level (the reviewer caught that
+`useSearchParams` requires Suspense in App Router or the page hard-crashes
+in production). Verified end-to-end: opening
+`/episodes/<id>?tab=intelligence` selects the Intelligence tab, and
+clicking Intelligence after deep-linking to ?tab=transcript updates the
+URL to `?tab=intelligence`. Production build (`npx next build`) passes
+clean.
 
 ---
 
@@ -535,7 +578,14 @@ use transcript timestamps to navigate. If BUG #30 (dead Export SRT
 button) ever gets wired up, the SRT file would also contain broken
 timestamps unless the fix here reaches that code path too.
 
-**Status:** DISCOVERED, NOT YET FIXED.
+**Status:** ✅ **FIXED 2026-04-15** (round 2). Renamed the `formatTimestamp`
+helper parameter from `seconds` to `milliseconds`, divides by 1000
+internally with `Math.max(0, …)` for safety. Single call site at line 1311
+already passed `seg.start` from `transcript_segments` (which AssemblyAI
+emits in milliseconds). End-to-end verified by inserting a test episode
+with realistic ms-based segments — first segment at 720ms now renders as
+`00:00`, last segment at 1530000ms renders as `25:30` (vs the old `12:00`
+and `25555:50`).
 
 ---
 
@@ -631,7 +681,16 @@ Any podcaster who wants captions for YouTube, Spotify, or their own
 video edits expected this feature to work. Currently they silently
 click and get nothing.
 
-**Status:** DISCOVERED, NOT YET FIXED.
+**Status:** ✅ **FIXED 2026-04-15** (round 2). Added `formatSrtTimestamp`
+(HH:MM:SS,mmm format with comma decimal separator) and `generateSrt`
+helpers (with null-text guard per code-reviewer feedback). Wired the
+button onClick to call `generateSrt(episode.transcript_segments)`, build
+a Blob with `text/srt;charset=utf-8`, and trigger a download with a
+slugified filename derived from the episode title. Verified end-to-end
+via a Playwright eval that intercepted the blob — captured filename
+`live-test-bug-verification-episode.srt`, blob size 501 bytes, MIME type
+correct, content shows valid SRT cue numbering and proper timestamps
+including hour-spanning durations.
 
 ---
 

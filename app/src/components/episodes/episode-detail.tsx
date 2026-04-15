@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, CheckCircle2, Loader2, Circle, ChevronRight, BarChart2, Zap, FileText, Package, AlignLeft, User, Brain, RefreshCw, Download, Copy, Check, Sparkles, Link2, Hash, Target, TrendingUp, AlertCircle, Globe, Clock, Mic2, MessageSquare, Twitter, Linkedin, Youtube, Mail, Image, BookOpen, Users, Wand2, Play, Volume2, ExternalLink, ChevronDown, ArrowUpRight, Radio, Activity, X, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import useEpisode from '@/hooks/use-episode';
 import useEpisodeAssets from '@/hooks/use-episode-assets';
@@ -22,7 +22,10 @@ import { sanitizeHtmlForDisplay } from '@/lib/sanitize-html';
 
 type Tab = 'show-notes' | 'assets' | 'transcript' | 'guest' | 'intelligence' | 'rss-tags';
 type ProcessingStep = 'upload' | 'transcribe' | 'generate' | 'ready';
-type StepStatus = 'done' | 'active' | 'pending';
+// BUG #19 fix: 'failed' was added so failed episodes can mark the specific
+// step where the pipeline broke instead of always rendering "transcribe
+// done, generate empty" regardless of the real failure location.
+type StepStatus = 'done' | 'active' | 'pending' | 'failed';
 type AssetStatus = 'generated' | 'generating' | 'idle';
 interface SignalStep {
   id: ProcessingStep;
@@ -34,7 +37,6 @@ interface AssetItem {
   label: string;
   icon: React.ElementType;
   description: string;
-  status: AssetStatus;
   accentColor: string;
   content?: string;
 }
@@ -92,6 +94,11 @@ const stepStatusConfig: Record<StepStatus, {
   pending: {
     dot: 'bg-accent border-border',
     text: 'text-muted-foreground',
+    connector: 'bg-muted'
+  },
+  failed: {
+    dot: 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.55)] border-red-400',
+    text: 'text-red-700',
     connector: 'bg-muted'
   }
 };
@@ -634,6 +641,20 @@ const ShowNotesTab = ({ episode, episodeId, seoScore, seoAnalysis, onSaved }: Sh
 
 // ─── Assets Tab ───────────────────────────────────────────────────────────────
 
+// BUG #14 fix: removed the hardcoded `status` field from every row. The
+// previous version had `status: 'generated'` baked into 8 of the 14 rows,
+// which produced phantom "Ready" badges on every episode regardless of
+// whether the DB actually had the asset. Row state is now derived
+// exclusively from `realAssetContent` in `AssetRow`.
+//
+// BUG #13 fix: removed the two orphan rows whose UI ids could never be
+// matched to a pipeline-written DB row:
+//   - `audiogram-script` (audiogram pipeline is a Remotion scaffold per
+//     CLAUDE.md, no audiogram asset_type is ever written)
+//   - `1-liner` (no AI-summary asset_type is written by any pipeline)
+// And fixed the `instagram-captions` slug — the UI was looking up the
+// `instagram_caption` slug but the pipeline writes `instagram_carousel`.
+// We rename the row to "Instagram Carousel" + remap below.
 const ASSET_CATEGORIES: AssetCategory[] = [{
   id: 'core',
   label: 'Core',
@@ -645,21 +666,18 @@ const ASSET_CATEGORIES: AssetCategory[] = [{
     label: 'Show Notes',
     icon: FileText,
     description: 'Full editorial show notes with timestamps',
-    status: 'generated',
     accentColor: 'text-emerald-600'
   }, {
     id: 'chapter-markers',
     label: 'Chapter Markers',
     icon: Hash,
     description: 'Timestamped chapter titles for podcast apps',
-    status: 'generated',
     accentColor: 'text-emerald-600'
   }, {
     id: 'episode-description',
     label: 'Episode Description',
     icon: AlignLeft,
     description: 'RSS feed description (500 chars)',
-    status: 'generated',
     accentColor: 'text-emerald-600'
   }]
 }, {
@@ -673,21 +691,18 @@ const ASSET_CATEGORIES: AssetCategory[] = [{
     label: 'X Thread',
     icon: Twitter,
     description: '8-tweet thread with key insights',
-    status: 'generated',
     accentColor: 'text-sky-600'
   }, {
     id: 'linkedin-post',
     label: 'LinkedIn Post',
     icon: Linkedin,
     description: 'Long-form professional post',
-    status: 'idle',
     accentColor: 'text-sky-600'
   }, {
-    id: 'instagram-captions',
-    label: 'Instagram Captions',
+    id: 'instagram-carousel',
+    label: 'Instagram Carousel',
     icon: Image,
-    description: '3 caption variations with hashtags',
-    status: 'idle',
+    description: '6-slide carousel with key takeaways',
     accentColor: 'text-sky-600'
   }]
 }, {
@@ -701,14 +716,12 @@ const ASSET_CATEGORIES: AssetCategory[] = [{
     label: 'Blog Article',
     icon: BookOpen,
     description: '1,200-word SEO article with structure',
-    status: 'generated',
     accentColor: 'text-violet-600'
   }, {
     id: 'newsletter',
     label: 'Newsletter Issue',
     icon: Mail,
     description: 'Email digest of episode highlights',
-    status: 'idle',
     accentColor: 'text-violet-600'
   }]
 }, {
@@ -722,14 +735,12 @@ const ASSET_CATEGORIES: AssetCategory[] = [{
     label: 'Guest Bio',
     icon: User,
     description: 'Formatted guest bio for show notes',
-    status: 'idle',
     accentColor: 'text-amber-600'
   }, {
     id: 'guest-email',
     label: 'Post-show Email',
     icon: Mail,
     description: 'Thank-you email template for guest',
-    status: 'idle',
     accentColor: 'text-amber-600'
   }]
 }, {
@@ -739,18 +750,10 @@ const ASSET_CATEGORIES: AssetCategory[] = [{
   iconBg: 'bg-rose-50 border-rose-200/60',
   countColor: 'text-rose-600 bg-rose-50 border-rose-200/60',
   assets: [{
-    id: 'audiogram-script',
-    label: 'Audiogram Script',
-    icon: Volume2,
-    description: 'Key quote for 60s audiogram clip',
-    status: 'generated',
-    accentColor: 'text-rose-600'
-  }, {
     id: 'youtube-desc',
     label: 'YouTube Description',
     icon: Youtube,
     description: 'Full YT description with timestamps',
-    status: 'idle',
     accentColor: 'text-rose-600'
   }]
 }, {
@@ -760,18 +763,10 @@ const ASSET_CATEGORIES: AssetCategory[] = [{
   iconBg: 'bg-muted border-border',
   countColor: 'text-muted-foreground bg-muted border-border',
   assets: [{
-    id: '1-liner',
-    label: 'One-liner Summary',
-    icon: Zap,
-    description: 'One sentence episode summary',
-    status: 'generated',
-    accentColor: 'text-muted-foreground'
-  }, {
     id: 'tldr',
     label: 'TL;DR Bullets',
     icon: AlignLeft,
     description: '5 key takeaways from the episode',
-    status: 'generated',
     accentColor: 'text-muted-foreground'
   }]
 }];
@@ -796,7 +791,11 @@ const AssetRow = ({
   /** Called with the UI asset id when the user clicks Generate */
   onGenerate: (uiAssetId: string) => Promise<void>;
 }) => {
-  const [status, setStatus] = useState<AssetStatus>(realAssetContent ? 'generated' : asset.status);
+  // BUG #14 fix: derive status exclusively from real DB content. Previously
+  // this fell back to a hardcoded `asset.status` field on `ASSET_CATEGORIES`,
+  // which produced phantom "Ready" badges + empty-string Copy buttons on
+  // every episode. The hardcoded field has been removed from `AssetItem`.
+  const [status, setStatus] = useState<AssetStatus>(realAssetContent ? 'generated' : 'idle');
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const Icon = asset.icon;
@@ -991,13 +990,11 @@ const CategoryCard = ({
   assetMap?: Map<string, GeneratedAsset>;
   onGenerate: (uiAssetId: string) => Promise<void>;
 }) => {
-  const readyCount = cat.assets.filter(a => {
-    if (assetMap) {
-      const real = assetMap.get(a.id);
-      if (real) return true;
-    }
-    return a.status === 'generated';
-  }).length;
+  // BUG #15 fix: count only assets that have a real DB row in `assetMap`.
+  // Previously this fell back to `a.status === 'generated'` on the local
+  // `AssetItem`, but that hardcoded literal disagreed with the header
+  // counter (which used assetMap only). Now both code paths agree.
+  const readyCount = cat.assets.filter(a => assetMap?.has(a.id) ?? false).length;
   const total = cat.assets.length;
   const allReady = readyCount === total;
   return <motion.div variants={listVariants} className="bg-card border border-border rounded-lg overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
@@ -1031,21 +1028,29 @@ const CategoryCard = ({
     </motion.div>;
 };
 
-// Map from UI asset IDs to database asset_type values
+// Map from UI asset IDs to database asset_type values.
+//
+// BUG #13 fix: every entry in this map MUST correspond to a slug the
+// pipeline actually writes (see `app/src/app/api/seed/route.ts` and
+// `app/src/lib/content/asset-prompts.ts`). The previous version had:
+//   - 'instagram-captions' → 'instagram_caption' (pipeline writes carousel)
+//   - 'audiogram-script'   → 'audiogram_clips' (pipeline never writes)
+//   - '1-liner'            → 'ai_summary_short' (pipeline never writes)
+// All three would orphan their UI rows forever. They have been removed
+// or remapped — instagram is now `instagram-carousel` → `instagram_carousel`,
+// and the two never-written entries are gone entirely.
 const UI_ID_TO_DB_TYPE: Record<string, string> = {
   'show-notes': 'show_notes',
   'chapter-markers': 'chapter_markers',
   'episode-description': 'seo_description',
   'twitter-thread': 'twitter_thread',
   'linkedin-post': 'linkedin_post',
-  'instagram-captions': 'instagram_caption',
+  'instagram-carousel': 'instagram_carousel',
   'blog-post': 'blog_post',
   'newsletter': 'newsletter_email',
   'guest-bio': 'guest_bio_short',
   'guest-email': 'guest_promo_kit',
-  'audiogram-script': 'audiogram_clips',
   'youtube-desc': 'youtube_description',
-  '1-liner': 'ai_summary_short',
   'tldr': 'key_takeaways',
 };
 
@@ -1271,11 +1276,39 @@ interface TranscriptTabProps {
   episode: Episode | null;
 }
 
-// Helper to format seconds to MM:SS
-const formatTimestamp = (seconds: number): string => {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
+// BUG #29 fix: AssemblyAI's transcript_segments emit `start` and `end` in
+// MILLISECONDS, not seconds. The previous version of this helper was named
+// `formatTimestamp(seconds)` and divided by 60 directly, producing values like
+// "12:00" for the first segment of a 25-minute episode (720 ms → 12 min 0 sec
+// instead of 0:00). The fix is to make the milliseconds assumption explicit
+// in the parameter name and convert internally.
+const formatTimestamp = (milliseconds: number): string => {
+  const totalSeconds = Math.floor(Math.max(0, milliseconds) / 1000);
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+};
+
+// BUG #30 fix: format milliseconds as the SRT "HH:MM:SS,mmm" cue timestamp
+// format. SRT uses comma as the decimal separator (not period — that's WebVTT)
+// and always pads hours, minutes, seconds, and milliseconds to fixed widths.
+const formatSrtTimestamp = (milliseconds: number): string => {
+  const ms = Math.max(0, Math.floor(milliseconds));
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  const s = Math.floor((ms % 60_000) / 1000);
+  const msRem = ms % 1000;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(msRem).padStart(3, '0')}`;
+};
+
+// Generate an SRT subtitle file from AssemblyAI-style segments. Each segment
+// becomes a numbered cue with start/end timestamps and the segment text.
+// Defensive against null/undefined `text` values (AssemblyAI occasionally
+// emits silence-only segments with no text payload).
+const generateSrt = (segments: import('@/types/database').TranscriptSegment[]): string => {
+  return segments
+    .map((seg, i) => `${i + 1}\n${formatSrtTimestamp(seg.start)} --> ${formatSrtTimestamp(seg.end)}\n${seg.text ?? ''}\n`)
+    .join('\n');
 };
 
 // Map API transcript segments to the UI format
@@ -1346,6 +1379,32 @@ const TranscriptTab = ({ episode }: TranscriptTabProps) => {
     const re = new RegExp(searchQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
     return acc + (seg.text.match(re)?.length ?? 0);
   }, 0) : 0;
+
+  // BUG #30 fix: previously the "Export SRT" button rendered as a clickable
+  // affordance with a download icon but had no onClick handler — dead button.
+  // We now generate a real SRT file from the original transcript_segments
+  // (which carry millisecond timestamps from AssemblyAI) and trigger a
+  // browser download. The filename uses the episode title for findability.
+  const handleExportSrt = () => {
+    const apiSegments = episode?.transcript_segments;
+    if (!apiSegments || apiSegments.length === 0) return;
+
+    const srt = generateSrt(apiSegments);
+    const blob = new Blob([srt], { type: 'text/srt;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeTitle = (episode?.title || 'transcript')
+      .replace(/[^a-zA-Z0-9-_ ]/g, '')
+      .trim()
+      .replace(/\s+/g, '-')
+      .toLowerCase() || 'transcript';
+    a.href = url;
+    a.download = `${safeTitle}.srt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
   return <div className="space-y-4">
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
@@ -1373,7 +1432,7 @@ const TranscriptTab = ({ episode }: TranscriptTabProps) => {
           <Radio className="w-3 h-3 text-emerald-500" />
           <span className="font-mono text-[10px] font-bold text-muted-foreground">{segments.length} segments</span>
         </div>
-        <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-muted-foreground hover:text-accent-foreground bg-card border border-border hover:border-border transition-all text-[11px] font-sans font-medium">
+        <button onClick={handleExportSrt} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-muted-foreground hover:text-accent-foreground bg-card border border-border hover:border-border transition-all text-[11px] font-sans font-medium">
           <Download className="w-3.5 h-3.5" />
           Export SRT
         </button>
@@ -1817,13 +1876,52 @@ const statusToSignalSteps = (
         ];
       }
     }
-    case 'failed':
-      return [
+    case 'failed': {
+      // BUG #19 fix: previously this branch always rendered "transcribe
+      // done, generate empty" regardless of where the pipeline actually
+      // failed. The Trigger.dev jobs already write `processing_step` to
+      // `episodes.metadata` at the start of every step, so when the job
+      // throws, the most-recent step name is still in the metadata. We use
+      // it to mark the failing step red and everything after it as pending.
+      //
+      // Step-name → visual-step bucket map (mirrors the 'processing' case):
+      //   uploading                          → upload
+      //   transcribing | vocabulary_processing → transcribe
+      //   generating_show_notes | seo_analysis | generating_assets → generate
+      //   completed                          → ready
+      const transcribeSteps = ['transcribing', 'vocabulary_processing'];
+      const generateSteps = ['generating_show_notes', 'seo_analysis', 'generating_assets'];
+
+      const step = processingStep || '';
+      let failedIdx: number;
+      if (step === 'uploading') {
+        failedIdx = 0; // upload
+      } else if (transcribeSteps.includes(step)) {
+        failedIdx = 1; // transcribe
+      } else if (generateSteps.includes(step)) {
+        failedIdx = 2; // generate
+      } else if (step === '' || step === 'failed') {
+        // Old failed episode (no processing_step recorded) OR generic failure
+        // marker — show a transcribe failure as the safest heuristic since
+        // most pipeline failures historically happened during transcription.
+        failedIdx = 1;
+      } else {
+        // Unknown step name — fall back to marking the generate step failed.
+        failedIdx = 2;
+      }
+
+      const stepDefs: SignalStep[] = [
         { id: 'upload', label: 'Upload', status: 'done' },
         { id: 'transcribe', label: 'Transcribe', status: 'done' },
-        { id: 'generate', label: 'Generate', status: 'pending' },
-        { id: 'ready', label: 'Ready', status: 'pending' },
+        { id: 'generate', label: 'Generate', status: 'done' },
+        { id: 'ready', label: 'Ready', status: 'done' },
       ];
+      stepDefs[failedIdx].status = 'failed';
+      for (let i = failedIdx + 1; i < stepDefs.length; i++) {
+        stepDefs[i].status = 'pending';
+      }
+      return stepDefs;
+    }
     case 'pending':
       return [
         { id: 'upload', label: 'Upload', status: 'active' },
@@ -1888,6 +1986,8 @@ export const EpisodeDetail = () => {
   const router = useRouter();
   const params = useParams();
   const episodeId = params?.id as string;
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
 
   // ── Data hooks ──
   const { episode, isLoading: episodeLoading, error: episodeError, processingStep, refetch } = useEpisode(episodeId);
@@ -1895,7 +1995,31 @@ export const EpisodeDetail = () => {
   const { seoData, isLoading: _seoLoading } = useEpisodeSeo(episodeId);
   void assetsLoading; void _seoLoading; // used indirectly via seoData
 
-  const [activeTab, setActiveTab] = useState<Tab>('show-notes');
+  // BUG #28 fix: synchronize activeTab with the URL ?tab= query parameter so
+  // deep-linking to a specific tab (e.g. /episodes/:id?tab=transcript) works
+  // in both directions: opening the URL selects the tab, and clicking a tab
+  // updates the URL. The previous implementation never read or wrote the
+  // query param so deep links silently dropped to "Show Notes".
+  const VALID_TABS: ReadonlyArray<Tab> = ['show-notes', 'assets', 'transcript', 'guest', 'intelligence', 'rss-tags'];
+  const initialTab: Tab = (() => {
+    const fromUrl = searchParams?.get('tab');
+    return fromUrl && (VALID_TABS as readonly string[]).includes(fromUrl)
+      ? (fromUrl as Tab)
+      : 'show-notes';
+  })();
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+
+  // Write the active tab back to the URL whenever it changes. Use
+  // router.replace + scroll: false so we don't push a history entry on every
+  // click and don't bounce the page back to the top.
+  useEffect(() => {
+    if (!pathname) return;
+    const currentParam = searchParams?.get('tab');
+    if (currentParam === activeTab) return;
+    const next = new URLSearchParams(searchParams?.toString() || '');
+    next.set('tab', activeTab);
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+  }, [activeTab, pathname, router, searchParams]);
 
   // ── Inline title editing ──
   const [isEditingTitle, setIsEditingTitle] = useState(false);

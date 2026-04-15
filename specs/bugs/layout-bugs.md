@@ -107,6 +107,15 @@ My recommendation: option 1 for Episodes (high-value, tells users
 "something needs your attention"), option 2 for Experts (the feature
 doesn't need a constant warning tag) and brand (delete).
 
-**Status:** DISCOVERED, NOT YET FIXED.
+**Status:** ✅ **FIXED 2026-04-15** (round 2). Three-part fix:
+(1) Episodes dot is now derived from real `useEpisodes()` data via a
+computed `episodesStatus` with priority order: failed (red) > processing
+(amber) > completed (green) > absent. Added 'failed' to NavItem status
+union and StatusDot color map (red).
+(2) Removed the hardcoded `status="warning"` prop from the Experts NavItem.
+(3) Removed the brand orange decorative pulsing dot at line 385 entirely.
+End-to-end verified: with one completed episode the dot renders emerald;
+inserting a temp failed episode flips it to red; the brand orange dot is
+no longer in the DOM.
 
 ---
