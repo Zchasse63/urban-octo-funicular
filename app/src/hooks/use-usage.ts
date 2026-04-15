@@ -2,11 +2,15 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { extractErrorMessage } from '@/lib/errors'
+import type { SubscriptionTier, SubscriptionStatus } from '@/lib/pricing'
 
 interface UsageData {
-  tier: string
+  tier: SubscriptionTier
+  status: SubscriptionStatus
+  trialEndsAt: string
+  pastDueSince: string | null
   billingPeriod: { start: string; end: string }
-  audioHours: { used: number; limit: number; percentage: number }
+  audioMinutes: { used: number; limit: number; percentage: number }
   shows: { used: number; limit: number; percentage: number }
 }
 

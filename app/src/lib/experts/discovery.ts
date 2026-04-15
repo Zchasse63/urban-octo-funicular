@@ -88,8 +88,11 @@ async function discoverFromTaddy(topic: string, showId: string): Promise<Expert[
   // 1. Check cached guest appearances for this topic first
   const cachedExperts = await getCachedExpertsForTopic(topic, showId);
 
-  // 2. Search Taddy for fresh episode results
-  const episodes = await searchEpisodesWithCache(topic, 1, 50);
+  // 2. Search Taddy for fresh episode results.
+  // Taddy caps limitPerPage at 25 on this endpoint (2026-04-15 schema
+  // change). The previous 50-item limit triggered a "limitPerPage must
+  // be between 1 and 25" error and returned zero episodes.
+  const episodes = await searchEpisodesWithCache(topic, 1, 25);
 
   // 3. Extract persons and accumulate into a map keyed by normalized name
   const personMap = new Map<string, PersonAccumulator>();
@@ -128,15 +131,19 @@ async function discoverFromTaddy(topic: string, showId: string): Promise<Expert[
         if (pubDateMs > existing.latestDate) {
           existing.latestDate = pubDateMs;
         }
-        // Prefer non-null image/profile
-        if (!existing.imageUrl && person.img) existing.imageUrl = person.img;
-        if (!existing.profileUrl && person.href) existing.profileUrl = person.href;
+        // Prefer non-null image/profile. Read new (imageUrl/url) field
+        // names with fallback to legacy (img/href) for rows cached before
+        // the 2026-04-15 Taddy schema migration.
+        const pImg = person.imageUrl || person.img;
+        const pUrl = person.url || person.href;
+        if (!existing.imageUrl && pImg) existing.imageUrl = pImg;
+        if (!existing.profileUrl && pUrl) existing.profileUrl = pUrl;
       } else {
         personMap.set(normalized, {
           name: person.name.trim(),
           nameNormalized: normalized,
-          imageUrl: person.img || null,
-          profileUrl: person.href || null,
+          imageUrl: person.imageUrl || person.img || null,
+          profileUrl: person.url || person.href || null,
           roles: new Set([person.role?.toLowerCase() || 'guest']),
           appearances: [appearance],
           totalCount: 1,

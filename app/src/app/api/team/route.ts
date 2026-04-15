@@ -38,8 +38,8 @@ console.error('Error fetching team members:', error)
 return errorResponse('Internal server error', 500)
     }
 
-    // Get seat limit
-    const tier = await getUserTier(userId)
+    // Get seat limit (team collaboration deferred to Phase 2 — all tiers = 1 seat)
+    const { tier } = await getUserTier(userId)
     const limits = getTierLimits(tier)
     const activeCount = (members || []).filter(
       (m: TeamMember) => m.status === 'active' || m.status === 'pending'
@@ -74,12 +74,17 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    // Check tier allows team seats
-    const tier = await getUserTier(userId)
+    // Team collaboration is deferred to Phase 2. At launch, all tiers have
+    // teamSeats: 1 so this check always blocks. See docs/planning/FUTURE-IMPROVEMENTS.md
+    // for the Phase 2 scope (fix invite emails, add role enforcement, update RLS).
+    const { tier } = await getUserTier(userId)
     const limits = getTierLimits(tier)
 
     if (limits.teamSeats <= 1) {
-      return errorResponse('Team collaboration requires the Agency plan. Please upgrade to invite team members.', 403)
+      return errorResponse(
+        'Team collaboration is not available in this release. This feature is coming in Phase 2.',
+        403
+      )
     }
 
     // Count current active/pending members

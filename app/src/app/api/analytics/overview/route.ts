@@ -111,20 +111,27 @@ export async function GET(request: NextRequest) {
         : 0
 
     // 4. Most-generated asset types
+    // NOTE: column is `asset_type` not `type`. The original select('type, ...')
+    // caused PostgREST to return an error (silently swallowed below), making
+    // POPULAR ASSET TYPES always render "0 types" even when the DB had
+    // hundreds of assets. Fixed 2026-04-15 — see specs/bugs/analytics-bugs.md.
     let assetsQuery = supabase
       .from('generated_assets')
-      .select('type, episodes!inner(show_id, shows!inner(user_id))')
+      .select('asset_type, episodes!inner(show_id, shows!inner(user_id))')
       .eq('episodes.shows.user_id', userId)
 
     if (showId) {
       assetsQuery = assetsQuery.eq('episodes.show_id', showId)
     }
 
-    const { data: assets } = await assetsQuery
+    const { data: assets, error: assetsError } = await assetsQuery
+    if (assetsError) {
+      console.error('Analytics assets query error:', assetsError.message)
+    }
 
     const assetCounts: Record<string, number> = {}
     for (const asset of assets || []) {
-      const t = asset.type || 'unknown'
+      const t = (asset as { asset_type?: string }).asset_type || 'unknown'
       assetCounts[t] = (assetCounts[t] || 0) + 1
     }
     const popularAssetTypes = Object.entries(assetCounts)

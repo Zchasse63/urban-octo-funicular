@@ -11,6 +11,46 @@ export async function constructEvent(
   return stripe.webhooks.constructEvent(payload, signature, secret);
 }
 
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+/**
+ * Updates a user row with retry-on-transient-failure logic.
+ * Throws if all retries fail.
+ */
+async function updateUserWithRetry(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  update: Record<string, unknown>,
+  operationName: string
+): Promise<void> {
+  let retries = 3;
+  let lastError: Error | null = null;
+
+  while (retries > 0) {
+    const { error } = await supabase
+      .from('users')
+      .update(update)
+      .eq('id', userId);
+
+    if (!error) return;
+
+    lastError = new Error(error.message);
+    retries--;
+
+    if (retries > 0) {
+      await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, 3 - retries)));
+    }
+  }
+
+  if (lastError) {
+    throw new Error(
+      `Failed to ${operationName} for user ${userId} after 3 retries: ${lastError.message}`
+    );
+  }
+}
+
+// ─── checkout.session.completed ────────────────────────────────────────────
+
 export async function handleCheckoutCompleted(
   session: Stripe.Checkout.Session
 ): Promise<void> {
@@ -38,7 +78,13 @@ export async function handleCheckoutCompleted(
 
   const subscriptionData = await stripe.subscriptions.retrieve(subscriptionId);
   const priceId = subscriptionData.items.data[0]?.price.id;
-  const tier = priceId ? getTierByPriceId(priceId) : 'free';
+  const tier = priceId ? getTierByPriceId(priceId) : null;
+
+  if (!tier) {
+    throw new Error(
+      `Checkout completed with unrecognized price ID "${priceId}" for subscription ${subscriptionId}. Verify Stripe price IDs match env vars.`
+    );
+  }
 
   // Access period timestamps (in seconds) from the subscription
   const periodStart = (subscriptionData as { current_period_start?: number }).current_period_start || Math.floor(Date.now() / 1000);
@@ -61,36 +107,20 @@ export async function handleCheckoutCompleted(
     throw new Error(`Failed to upsert subscription for user ${userId}, subscription ${subscriptionId}: ${upsertError.message}`);
   }
 
-  // Update user tier with retry for transient failures
-  // If this fails, webhook will return 500 and Stripe will retry
-  if (tier) {
-    let retries = 3;
-    let lastError: Error | null = null;
-
-    while (retries > 0) {
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ subscription_tier: tier })
-        .eq('id', userId);
-
-      if (!updateError) {
-        break; // Success
-      }
-
-      lastError = new Error(updateError.message);
-      retries--;
-
-      if (retries > 0) {
-        // Exponential backoff: 100ms, 200ms, 400ms
-        await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, 3 - retries)));
-      }
-    }
-
-    if (lastError && retries === 0) {
-      throw new Error(`Failed to update subscription tier for user ${userId} after 3 retries: ${lastError.message}`);
-    }
-  }
+  // Transition user from trialing → active at their new tier
+  await updateUserWithRetry(
+    supabase,
+    userId,
+    {
+      subscription_tier: tier,
+      subscription_status: 'active',
+      past_due_since: null,
+    },
+    'update subscription on checkout'
+  );
 }
+
+// ─── customer.subscription.updated ─────────────────────────────────────────
 
 export async function handleSubscriptionUpdated(
   subscription: Stripe.Subscription
@@ -110,14 +140,10 @@ export async function handleSubscriptionUpdated(
     throw new Error(`Subscription not found for update: ${subscription.id}, error: ${fetchError?.message}`);
   }
 
-  // Idempotency: skip if our record was updated after this Stripe event was created
-  // Stripe subscription objects have a `created` timestamp (seconds) that stays constant,
-  // but we use the event delivery time as a guard. If our DB was already updated more
-  // recently than 5 seconds ago (accounting for clock skew), this is likely a duplicate.
+  // Idempotency: skip if our record was updated very recently (likely duplicate delivery)
   if (existingSub.updated_at) {
     const dbUpdatedAt = new Date(existingSub.updated_at).getTime();
     const now = Date.now();
-    // If the record was updated less than 2 seconds ago, this is likely a duplicate delivery
     if (now - dbUpdatedAt < 2000) {
       console.log(`Subscription ${subscription.id} was just updated ${now - dbUpdatedAt}ms ago, likely duplicate — skipping`);
       return;
@@ -143,34 +169,51 @@ export async function handleSubscriptionUpdated(
     throw new Error(`Failed to update subscription ${subscription.id}: ${updateError.message}`);
   }
 
-  // Update user tier with retry for transient failures
+  // Build the users table update based on Stripe's status and new tier.
+  // We care about these states from Stripe: active, past_due, canceled, unpaid
+  const userUpdate: Record<string, unknown> = {};
+
   if (tier) {
-    let retries = 3;
-    let lastError: Error | null = null;
+    userUpdate.subscription_tier = tier;
+  }
 
-    while (retries > 0) {
-      const { error: tierError } = await supabase
-        .from('users')
-        .update({ subscription_tier: tier })
-        .eq('id', existingSub.user_id);
-
-      if (!tierError) {
-        break; // Success
-      }
-
-      lastError = new Error(tierError.message);
-      retries--;
-
-      if (retries > 0) {
-        await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, 3 - retries)));
-      }
+  if (subscription.status === 'active') {
+    userUpdate.subscription_status = 'active';
+    userUpdate.past_due_since = null;
+  } else if (subscription.status === 'past_due' || subscription.status === 'unpaid') {
+    userUpdate.subscription_status = 'past_due';
+    // Only set past_due_since if it isn't already set — preserve the original failure time
+    const { data: currentUser, error: userFetchError } = await supabase
+      .from('users')
+      .select('past_due_since')
+      .eq('id', existingSub.user_id)
+      .single();
+    if (userFetchError) {
+      // Log but don't throw — if we can't read the current state, prefer to
+      // leave past_due_since unset and let the webhook be retried rather than
+      // reset the grace-period clock.
+      console.error(
+        `Failed to read past_due_since for user ${existingSub.user_id}:`,
+        userFetchError.message
+      );
+    } else if (!currentUser?.past_due_since) {
+      userUpdate.past_due_since = new Date().toISOString();
     }
+  } else if (subscription.status === 'canceled' || subscription.status === 'incomplete_expired') {
+    userUpdate.subscription_status = 'canceled';
+  }
 
-    if (lastError && retries === 0) {
-      throw new Error(`Failed to update tier for user ${existingSub.user_id} after 3 retries: ${lastError.message}`);
-    }
+  if (Object.keys(userUpdate).length > 0) {
+    await updateUserWithRetry(
+      supabase,
+      existingSub.user_id,
+      userUpdate,
+      'update subscription status'
+    );
   }
 }
+
+// ─── customer.subscription.deleted ─────────────────────────────────────────
 
 export async function handleSubscriptionDeleted(
   subscription: Stripe.Subscription
@@ -199,29 +242,143 @@ export async function handleSubscriptionDeleted(
     throw new Error(`Failed to cancel subscription ${subscription.id}: ${updateError.message}`);
   }
 
-  // Reset user tier with retry for transient failures
-  let retries = 3;
-  let lastError: Error | null = null;
+  // Mark the user as canceled but preserve their tier — this gives them read-only
+  // access to historical content without ambiguity about what they used to have.
+  await updateUserWithRetry(
+    supabase,
+    existingSub.user_id,
+    { subscription_status: 'canceled' },
+    'mark user canceled'
+  );
+}
 
-  while (retries > 0) {
-    const { error: tierError } = await supabase
-      .from('users')
-      .update({ subscription_tier: 'free' })
-      .eq('id', existingSub.user_id);
+// ─── invoice.payment_succeeded ─────────────────────────────────────────────
 
-    if (!tierError) {
-      break; // Success
-    }
+export async function handleInvoicePaymentSucceeded(
+  invoice: Stripe.Invoice
+): Promise<void> {
+  const supabase = await createClient();
 
-    lastError = new Error(tierError.message);
-    retries--;
+  // Extract subscription ID from the invoice.
+  // Stripe.Invoice historically had `subscription` as `string | Stripe.Subscription | null`
+  // but the type was removed in newer SDK versions. Access it via `unknown` cast
+  // to stay compatible across SDK versions.
+  const subscriptionField = (invoice as unknown as { subscription?: string | { id: string } | null }).subscription;
+  const subscriptionId =
+    typeof subscriptionField === 'string'
+      ? subscriptionField
+      : subscriptionField?.id;
 
-    if (retries > 0) {
-      await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, 3 - retries)));
-    }
+  if (!subscriptionId) {
+    // Not a subscription invoice (one-off charge); nothing to do
+    return;
   }
 
-  if (lastError && retries === 0) {
-    throw new Error(`Failed to reset tier to free for user ${existingSub.user_id} after 3 retries: ${lastError.message}`);
+  const { data: existingSub, error: fetchError } = await supabase
+    .from('subscriptions')
+    .select('user_id')
+    .eq('stripe_subscription_id', subscriptionId)
+    .single();
+
+  if (fetchError || !existingSub) {
+    throw new Error(`Subscription not found for payment_succeeded: ${subscriptionId}, error: ${fetchError?.message}`);
   }
+
+  // Mark the subscription as active in our subscriptions table
+  const { error: subUpdateError } = await supabase
+    .from('subscriptions')
+    .update({
+      status: 'active',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('stripe_subscription_id', subscriptionId);
+
+  if (subUpdateError) {
+    throw new Error(`Failed to mark subscription ${subscriptionId} active: ${subUpdateError.message}`);
+  }
+
+  // Clear past_due on the user — payment recovered
+  await updateUserWithRetry(
+    supabase,
+    existingSub.user_id,
+    {
+      subscription_status: 'active',
+      past_due_since: null,
+    },
+    'mark user active after payment'
+  );
+}
+
+// ─── invoice.payment_failed ────────────────────────────────────────────────
+
+export async function handleInvoicePaymentFailed(
+  invoice: Stripe.Invoice
+): Promise<void> {
+  const supabase = await createClient();
+
+  // See handleInvoicePaymentSucceeded for explanation of this cast pattern.
+  const subscriptionField = (invoice as unknown as { subscription?: string | { id: string } | null }).subscription;
+  const subscriptionId =
+    typeof subscriptionField === 'string'
+      ? subscriptionField
+      : subscriptionField?.id;
+
+  if (!subscriptionId) {
+    return;
+  }
+
+  const { data: existingSub, error: fetchError } = await supabase
+    .from('subscriptions')
+    .select('user_id')
+    .eq('stripe_subscription_id', subscriptionId)
+    .single();
+
+  if (fetchError || !existingSub) {
+    throw new Error(`Subscription not found for payment_failed: ${subscriptionId}, error: ${fetchError?.message}`);
+  }
+
+  // Flip the subscription to past_due in our subscriptions table
+  const { error: subUpdateError } = await supabase
+    .from('subscriptions')
+    .update({
+      status: 'past_due',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('stripe_subscription_id', subscriptionId);
+
+  if (subUpdateError) {
+    throw new Error(`Failed to mark subscription ${subscriptionId} past_due: ${subUpdateError.message}`);
+  }
+
+  // Preserve original past_due_since timestamp if already set (from earlier event).
+  // If the read fails, prefer NOT to reset the grace period clock — only set
+  // past_due_since when we've confirmed it's actually empty.
+  const { data: currentUser, error: userFetchError } = await supabase
+    .from('users')
+    .select('past_due_since')
+    .eq('id', existingSub.user_id)
+    .single();
+
+  if (userFetchError) {
+    console.error(
+      `Failed to read past_due_since for user ${existingSub.user_id}:`,
+      userFetchError.message
+    );
+  }
+
+  const pastDueSinceUpdate: { subscription_status: string; past_due_since?: string } = {
+    subscription_status: 'past_due',
+  };
+  // Only write past_due_since when we successfully confirmed it's currently null.
+  // On read error OR when a value already exists, leave it alone.
+  if (!userFetchError && !currentUser?.past_due_since) {
+    pastDueSinceUpdate.past_due_since = new Date().toISOString();
+  }
+
+  await updateUserWithRetry(
+    supabase,
+    existingSub.user_id,
+    pastDueSinceUpdate,
+    'mark user past_due after payment failure'
+  );
 }

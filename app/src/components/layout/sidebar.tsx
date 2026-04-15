@@ -12,6 +12,7 @@ import useSubscription from '@/hooks/use-subscription'
 import { useUsage } from '@/hooks/use-usage'
 import { CreateShowDialog } from '@/components/shows/create-show-dialog'
 import type { Show } from '@/types/database'
+import { getTierLabel, type SubscriptionTier } from '@/lib/pricing'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -319,8 +320,8 @@ function Sidebar({ collapsed, onToggleCollapse, className }: SidebarProps) {
   const [isDark, setIsDark] = useState(false)
   const [showKeyboardModal, setShowKeyboardModal] = useState(false)
 
-  const tier = subscription?.tier || 'free'
-  const tierLabel = tier === 'free' ? 'Free Plan' : tier === 'pro' ? 'Pro Plan' : 'Agency Plan'
+  const tier: SubscriptionTier = subscription?.tier ?? 'pro'
+  const tierLabel = `${getTierLabel(tier)} Plan`
 
   // Set first show as current when shows load
   useEffect(() => {
@@ -451,19 +452,19 @@ function Sidebar({ collapsed, onToggleCollapse, className }: SidebarProps) {
                     <div className="flex justify-between text-[11px] font-medium">
                       <span className="opacity-80">Monthly Audio</span>
                       <span className="font-mono">
-                        {usage ? `${Math.round(usage.audioHours.percentage)}%` : '—'}
+                        {usage ? `${Math.round(usage.audioMinutes.percentage)}%` : '—'}
                       </span>
                     </div>
                     <div className="h-1 w-full bg-stone-700 rounded-full overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
-                        animate={{ width: `${Math.min(100, Math.round(usage?.audioHours.percentage ?? 0))}%` }}
+                        animate={{ width: `${Math.min(100, Math.round(usage?.audioMinutes.percentage ?? 0))}%` }}
                         transition={{ duration: 0.8, delay: 0.3, ease: 'easeOut' }}
                         className={cn(
                           'h-full rounded-full',
-                          (usage?.audioHours.percentage ?? 0) >= 90
+                          (usage?.audioMinutes.percentage ?? 0) >= 90
                             ? 'bg-rose-400 shadow-[0_0_8px_rgba(251,113,133,0.5)]'
-                            : (usage?.audioHours.percentage ?? 0) >= 70
+                            : (usage?.audioMinutes.percentage ?? 0) >= 70
                               ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]'
                               : 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]'
                         )}

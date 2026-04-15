@@ -70,7 +70,10 @@ export interface User {
   google_id: string | null
   avatar_url: string | null
   preferences: Record<string, unknown>
-  subscription_tier: 'free' | 'pro' | 'creator' | 'agency'
+  subscription_tier: 'pro' | 'creator' | 'agency'
+  subscription_status: 'trialing' | 'active' | 'past_due' | 'trial_expired' | 'canceled'
+  trial_ends_at: string
+  past_due_since: string | null
   created_at: string
   updated_at: string
 }

@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { requireAuth, isValidUUID } from '@/lib/auth';
 import { errorResponse, successResponse, handleApiError } from '@/lib/api/helpers';
 import { checkRateLimit } from '@/lib/rate-limit';
-import { getTierLimits, getUserTier, getAudioHoursUsed } from '@/lib/tier-limits';
+import { getTierLimits, getUserTier, getAudioMinutesUsed } from '@/lib/tier-limits';
 import { parseRSSFeed } from '@/lib/rss/parser';
 import { ImportFeedSchema, parseBody } from '@/lib/validation-schemas';
 
@@ -65,15 +65,25 @@ export async function POST(
     if (parsed.response) return parsed.response;
     const feedUrl = parsed.data.feedUrl;
 
-    // Check audio hours tier limits before importing
-    const tier = await getUserTier(userId);
+    // Check audio minute tier limits before importing
+    const { tier, status } = await getUserTier(userId);
     const limits = getTierLimits(tier);
-    const hoursUsed = await getAudioHoursUsed(userId);
-    const remainingHours = Math.max(0, limits.audioHoursPerMonth - hoursUsed);
+    const minutesUsed = await getAudioMinutesUsed(userId);
+    const remainingMinutes = Math.max(0, limits.audioMinutesPerMonth - minutesUsed);
 
-    if (remainingHours <= 0) {
+    // Block access for users who are trial_expired or canceled
+    if (status === 'trial_expired' || status === 'canceled') {
       return errorResponse(
-        `You've used all ${limits.audioHoursPerMonth} audio hours this month on the ${tier} plan. Upgrade to import more episodes.`,
+        status === 'trial_expired'
+          ? 'Your trial has ended. Upgrade to continue importing episodes.'
+          : 'Your subscription has been canceled. Reactivate to continue importing episodes.',
+        403
+      );
+    }
+
+    if (remainingMinutes <= 0) {
+      return errorResponse(
+        `You've used all ${limits.audioMinutesPerMonth} minutes this month on the ${tier} plan. Upgrade to import more episodes.`,
         403
       );
     }

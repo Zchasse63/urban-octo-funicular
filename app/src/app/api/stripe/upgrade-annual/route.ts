@@ -34,8 +34,8 @@ export async function POST() {
 
     // Get current tier from price ID
     const currentTier = sub.price_id ? getTierByPriceId(sub.price_id) : null;
-    if (!currentTier || currentTier === 'free') {
-      return errorResponse('Cannot upgrade free tier to annual', 400);
+    if (!currentTier) {
+      return errorResponse('Unable to determine current subscription tier', 400);
     }
 
     // Get annual price ID for the current tier

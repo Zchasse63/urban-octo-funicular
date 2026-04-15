@@ -1,9 +1,10 @@
 "use client"
 
-import { cn } from "@/lib/utils"
 import { useState, useEffect, useCallback, type ReactNode } from "react"
 import { Sidebar } from "./sidebar"
 import { MobileHeader } from "./mobile-header"
+import { SubscriptionBanners } from "@/components/ui/subscription-banners"
+import { useUsage } from "@/hooks/use-usage"
 
 interface AppShellProps {
   children: ReactNode
@@ -12,6 +13,7 @@ interface AppShellProps {
 function AppShell({ children }: AppShellProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const { usage } = useUsage()
 
   // Restore collapse state from localStorage
   useEffect(() => {
@@ -73,6 +75,13 @@ function AppShell({ children }: AppShellProps) {
         <MobileHeader
           sidebarOpen={mobileSidebarOpen}
           onToggleSidebar={toggleMobileSidebar}
+        />
+
+        {/* Subscription status banner (trialing / past_due / blocked) */}
+        <SubscriptionBanners
+          status={usage?.status ?? null}
+          trialEndsAt={usage?.trialEndsAt ?? null}
+          pastDueSince={usage?.pastDueSince ?? null}
         />
 
         <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8">

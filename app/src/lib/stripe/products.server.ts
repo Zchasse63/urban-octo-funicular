@@ -1,6 +1,10 @@
 /**
  * Server-only Stripe price functions.
  * These access process.env secrets and must NEVER be imported from client components.
+ *
+ * PricingTier is now a re-export of SubscriptionTier from @/lib/pricing
+ * (removed 'free' — we no longer have a free tier; new users start on a
+ * 14-day Pro trial).
  */
 
 import type { PricingTier, BillingInterval } from './products';

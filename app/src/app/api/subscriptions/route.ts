@@ -12,7 +12,7 @@ export async function GET() {
 
     const { data: subscription, error } = await supabase
       .from('subscriptions')
-      .select('*, users!inner(subscription_tier)')
+      .select('*, users!inner(subscription_tier, subscription_status, trial_ends_at, past_due_since)')
       .eq('user_id', userId)
       .single();
 
@@ -24,23 +24,32 @@ export async function GET() {
       );
     }
 
+    // No subscription row yet — user is on trial or hasn't paid yet.
+    // Return their subscription state from the users table directly.
     if (!subscription) {
       const { data: user } = await supabase
         .from('users')
-        .select('subscription_tier')
+        .select('subscription_tier, subscription_status, trial_ends_at, past_due_since')
         .eq('id', userId)
         .single();
 
       return NextResponse.json({
-        tier: user?.subscription_tier || 'free',
-        status: null,
+        tier: user?.subscription_tier ?? 'pro',
+        status: user?.subscription_status ?? 'trialing',
+        trialEndsAt: user?.trial_ends_at ?? null,
+        pastDueSince: user?.past_due_since ?? null,
       });
     }
 
+    // Subscription row exists — merge users table access state with
+    // Stripe-side billing details.
     return NextResponse.json({
       id: subscription.id,
-      status: subscription.status,
-      tier: subscription.users?.subscription_tier || 'free',
+      // subscription_status on users is the source of truth for access decisions
+      status: subscription.users?.subscription_status ?? 'active',
+      tier: subscription.users?.subscription_tier ?? 'pro',
+      trialEndsAt: subscription.users?.trial_ends_at ?? null,
+      pastDueSince: subscription.users?.past_due_since ?? null,
       stripe_subscription_id: subscription.stripe_subscription_id,
       price_id: subscription.price_id,
       current_period_start: subscription.current_period_start,

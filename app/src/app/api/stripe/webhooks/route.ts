@@ -5,6 +5,8 @@ import {
   handleCheckoutCompleted,
   handleSubscriptionUpdated,
   handleSubscriptionDeleted,
+  handleInvoicePaymentSucceeded,
+  handleInvoicePaymentFailed,
 } from '@/lib/stripe/webhooks';
 
 // Disable Next.js body parsing to get raw bytes for Stripe signature validation
@@ -61,6 +63,14 @@ export async function POST(request: NextRequest) {
 
       case 'customer.subscription.deleted':
         await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+        break;
+
+      case 'invoice.payment_succeeded':
+        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice);
+        break;
+
+      case 'invoice.payment_failed':
+        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
         break;
 
       default:

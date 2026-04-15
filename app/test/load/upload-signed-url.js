@@ -9,11 +9,15 @@
  * Requires k6 (https://k6.io/docs/get-started/installation/):
  *   brew install k6
  *
- * Run:
- *   API_BASE=http://localhost:3100 AUTH_COOKIE="<session cookie>" k6 run test/load/upload-signed-url.js
+ * Run (recommended — uses the automated extractor):
+ *   node scripts/extract-load-test-cookie.mjs > /tmp/k6-cookie.txt
+ *   API_BASE=http://localhost:3000 \
+ *     AUTH_COOKIE_HEADER="$(cat /tmp/k6-cookie.txt)" \
+ *     k6 run test/load/upload-signed-url.js
  *
- * Getting the AUTH_COOKIE: log in via the UI, open DevTools → Application
- * → Cookies, copy the `sb-<project>-auth-token` cookie value.
+ * Alternative (manual): log in via the UI, open DevTools → Application
+ * → Cookies, copy ALL `sb-<project>-auth-token*` cookies as a single
+ * Cookie header value (semicolon-separated) into AUTH_COOKIE_HEADER.
  *
  * Stages:
  *   0–30s:  ramp up to 10 VUs
@@ -50,12 +54,14 @@ export const options = {
   },
 }
 
-const API_BASE = __ENV.API_BASE || 'http://localhost:3100'
-const AUTH_COOKIE = __ENV.AUTH_COOKIE || ''
+const API_BASE = __ENV.API_BASE || 'http://localhost:3000'
+const AUTH_COOKIE_HEADER = __ENV.AUTH_COOKIE_HEADER || __ENV.AUTH_COOKIE || ''
 
-if (!AUTH_COOKIE) {
+if (!AUTH_COOKIE_HEADER) {
   throw new Error(
-    'AUTH_COOKIE environment variable required. Get it from DevTools > Application > Cookies > sb-<project>-auth-token after signing in.'
+    'AUTH_COOKIE_HEADER environment variable required. Run:\n' +
+      '  node scripts/extract-load-test-cookie.mjs > /tmp/k6-cookie.txt\n' +
+      '  AUTH_COOKIE_HEADER="$(cat /tmp/k6-cookie.txt)" k6 run test/load/upload-signed-url.js'
   )
 }
 
@@ -69,7 +75,7 @@ export default function () {
   const res = http.post(`${API_BASE}/api/upload`, payload, {
     headers: {
       'Content-Type': 'application/json',
-      Cookie: `sb-auth-token=${AUTH_COOKIE}`,
+      Cookie: AUTH_COOKIE_HEADER,
     },
   })
 

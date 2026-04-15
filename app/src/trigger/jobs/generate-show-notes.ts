@@ -1,5 +1,45 @@
 import { task, logger } from "@trigger.dev/sdk";
+import { z } from "zod";
 import type { TranscriptSegment, ViralMoment, SEOAnalysis } from "@/types/database";
+
+// ─── Grok response schemas (runtime-validated) ─────────────────────────────
+//
+// Grok MUST return JSON matching these schemas. Without runtime validation,
+// any field-name drift silently produces empty objects in `viral_moments`
+// and `schema_markup.hasPart`. Validation failure here triggers a Trigger.dev
+// retry, which is the desired behavior — a retry is always better than a
+// malformed but "successful" database write.
+
+const ViralMomentSchema = z.object({
+  start_time: z.number(),
+  end_time: z.number(),
+  text: z.string().min(1),
+  score: z.number().min(1).max(100),
+  reason: z.string().min(1),
+  type: z.enum([
+    "controversial",
+    "emotional",
+    "quotable",
+    "revelation",
+    "counter_intuitive",
+  ]),
+});
+
+const TimestampSchema = z.object({
+  time: z.string().min(1),
+  time_seconds: z.number().nonnegative(),
+  topic: z.string().min(1),
+});
+
+const GrokShowNotesResponseSchema = z.object({
+  show_notes_markdown: z.string().min(1),
+  summary: z.string().min(1),
+  key_topics: z.array(z.string()),
+  timestamps: z.array(TimestampSchema),
+  viral_moments: z.array(ViralMomentSchema),
+  suggested_title: z.string().min(1),
+  suggested_description: z.string().min(1),
+});
 
 /**
  * Input payload for the generate-show-notes job
@@ -36,28 +76,12 @@ export interface ShowNotesResult {
 }
 
 /**
- * xAI Grok response structure for show notes generation
+ * xAI Grok response structure for show notes generation.
+ *
+ * Derived from the Zod schema above so the type and the runtime validator
+ * can never drift apart.
  */
-interface GrokShowNotesResponse {
-  show_notes_markdown: string;
-  summary: string;
-  key_topics: string[];
-  timestamps: Array<{
-    time: string;
-    time_seconds: number;
-    topic: string;
-  }>;
-  viral_moments: Array<{
-    start_time: number;
-    end_time: number;
-    text: string;
-    score: number;
-    reason: string;
-    type: string;
-  }>;
-  suggested_title: string;
-  suggested_description: string;
-}
+type GrokShowNotesResponse = z.infer<typeof GrokShowNotesResponseSchema>;
 
 /**
  * Generate show notes using xAI Grok
@@ -190,16 +214,50 @@ async function generateShowNotesWithGrok(
     throw new Error("No content in xAI response");
   }
 
+  let raw: unknown;
   try {
-    return JSON.parse(content);
+    raw = JSON.parse(content);
   } catch (error) {
     logger.error("Failed to parse xAI response as JSON", { content: content.slice(0, 500) });
     throw new Error("xAI returned malformed JSON response");
   }
+
+  // Runtime shape validation. Any failure here means Grok returned a
+  // differently-named field (e.g. camelCase or a renamed property) and the
+  // caller's code would otherwise silently produce empty objects. A thrown
+  // ZodError here triggers Trigger.dev's built-in retry.
+  const parseResult = GrokShowNotesResponseSchema.safeParse(raw);
+  if (!parseResult.success) {
+    logger.error("xAI response failed schema validation", {
+      issues: parseResult.error.issues.slice(0, 8),
+      rawKeys: typeof raw === "object" && raw !== null ? Object.keys(raw) : typeof raw,
+      firstViralMoment:
+        typeof raw === "object" && raw !== null && "viral_moments" in raw
+          ? (raw as { viral_moments?: unknown[] }).viral_moments?.[0]
+          : undefined,
+      firstTimestamp:
+        typeof raw === "object" && raw !== null && "timestamps" in raw
+          ? (raw as { timestamps?: unknown[] }).timestamps?.[0]
+          : undefined,
+    });
+    throw new Error(
+      `xAI response failed schema validation: ${parseResult.error.issues
+        .slice(0, 3)
+        .map((i) => `${i.path.join(".")}: ${i.message}`)
+        .join("; ")}`
+    );
+  }
+  return parseResult.data;
 }
 
 /**
- * Build the system prompt for show notes generation
+ * Build the system prompt for show notes generation.
+ *
+ * CRITICAL: This prompt names every field explicitly because Grok's JSON
+ * output is downstream-validated by a Zod schema. Any field-name drift
+ * (camelCase, renamed keys, omitted fields) causes validation failure and
+ * a Trigger.dev retry. Do NOT loosen the contract here without updating the
+ * Zod schema in lockstep.
  */
 function buildSystemPrompt(
   stylePreferences?: { tone?: string; format_preferences?: Record<string, unknown> }
@@ -210,23 +268,60 @@ function buildSystemPrompt(
 
 Your writing style should be ${tone}.
 
-You must respond with a JSON object containing:
-- show_notes_markdown: Complete show notes in Markdown format with headers, bullet points, and timestamps
-- summary: A 2-3 sentence summary of the episode
-- key_topics: Array of main topics discussed (5-10 items)
-- timestamps: Array of notable moments with time codes and descriptions
-- viral_moments: Array of quotable or shareable moments that could go viral
-- suggested_title: An engaging, SEO-friendly episode title
-- suggested_description: A compelling episode description (150-200 words)
+You MUST respond with a JSON object matching this exact schema. Every field is required. Do NOT add extra fields. Do NOT rename fields. Do NOT omit any fields.
 
-For viral moments, identify:
+{
+  "show_notes_markdown": "string — complete show notes in Markdown format with headers, bullet points, and timestamps",
+  "summary": "string — a 2-3 sentence summary of the episode",
+  "key_topics": ["string — main topic discussed", "..."],
+  "timestamps": [
+    {
+      "time": "string — formatted as MM:SS or H:MM:SS (for example '12:34' or '1:05:30')",
+      "time_seconds": "number — the same moment expressed as total seconds (for example 754)",
+      "topic": "string — brief description of what happens at this timestamp"
+    }
+  ],
+  "viral_moments": [
+    {
+      "start_time": "number — start of the clip expressed in seconds (for example 312.0)",
+      "end_time": "number — end of the clip expressed in seconds (for example 328.5)",
+      "text": "string — verbatim or near-verbatim quote from the transcript",
+      "score": "number — shareability rating from 1 (low) to 100 (viral)",
+      "reason": "string — one sentence explaining why this moment is shareable",
+      "type": "string — exactly one of: controversial | emotional | quotable | revelation | counter_intuitive"
+    }
+  ],
+  "suggested_title": "string — an engaging, SEO-friendly episode title",
+  "suggested_description": "string — a compelling episode description between 150 and 200 words"
+}
+
+Provide 5-10 items in key_topics. Provide 5-15 timestamps that cover the main beats of the episode. Provide 3-8 viral_moments that represent the most shareable moments.
+
+For viral_moments, look for:
 - Controversial statements
 - Emotional revelations
 - Highly quotable insights
 - Surprising revelations
 - Counter-intuitive ideas
 
-Rate each viral moment 1-100 based on shareability.`;
+Example of a correctly-formed viral_moment:
+{
+  "start_time": 312.0,
+  "end_time": 328.5,
+  "text": "Most people think they need a team before they can start. That's exactly backwards.",
+  "score": 87,
+  "reason": "Counter-intuitive claim that directly challenges common founder advice, highly quotable.",
+  "type": "counter_intuitive"
+}
+
+Example of a correctly-formed timestamp:
+{
+  "time": "5:12",
+  "time_seconds": 312,
+  "topic": "Why solo founders outperform teams in the early stage"
+}
+
+Rate each viral moment 1-100 based on shareability. Do NOT omit start_time, end_time, text, score, reason, or type for any viral moment. Do NOT omit time, time_seconds, or topic for any timestamp.`;
 }
 
 /**

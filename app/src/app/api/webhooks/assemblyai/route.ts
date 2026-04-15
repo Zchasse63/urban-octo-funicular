@@ -181,7 +181,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Trigger the remaining processing pipeline (vocabulary -> show notes -> SEO -> assets)
-    // Uses dynamic import to avoid circular dependency issues in the webhook context
+    // Uses dynamic import to avoid circular dependency issues in the webhook context.
+    //
+    // audioDurationSeconds is already written to the episode row above (line 144),
+    // but we also pass it through so `saveProcessingResults` can idempotently re-apply
+    // it on a Trigger.dev retry if the column ever gets wiped. Both this path and
+    // the save helper use Math.ceil() so the two call sites produce identical integer
+    // values — a retry will never alternate between two different durations.
     const { triggerPostTranscriptionPipeline } = await import('@/lib/trigger/client')
     await triggerPostTranscriptionPipeline({
       episodeId: episode.id,
@@ -190,6 +196,7 @@ export async function POST(request: NextRequest) {
       segments,
       guestName: episode.guest_name || undefined,
       guestBio: episode.guest_bio || undefined,
+      audioDurationSeconds: Math.ceil(transcript.audio_duration || 0),
     })
 
     return NextResponse.json({ received: true })

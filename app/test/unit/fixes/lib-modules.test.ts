@@ -33,11 +33,13 @@ describe('Stripe products module', () => {
     }
   })
 
-  it('free tier has price 0', async () => {
+  it('pro tier has expected price (replaces legacy free-tier test)', async () => {
+    // Free tier was removed in favor of a 14-day Pro trial. This test
+    // now verifies that the Pro tier price is set correctly.
     const mod = await import('@/lib/stripe/products')
-    const freeTier = (mod.PRICING_TIERS as any).free
-    expect(freeTier).toBeDefined()
-    expect(freeTier.price).toBe(0)
+    const proTier = mod.PRICING_TIERS.pro
+    expect(proTier).toBeDefined()
+    expect(proTier.price).toBe(29)
   })
 
   it('does NOT export getServerPriceId (moved to server module)', async () => {

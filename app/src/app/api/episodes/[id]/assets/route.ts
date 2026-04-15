@@ -113,7 +113,7 @@ export async function POST(
     const body: GenerateAssetRequest = await request.json();
 
     // ── Tier gate: check if user can generate this asset type ──
-    const tier = await getUserTier(userId);
+    const { tier } = await getUserTier(userId);
     if (!canGenerateAssetType(tier, body.assetType)) {
       return errorResponse(
         `The "${body.assetType}" asset type requires a Pro or Agency plan. Upgrade to unlock advanced content generation.`,

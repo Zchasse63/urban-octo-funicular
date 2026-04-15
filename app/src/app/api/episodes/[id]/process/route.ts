@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAuth, isValidUUID } from "@/lib/auth";
 import { errorResponse, successResponse, handleApiError } from "@/lib/api/helpers";
 import { rateLimitByIP } from "@/lib/rate-limit";
+import { canProcessEpisode } from "@/lib/tier-limits";
 import {
   triggerEpisodeProcessing,
   getRunStatus,
@@ -71,6 +72,21 @@ export async function POST(
 
     if (fetchError || !episode) {
       return errorResponse("Episode not found", 404);
+    }
+
+    // ── Subscription gate ──
+    // Blocks access for trial_expired / canceled users and enforces the
+    // monthly minute cap. Use the episode's known duration (if any) for a
+    // precise check; otherwise just verify the user isn't already at cap.
+    const processCheck = await canProcessEpisode(
+      userId,
+      episode.audio_duration_seconds ?? undefined
+    );
+    if (!processCheck.allowed) {
+      return errorResponse(
+        processCheck.reason || "Subscription required to process episodes",
+        403
+      );
     }
 
     // Don't allow processing if already in progress

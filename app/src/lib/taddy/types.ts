@@ -19,11 +19,23 @@ export interface TaddyPodcast {
   itunesId: number | null;
   genres: string[];
   language: string;
-  country: string;
+  /**
+   * @deprecated Taddy removed this field in its 2026-04-15 schema.
+   * Kept as optional for backward-compat with rows already cached in
+   * `taddy_podcast_cache.country` (a DB column that still exists but
+   * is no longer populated by new API responses). New code should not
+   * rely on this being present.
+   */
+  country?: string;
   websiteUrl: string | null;
   authorName: string | null;
   totalEpisodesCount: number;
+  /**
+   * Taddy renamed `popularity` → `popularityRank` in the 2026-04-15
+   * schema. `popularity` is kept for backward-compat with cached rows.
+   */
   popularity: number | null;
+  popularityRank?: number | null;
   datePublished: number | null; // Unix timestamp
 }
 
@@ -45,10 +57,19 @@ export interface TaddyEpisode {
 }
 
 export interface TaddyPerson {
+  uuid: string;
   name: string;
   role: string; // HOST, GUEST, PRODUCER, etc.
-  img: string | null;
-  href: string | null;
+  imageUrl: string | null;
+  url: string | null;
+  /**
+   * @deprecated Taddy renamed these to imageUrl/url in their 2025 schema.
+   * Left as optional aliases for the cache-row mapper which reads existing
+   * jsonb blobs from `taddy_episode_cache.persons` that may still contain
+   * the old field names from pre-fix rows. New rows use imageUrl/url.
+   */
+  img?: string | null;
+  href?: string | null;
 }
 
 export interface TaddyCreator {
@@ -82,8 +103,11 @@ export interface TaddyEpisodeResponse {
 
 // -- Query option types --
 
-export type TaddySortBy = 'RELEVANCE' | 'DATE' | 'POPULARITY';
-export type TaddyMatchBy = 'TERM' | 'EXACT_PHRASE';
+// Taddy enum values as of 2026-04-15 schema introspection.
+// SearchSortOrder allows: POPULARITY, EXACTNESS  (previously included RELEVANCE/DATE — removed)
+// SearchMatchType allows: EXACT_PHRASE, ALL_TERMS, MOST_TERMS  (previously TERM — renamed)
+export type TaddySortBy = 'POPULARITY' | 'EXACTNESS';
+export type TaddyMatchBy = 'EXACT_PHRASE' | 'ALL_TERMS' | 'MOST_TERMS';
 
 export interface TaddySearchOptions {
   page?: number;

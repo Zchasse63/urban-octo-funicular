@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next"
-import { Toaster } from "sonner"
+import { ToasterProvider } from "@/components/layout/toaster-provider"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -66,12 +66,7 @@ export default function RootLayout({
       </head>
       <body>
         {children}
-        <Toaster
-          position="bottom-right"
-          toastOptions={{
-            className: "font-sans bg-card text-card-foreground border border-border shadow-xl",
-          }}
-        />
+        <ToasterProvider />
       </body>
     </html>
   )

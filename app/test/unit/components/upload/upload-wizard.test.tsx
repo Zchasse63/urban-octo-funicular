@@ -48,10 +48,13 @@ const mockUseShows = vi.fn().mockReturnValue({
 
 const mockUseUsage = vi.fn().mockReturnValue({
   usage: {
-    tier: 'free',
+    tier: 'pro',
+    status: 'trialing',
+    trialEndsAt: '2026-05-01T00:00:00Z',
+    pastDueSince: null,
     billingPeriod: { start: '2026-02-01', end: '2026-03-01' },
-    audioHours: { used: 0.5, limit: 1, percentage: 50 },
-    shows: { used: 1, limit: 1, percentage: 100 },
+    audioMinutes: { used: 150, limit: 300, percentage: 50 },
+    shows: { used: 1, limit: 2, percentage: 50 },
   },
   isLoading: false,
   error: null,
@@ -85,10 +88,13 @@ describe('UploadWizard', () => {
     })
     mockUseUsage.mockReturnValue({
       usage: {
-        tier: 'free',
+        tier: 'pro',
+        status: 'trialing',
+        trialEndsAt: '2026-05-01T00:00:00Z',
+        pastDueSince: null,
         billingPeriod: { start: '2026-02-01', end: '2026-03-01' },
-        audioHours: { used: 0.5, limit: 1, percentage: 50 },
-        shows: { used: 1, limit: 1, percentage: 100 },
+        audioMinutes: { used: 150, limit: 300, percentage: 50 },
+        shows: { used: 1, limit: 2, percentage: 50 },
       },
       isLoading: false,
       error: null,
@@ -132,13 +138,16 @@ describe('UploadWizard', () => {
   })
 
   describe('tier enforcement', () => {
-    it('shows upgrade prompt when audio hours limit reached', () => {
+    it('shows upgrade prompt when audio minutes limit reached', () => {
       mockUseUsage.mockReturnValue({
         usage: {
-          tier: 'free',
+          tier: 'pro',
+          status: 'trialing',
+          trialEndsAt: '2026-05-01T00:00:00Z',
+          pastDueSince: null,
           billingPeriod: { start: '2026-02-01', end: '2026-03-01' },
-          audioHours: { used: 1, limit: 1, percentage: 100 },
-          shows: { used: 1, limit: 1, percentage: 100 },
+          audioMinutes: { used: 300, limit: 300, percentage: 100 },
+          shows: { used: 1, limit: 2, percentage: 50 },
         },
         isLoading: false,
         error: null,

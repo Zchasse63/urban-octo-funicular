@@ -7,17 +7,29 @@ export async function findSimilarSections(
   threshold: number = 0.75
 ): Promise<SimilarityResult[]> {
   const supabase = await createClient();
+
+  // Fetch the first usable section (non-null embedding) from this episode
+  // to use as the query vector. Filtering in SQL avoids the case where the
+  // first section happens to have NULL embedding and we'd pass NULL to the
+  // RPC — which used to silently return nothing and fall through to a
+  // lying fallback. See specs/bugs/processing-pipeline-bugs.md#bug-17.
   const { data: querySections, error: sectionsError } = await supabase
     .from('episode_sections')
     .select('id, content, embedding')
     .eq('episode_id', episodeId)
-    .limit(10);
+    .not('embedding', 'is', null)
+    .limit(1);
 
   if (sectionsError || !querySections || querySections.length === 0) {
     return [];
   }
 
   const queryEmbedding = querySections[0].embedding;
+  if (!queryEmbedding) {
+    // Defensive: the .not('embedding','is',null) filter should guarantee
+    // this, but handle the edge case rather than passing NULL to the RPC.
+    return [];
+  }
 
   const { data: similarSections, error: similarityError } = await supabase.rpc(
     'find_similar_sections',
@@ -30,23 +42,12 @@ export async function findSimilarSections(
   );
 
   if (similarityError || !similarSections) {
-    const { data: fallbackResults } = await supabase
-      .from('episode_sections')
-      .select('episode_id, id, content, start_time, end_time, speaker, embedding')
-      .neq('episode_id', episodeId)
-      .limit(10);
-
-    if (!fallbackResults) return [];
-
-    return fallbackResults.map((section) => ({
-      episodeId: section.episode_id,
-      sectionId: section.id,
-      content: section.content,
-      startTime: section.start_time,
-      endTime: section.end_time,
-      similarity: 0.5,
-      speaker: section.speaker,
-    }));
+    // HISTORICAL BUG #17 (fixed 2026-04-15): the original fallback here
+    // returned 10 arbitrary non-matching sections with a hardcoded
+    // similarity of 0.5. This showed users "Related Episodes" at 50%
+    // confidence that had no actual semantic relationship to the source.
+    // An honest empty return is strictly better than a confident lie.
+    return [];
   }
 
   return similarSections.map((section: Record<string, unknown>) => ({

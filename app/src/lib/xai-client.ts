@@ -1,12 +1,17 @@
 /**
  * xAI Grok API Client
+ *
+ * This client wraps the xAI chat completions endpoint. xAI has never
+ * offered an embeddings API, so there is no `createEmbedding` here —
+ * semantic embeddings are handled by `@/lib/cross-episode/embeddings.ts`
+ * which calls OpenAI `text-embedding-3-small` directly.
+ * See `specs/bugs/processing-pipeline-bugs.md#bug-6` for the history.
  */
 
 import { xaiCircuitBreaker } from '@/lib/circuit-breaker';
 
 const XAI_API_URL = 'https://api.x.ai/v1';
 const DEFAULT_MODEL = process.env.XAI_MODEL || 'grok-4-1-fast';
-const DEFAULT_EMBEDDING_MODEL = 'grok-embedding-small';
 
 interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -33,22 +38,6 @@ interface ChatCompletionResponse {
   usage: {
     prompt_tokens: number;
     completion_tokens: number;
-    total_tokens: number;
-  };
-}
-
-interface EmbeddingOptions {
-  model?: string;
-  input: string | string[];
-}
-
-interface EmbeddingResponse {
-  data: Array<{
-    embedding: number[];
-    index: number;
-  }>;
-  usage: {
-    prompt_tokens: number;
     total_tokens: number;
   };
 }
@@ -96,38 +85,8 @@ export async function createChatCompletion(
 }
 
 /**
- * Create embeddings with xAI
- */
-export async function createEmbedding(
-  options: EmbeddingOptions
-): Promise<EmbeddingResponse> {
-  const apiKey = getApiKey();
-
-  return xaiCircuitBreaker.execute(async () => {
-    const response = await fetch(`${XAI_API_URL}/embeddings`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: options.model || DEFAULT_EMBEDDING_MODEL,
-        input: options.input,
-      }),
-      signal: AbortSignal.timeout(30000),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`xAI Embeddings API error: ${response.status} - ${errorText}`);
-    }
-
-    return response.json();
-  });
-}
-
-/**
- * Grok client interface
+ * Grok client interface — chat completions only.
+ * Embeddings are handled separately by `cross-episode/embeddings.ts`.
  */
 interface GrokClient {
   chat: {
@@ -135,14 +94,11 @@ interface GrokClient {
       create: typeof createChatCompletion;
     };
   };
-  embeddings: {
-    create: typeof createEmbedding;
-  };
 }
 
 /**
  * Create a Grok client instance.
- * Used by viral-moments/detector, guest-intel/service, cross-episode/embeddings, experts/discovery
+ * Used by viral-moments/detector, guest-intel/service, experts/discovery
  * via dynamic import.
  */
 export function createGrokClient(): GrokClient {
@@ -151,9 +107,6 @@ export function createGrokClient(): GrokClient {
       completions: {
         create: createChatCompletion,
       },
-    },
-    embeddings: {
-      create: createEmbedding,
     },
   };
 }

@@ -1,0 +1,21 @@
+{
+  "mode": "apply",
+  "timestamp": "2026-04-14T22:12:01.718Z",
+  "tiers": {
+    "pro": {
+      "productId": "prod_UKT0INXbdrrvgI",
+      "monthlyPriceId": "price_1TMFBeHfTrci5jg99xFiVSRx",
+      "annualPriceId": "price_1TMFBeHfTrci5jg97Pl0ns2v"
+    },
+    "creator": {
+      "productId": "prod_UKv1m8I5YWIItU",
+      "monthlyPriceId": "price_1TMFBfHfTrci5jg9hgJqjIZ1",
+      "annualPriceId": "price_1TMFBfHfTrci5jg9DoUCcmKk"
+    },
+    "agency": {
+      "productId": "prod_UKT05MxcZIvEBN",
+      "monthlyPriceId": "price_1TMFBgHfTrci5jg97ze9xX7l",
+      "annualPriceId": "price_1TMFBgHfTrci5jg9NObghd5z"
+    }
+  }
+}

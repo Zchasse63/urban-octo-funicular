@@ -123,8 +123,11 @@ class TaddyClient {
       term,
       page: options?.page ?? 1,
       limitPerPage: options?.limitPerPage ?? 25,
-      sortBy: options?.sortBy ?? 'RELEVANCE',
-      matchBy: options?.matchBy ?? 'TERM',
+      // Taddy 2026-04-15 schema: SearchSortOrder = POPULARITY | EXACTNESS;
+      // RELEVANCE and DATE were removed. SearchMatchType replaces the old
+      // TERM with MOST_TERMS (the closest functional equivalent).
+      sortBy: options?.sortBy ?? 'EXACTNESS',
+      matchBy: options?.matchBy ?? 'MOST_TERMS',
     });
   }
 
@@ -143,7 +146,7 @@ class TaddyClient {
       term,
       page: options?.page ?? 1,
       limitPerPage: options?.limitPerPage ?? 25,
-      sortBy: options?.sortBy ?? 'RELEVANCE',
+      sortBy: options?.sortBy ?? 'EXACTNESS',
     });
   }
 

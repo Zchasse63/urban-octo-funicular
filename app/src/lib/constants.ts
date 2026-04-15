@@ -56,41 +56,9 @@ export const POLL_INTERVAL_MS = 3000
 export const COPY_FEEDBACK_MS = 1800
 export const DEBOUNCE_DEFAULT_MS = 500
 
-// Subscription Tiers — hours-based pricing aligned with stripe/products.ts
-export const SUBSCRIPTION_TIERS = {
-  free: {
-    name: 'Free',
-    audioHoursPerMonth: 1,
-    maxShows: 1,
-    teamSeats: 1,
-    priceMonthly: 0,
-    priceAnnual: 0,
-  },
-  pro: {
-    name: 'Pro',
-    audioHoursPerMonth: 10,
-    maxShows: 3,
-    teamSeats: 1,
-    priceMonthly: 29,
-    priceAnnual: 232,
-  },
-  creator: {
-    name: 'Creator',
-    audioHoursPerMonth: 25,
-    maxShows: 10,
-    teamSeats: 3,
-    priceMonthly: 59,
-    priceAnnual: 472,
-  },
-  agency: {
-    name: 'Agency',
-    audioHoursPerMonth: 100,
-    maxShows: 999,
-    teamSeats: 10,
-    priceMonthly: 149,
-    priceAnnual: 1192,
-  },
-} as const
+// Subscription tier configuration has moved to src/lib/pricing.ts.
+// Import TIER_CONFIGS or getTierConfig from there. This consolidation
+// eliminates the drift risk of maintaining pricing in two places.
 
 // Supported Audio Formats
 export const SUPPORTED_AUDIO_FORMATS = [

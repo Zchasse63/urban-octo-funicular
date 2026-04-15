@@ -3,11 +3,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { extractErrorMessage } from "@/lib/errors";
 import type { PricingTier, BillingInterval } from "@/lib/stripe/products";
+import type { SubscriptionStatus } from "@/lib/pricing";
 
 interface SubscriptionData {
   id?: string;
-  status: string | null;
+  status: SubscriptionStatus;
   tier: PricingTier;
+  trialEndsAt: string | null;
+  pastDueSince: string | null;
   stripe_subscription_id?: string;
   current_period_end?: string;
 }

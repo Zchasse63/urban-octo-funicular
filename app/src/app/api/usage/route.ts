@@ -3,18 +3,24 @@ import { successResponse, handleApiError } from '@/lib/api/helpers'
 import {
   getUserTier,
   getTierLimits,
-  getAudioHoursUsed,
+  getAudioMinutesUsed,
   getShowCount,
   getBillingPeriod,
+  type SubscriptionTier,
+  type SubscriptionStatus,
 } from '@/lib/tier-limits'
+import { getUsagePercentage } from '@/lib/pricing'
 
 interface UsageData {
-  tier: string
+  tier: SubscriptionTier
+  status: SubscriptionStatus
+  trialEndsAt: string
+  pastDueSince: string | null
   billingPeriod: {
     start: string
     end: string
   }
-  audioHours: {
+  audioMinutes: {
     used: number
     limit: number
     percentage: number
@@ -30,30 +36,33 @@ export async function GET() {
   try {
     const { userId } = await requireAuth()
 
-    const [tier, audioHoursUsed, showCount, billingPeriod] = await Promise.all([
+    const [userTierState, audioMinutesUsed, showCount, billingPeriod] = await Promise.all([
       getUserTier(userId),
-      getAudioHoursUsed(userId),
+      getAudioMinutesUsed(userId),
       getShowCount(userId),
       getBillingPeriod(userId),
     ])
 
-    const limits = getTierLimits(tier)
+    const limits = getTierLimits(userTierState.tier)
 
     const usage: UsageData = {
-      tier,
+      tier: userTierState.tier,
+      status: userTierState.status,
+      trialEndsAt: userTierState.trialEndsAt.toISOString(),
+      pastDueSince: userTierState.pastDueSince?.toISOString() ?? null,
       billingPeriod: {
         start: billingPeriod.start.toISOString(),
         end: billingPeriod.end.toISOString(),
       },
-      audioHours: {
-        used: audioHoursUsed,
-        limit: limits.audioHoursPerMonth,
-        percentage: Math.round((audioHoursUsed / limits.audioHoursPerMonth) * 100),
+      audioMinutes: {
+        used: audioMinutesUsed,
+        limit: limits.audioMinutesPerMonth,
+        percentage: getUsagePercentage(audioMinutesUsed, limits.audioMinutesPerMonth),
       },
       shows: {
         used: showCount,
         limit: limits.maxShows,
-        percentage: Math.round((showCount / limits.maxShows) * 100),
+        percentage: getUsagePercentage(showCount, limits.maxShows),
       },
     }
 

@@ -6,9 +6,21 @@
 /**
  * Search episodes by term with person metadata (guests, hosts).
  * Returns episodes with podcast series context and persons array.
+ *
+ * NOTE: Taddy enforces a tight query-complexity budget on this endpoint.
+ * On 2026-04-15 the following combination was empirically found to fit
+ * within the budget up to `limitPerPage = 25`:
+ *   - episode: uuid, name, datePublished (no audioUrl, no description)
+ *   - podcastSeries: uuid, name (NO imageUrl — tips over the threshold)
+ *   - persons: uuid, name, role, imageUrl, url
+ *
+ * If you need `audioUrl` or `podcastSeries.imageUrl` for a specific
+ * episode, fetch it via a separate `getPodcastEpisode(uuid)` call — the
+ * single-item query path has a much higher complexity allowance. See
+ * `specs/bugs/experts-bugs.md#bug-34` for the full debugging trail.
  */
 export const SEARCH_EPISODES = `
-  query SearchEpisodes($term: String!, $page: Int, $limitPerPage: Int, $sortBy: SearchSortByEnum, $matchBy: SearchMatchByEnum) {
+  query SearchEpisodes($term: String!, $page: Int, $limitPerPage: Int, $sortBy: SearchSortOrder, $matchBy: SearchMatchType) {
     search(
       term: $term
       filterForTypes: PODCASTEPISODE
@@ -21,22 +33,17 @@ export const SEARCH_EPISODES = `
       podcastEpisodes {
         uuid
         name
-        description
-        audioUrl
-        duration
         datePublished
-        episodeNumber
-        seasonNumber
         podcastSeries {
           uuid
           name
-          imageUrl
         }
         persons {
+          uuid
           name
           role
-          img
-          href
+          imageUrl
+          url
         }
       }
     }
@@ -48,7 +55,7 @@ export const SEARCH_EPISODES = `
  * Returns podcast series with metadata for discovery.
  */
 export const SEARCH_PODCASTS = `
-  query SearchPodcasts($term: String!, $page: Int, $limitPerPage: Int, $sortBy: SearchSortByEnum) {
+  query SearchPodcasts($term: String!, $page: Int, $limitPerPage: Int, $sortBy: SearchSortOrder) {
     search(
       term: $term
       filterForTypes: PODCASTSERIES
@@ -66,11 +73,10 @@ export const SEARCH_PODCASTS = `
         itunesId
         genres
         language
-        country
         websiteUrl
         authorName
         totalEpisodesCount
-        popularity
+        popularityRank
         datePublished
       }
     }
@@ -91,11 +97,10 @@ export const GET_PODCAST = `
       itunesId
       genres
       language
-      country
       websiteUrl
       authorName
       totalEpisodesCount
-      popularity
+      popularityRank
       datePublished
     }
   }
@@ -121,10 +126,11 @@ export const GET_EPISODE = `
         imageUrl
       }
       persons {
+        uuid
         name
         role
-        img
-        href
+        imageUrl
+        url
       }
     }
   }
@@ -151,10 +157,11 @@ export const GET_EPISODE_WITH_TRANSCRIPT = `
         imageUrl
       }
       persons {
+        uuid
         name
         role
-        img
-        href
+        imageUrl
+        url
       }
     }
   }

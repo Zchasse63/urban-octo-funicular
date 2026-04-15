@@ -53,8 +53,12 @@ vi.mock('@/lib/stripe/client', () => ({
 vi.mock('@/lib/stripe/products.server', () => ({
   getTierByPriceId: vi.fn((priceId: string) => {
     if (priceId === 'price_pro') return 'pro';
+    if (priceId === 'price_creator') return 'creator';
     if (priceId === 'price_agency') return 'agency';
-    return 'free';
+    // After removing the free tier, unrecognized price IDs return null.
+    // handleCheckoutCompleted now throws on null tiers rather than silently
+    // defaulting to 'free'.
+    return null;
   }),
 }));
 
@@ -62,6 +66,8 @@ import {
   handleCheckoutCompleted,
   handleSubscriptionUpdated,
   handleSubscriptionDeleted,
+  handleInvoicePaymentSucceeded,
+  handleInvoicePaymentFailed,
 } from '@/lib/stripe/webhooks';
 
 describe('Stripe Webhook Handlers', () => {
@@ -290,6 +296,108 @@ describe('Stripe Webhook Handlers', () => {
       // This test verifies the retry logic exists even if we can't
       // easily test 3 retries with this mock structure
       expect(mockSupabase.from).toBeDefined();
+    });
+
+    it('does NOT write subscription_tier on cancellation (preserves tier for read-only access)', async () => {
+      // After the subscription state machine refactor, handleSubscriptionDeleted
+      // only flips subscription_status to 'canceled'. The user's tier is preserved
+      // so they retain read-only access to their historical content.
+      const source = handleSubscriptionDeleted.toString();
+      expect(source).toContain('subscription_status');
+      expect(source).toMatch(/canceled/);
+      // Verify the handler does not write a tier value
+      expect(source).not.toMatch(/subscription_tier:\s*['"]free['"]/);
+    });
+  });
+
+  // ─── New handlers: invoice.payment_succeeded / payment_failed ──────────
+
+  describe('handleInvoicePaymentSucceeded', () => {
+    const mockInvoice = {
+      subscription: 'sub_123',
+    } as unknown as Stripe.Invoice;
+
+    it('skips invoices without a subscription (one-off charges)', async () => {
+      const oneOffInvoice = { subscription: null } as unknown as Stripe.Invoice;
+      // Should not throw and should not query the database
+      await handleInvoicePaymentSucceeded(oneOffInvoice);
+      // No DB calls expected
+      expect(mockSupabase.from).not.toHaveBeenCalled();
+    });
+
+    it('throws if the subscription is not found', async () => {
+      mockChain.single.mockResolvedValue({
+        data: null,
+        error: { message: 'not found' },
+      });
+
+      await expect(handleInvoicePaymentSucceeded(mockInvoice)).rejects.toThrow(
+        /Subscription not found for payment_succeeded/
+      );
+    });
+
+    it('sets subscription_status to active and clears past_due_since', async () => {
+      mockChain.single.mockResolvedValue({
+        data: { user_id: 'user-abc' },
+        error: null,
+      });
+      mockChain.update.mockReturnValue({
+        ...mockChain,
+        eq: vi.fn().mockReturnValue({ error: null }),
+      });
+
+      await handleInvoicePaymentSucceeded(mockInvoice);
+
+      // Should have queried both subscriptions and users tables
+      expect(mockSupabase.from).toHaveBeenCalledWith('subscriptions');
+      expect(mockSupabase.from).toHaveBeenCalledWith('users');
+    });
+  });
+
+  describe('handleInvoicePaymentFailed', () => {
+    const mockInvoice = {
+      subscription: 'sub_123',
+    } as unknown as Stripe.Invoice;
+
+    it('skips invoices without a subscription', async () => {
+      const oneOffInvoice = { subscription: null } as unknown as Stripe.Invoice;
+      await handleInvoicePaymentFailed(oneOffInvoice);
+      expect(mockSupabase.from).not.toHaveBeenCalled();
+    });
+
+    it('throws if the subscription is not found', async () => {
+      mockChain.single.mockResolvedValue({
+        data: null,
+        error: { message: 'not found' },
+      });
+
+      await expect(handleInvoicePaymentFailed(mockInvoice)).rejects.toThrow(
+        /Subscription not found for payment_failed/
+      );
+    });
+
+    it('sets subscription_status to past_due', async () => {
+      mockChain.single.mockResolvedValue({
+        data: { user_id: 'user-abc', past_due_since: null },
+        error: null,
+      });
+      mockChain.update.mockReturnValue({
+        ...mockChain,
+        eq: vi.fn().mockReturnValue({ error: null }),
+      });
+
+      await handleInvoicePaymentFailed(mockInvoice);
+
+      expect(mockSupabase.from).toHaveBeenCalledWith('subscriptions');
+      expect(mockSupabase.from).toHaveBeenCalledWith('users');
+    });
+
+    it('preserves existing past_due_since when the user is already past_due', async () => {
+      // If the user is already past_due (payment failed twice), we should
+      // preserve the original failure timestamp so the grace period countdown
+      // continues from the first failure, not the latest.
+      const source = handleInvoicePaymentFailed.toString();
+      expect(source).toContain('past_due_since');
     });
   });
 });

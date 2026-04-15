@@ -106,7 +106,7 @@ export default function LandingPage() {
                 href="/register"
                 className="inline-flex h-12 items-center gap-2 rounded-lg bg-[#2563EB] px-7 text-base font-semibold text-white shadow-md transition-all hover:bg-[#1D4ED8] hover:shadow-lg active:shadow-sm dark:bg-[#3B82F6] dark:hover:bg-[#2563EB]"
               >
-                Get Started Free
+                Start 14-Day Free Trial
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <a
@@ -120,7 +120,7 @@ export default function LandingPage() {
 
             {/* Social proof nudge */}
             <p className="mt-10 text-xs font-medium tracking-wide text-muted-foreground/70">
-              FREE PLAN AVAILABLE &middot; NO CREDIT CARD REQUIRED
+              14-DAY PRO TRIAL &middot; NO CREDIT CARD REQUIRED
             </p>
           </div>
         </section>
@@ -331,31 +331,26 @@ export default function LandingPage() {
                 Simple, Transparent Pricing
               </h2>
               <p className="mt-4 font-serif text-lg leading-relaxed text-muted-foreground">
-                Start free and scale as your podcast grows. No hidden fees.
+                All plans start with a free 14-day Pro trial. No credit card required.
               </p>
             </div>
 
-            <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
               {(
                 [
                   {
-                    tier: PRICING_TIERS.free,
-                    cta: "Get Started Free",
-                    href: "/register",
-                  },
-                  {
                     tier: PRICING_TIERS.pro,
-                    cta: "Start Pro Trial",
+                    cta: "Start 14-day Trial",
                     href: "/register?plan=pro",
                   },
                   {
                     tier: PRICING_TIERS.creator,
-                    cta: "Start Creator Trial",
+                    cta: "Start 14-day Trial",
                     href: "/register?plan=creator",
                   },
                   {
                     tier: PRICING_TIERS.agency,
-                    cta: "Contact Sales",
+                    cta: "Start 14-day Trial",
                     href: "/register?plan=agency",
                   },
                 ] as const
@@ -396,7 +391,7 @@ export default function LandingPage() {
                       </p>
                     )}
                     <p className="mt-2 text-sm text-muted-foreground">
-                      {tier.audioHoursPerMonth} {tier.audioHoursPerMonth === 1 ? 'hour' : 'hours'}/mo &middot;{" "}
+                      {tier.audioMinutesPerMonth.toLocaleString()} min/mo &middot;{" "}
                       {tier.shows >= 999
                         ? "Unlimited shows"
                         : `${tier.shows} show${tier.shows > 1 ? "s" : ""}`}
@@ -446,7 +441,7 @@ export default function LandingPage() {
                 href="/register"
                 className="inline-flex h-12 items-center gap-2 rounded-lg bg-[#2563EB] px-8 text-base font-semibold text-white shadow-md transition-all hover:bg-[#1D4ED8] hover:shadow-lg active:shadow-sm dark:bg-[#3B82F6] dark:hover:bg-[#2563EB]"
               >
-                Get Started Free
+                Start 14-Day Free Trial
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
@@ -476,12 +471,24 @@ export default function LandingPage() {
               >
                 Support
               </Link>
-              <a href="#" className="transition-colors hover:text-foreground">
+              <Link
+                href="/terms"
+                className="transition-colors hover:text-foreground"
+              >
                 Terms
-              </a>
-              <a href="#" className="transition-colors hover:text-foreground">
+              </Link>
+              <Link
+                href="/privacy"
+                className="transition-colors hover:text-foreground"
+              >
                 Privacy
-              </a>
+              </Link>
+              <Link
+                href="/cookies"
+                className="transition-colors hover:text-foreground"
+              >
+                Cookies
+              </Link>
             </nav>
 
             {/* Social */}

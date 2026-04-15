@@ -5,6 +5,11 @@ import { generateAssetsTask, type AssetsResult } from "./generate-assets";
 import { getTriggerClient } from "@/lib/supabase/trigger-client";
 import { analyzeSEO } from "@/lib/seo/analyzer";
 import { dispatchWebhooks } from "@/lib/webhooks/dispatcher";
+import { saveProcessingResults } from "../lib/save-processing-results";
+import {
+  sendProcessingCompleteEmail,
+  sendProcessingFailedEmail,
+} from "@/lib/email/processing-notification";
 
 /**
  * Input payload for the post-transcription pipeline.
@@ -17,6 +22,13 @@ export interface PostTranscriptionPipelinePayload {
   segments: TranscriptSegment[];
   guestName?: string;
   guestBio?: string;
+  /**
+   * Optional audio duration (seconds). The webhook handler already writes
+   * this to `episodes.audio_duration_seconds` before triggering us, so we
+   * don't strictly need it — but passing it through lets the save helper
+   * idempotently re-apply it on retries if the column ever gets wiped.
+   */
+  audioDurationSeconds?: number;
 }
 
 /**
@@ -40,130 +52,137 @@ export const postTranscriptionPipelineTask = task({
   },
   run: async (payload: PostTranscriptionPipelinePayload) => {
     const startTime = Date.now();
-    const { episodeId, showId, transcript, segments, guestName, guestBio } = payload;
+    const {
+      episodeId,
+      showId,
+      transcript,
+      segments,
+      guestName,
+      guestBio,
+      audioDurationSeconds,
+    } = payload;
 
     logger.info("Starting post-transcription pipeline", {
       episodeId,
       showId,
       transcriptLength: transcript.length,
       segmentCount: segments.length,
+      audioDurationSeconds,
     });
 
-    // Step 1: Vocabulary processing
-    await updateEpisodeStatus(episodeId, "processing", "vocabulary_processing", 40);
-    logger.info("Processing vocabulary", { episodeId, showId });
+    try {
+      // Step 1: Vocabulary processing
+      await updateEpisodeStatus(episodeId, "processing", "vocabulary_processing", 40);
+      logger.info("Processing vocabulary", { episodeId, showId });
 
-    const vocabularyTerms = await fetchVocabularyTerms(showId);
-    const processedTranscript = await applyVocabularyCorrections(
-      transcript,
-      vocabularyTerms
-    );
+      const vocabularyTerms = await fetchVocabularyTerms(showId);
+      const processedTranscript = await applyVocabularyCorrections(transcript, vocabularyTerms);
 
-    // Step 2: Generate show notes with xAI Grok
-    await updateEpisodeStatus(episodeId, "processing", "generating_show_notes", 50);
-    logger.info("Generating show notes", { episodeId });
+      // Step 2: Generate show notes with xAI Grok
+      await updateEpisodeStatus(episodeId, "processing", "generating_show_notes", 50);
+      logger.info("Generating show notes", { episodeId });
 
-    const showNotesResult = await generateShowNotesTask.triggerAndWait({
-      episodeId,
-      transcript: processedTranscript,
-      segments,
-      guestName,
-      guestBio,
-    });
+      const showNotesResult = await generateShowNotesTask.triggerAndWait({
+        episodeId,
+        transcript: processedTranscript,
+        segments,
+        guestName,
+        guestBio,
+      });
 
-    if (!showNotesResult.ok) {
-      logger.error("Show notes generation failed", { episodeId, error: showNotesResult.error });
-      await updateEpisodeStatus(episodeId, "failed", "failed", 0, "Show notes generation failed");
-
-      // Dispatch webhook for failure
-      const failUserId = await getEpisodeUserId(episodeId);
-      if (failUserId) {
-        dispatchWebhooks(failUserId, {
-          event: "episode.failed",
-          timestamp: new Date().toISOString(),
-          data: { episodeId, showId, reason: "Show notes generation failed" },
-        }, getTriggerClient()).catch(() => {});
+      if (!showNotesResult.ok) {
+        logger.error("Show notes generation failed", {
+          episodeId,
+          error: showNotesResult.error,
+        });
+        await updateEpisodeStatus(episodeId, "failed", "failed", 0, "Show notes generation failed");
+        await notifyFailure(episodeId, showId, "Show notes generation failed");
+        throw new Error(`Show notes generation failed: ${showNotesResult.error}`);
       }
 
-      throw new Error(`Show notes generation failed: ${showNotesResult.error}`);
+      logger.info("Show notes generated", { episodeId });
+
+      // Step 3: SEO Analysis
+      await updateEpisodeStatus(episodeId, "processing", "seo_analysis", 70);
+      logger.info("Running SEO analysis", { episodeId });
+
+      const seoAnalysis = await performSEOAnalysis(
+        showNotesResult.output.showNotes,
+        showNotesResult.output.showNotesHtml
+      );
+
+      // Step 4: Generate all content assets
+      await updateEpisodeStatus(episodeId, "processing", "generating_assets", 80);
+      logger.info("Generating content assets", { episodeId });
+
+      const assetsResult = await generateAssetsTask.triggerAndWait({
+        episodeId,
+        transcript: processedTranscript,
+        showNotes: showNotesResult.output.showNotes,
+        guestName,
+        viralMoments: showNotesResult.output.viralMoments,
+      });
+
+      if (!assetsResult.ok) {
+        logger.error("Asset generation failed", { episodeId, error: assetsResult.error });
+        logger.warn("Continuing without all assets", { episodeId });
+      }
+
+      // Step 5: Save all results to database (shared helper — audio duration,
+      // idempotent delete-before-insert, embeddings, Taddy enrichment all live here)
+      const userId = await getEpisodeUserId(episodeId);
+
+      await saveProcessingResults(episodeId, {
+        transcript: processedTranscript,
+        segments,
+        showNotes: showNotesResult.output.showNotes,
+        showNotesHtml: showNotesResult.output.showNotesHtml,
+        schemaMarkup: showNotesResult.output.schemaMarkup,
+        seoScore: seoAnalysis.score,
+        seoAnalysis: seoAnalysis,
+        viralMoments: showNotesResult.output.viralMoments,
+        assets: assetsResult.ok ? assetsResult.output.assets : [],
+        audioDurationSeconds,
+        guestName,
+        userId: userId ?? undefined,
+      });
+
+      // Step 6: Mark as completed
+      await updateEpisodeStatus(episodeId, "completed", "completed", 100);
+
+      // Step 7: Notify the user (email + webhooks).
+      const assetCount = assetsResult.ok ? assetsResult.output.assets.length : 0;
+      await notifySuccess(episodeId, showId, seoAnalysis.score, assetCount);
+
+      const processingTimeMs = Date.now() - startTime;
+      logger.info("Post-transcription pipeline completed", {
+        episodeId,
+        processingTimeMs,
+        processingTimeMinutes: Math.round(processingTimeMs / 60000),
+      });
+
+      return {
+        episodeId,
+        showNotes: showNotesResult.output,
+        assets: assetsResult.ok ? assetsResult.output : { assets: [] },
+        processingTimeMs,
+      };
+    } catch (err) {
+      // Any error that escapes the pipeline triggers a failure notification.
+      // This mirrors process-episode.ts so both execution paths produce the
+      // same observable outcome on failure (user gets an email + webhook).
+      // We re-throw so Trigger.dev records the retry/failure normally.
+      const message = err instanceof Error ? err.message : "Unknown processing error";
+      logger.error("Post-transcription pipeline threw", { episodeId, message });
+      // Best-effort failure notification — swallow its errors so we don't
+      // hide the original pipeline error behind a delivery problem.
+      await notifyFailure(episodeId, showId, message).catch(() => {});
+      throw err;
     }
-
-    logger.info("Show notes generated", { episodeId });
-
-    // Step 3: SEO Analysis
-    await updateEpisodeStatus(episodeId, "processing", "seo_analysis", 70);
-    logger.info("Running SEO analysis", { episodeId });
-
-    const seoAnalysis = await performSEOAnalysis(
-      showNotesResult.output.showNotes,
-      showNotesResult.output.showNotesHtml
-    );
-
-    // Step 4: Generate all content assets
-    await updateEpisodeStatus(episodeId, "processing", "generating_assets", 80);
-    logger.info("Generating content assets", { episodeId });
-
-    const assetsResult = await generateAssetsTask.triggerAndWait({
-      episodeId,
-      transcript: processedTranscript,
-      showNotes: showNotesResult.output.showNotes,
-      guestName,
-      viralMoments: showNotesResult.output.viralMoments,
-    });
-
-    if (!assetsResult.ok) {
-      logger.error("Asset generation failed", { episodeId, error: assetsResult.error });
-      logger.warn("Continuing without all assets", { episodeId });
-    }
-
-    // Step 5: Save all results to database
-    await saveProcessingResults(episodeId, {
-      transcript: processedTranscript,
-      segments,
-      showNotes: showNotesResult.output.showNotes,
-      showNotesHtml: showNotesResult.output.showNotesHtml,
-      schemaMarkup: showNotesResult.output.schemaMarkup,
-      seoScore: seoAnalysis.score,
-      seoAnalysis: seoAnalysis,
-      viralMoments: showNotesResult.output.viralMoments,
-      assets: assetsResult.ok ? assetsResult.output.assets : [],
-    });
-
-    // Step 6: Mark as completed
-    await updateEpisodeStatus(episodeId, "completed", "completed", 100);
-
-    // Dispatch webhook for completion
-    const completionUserId = await getEpisodeUserId(episodeId);
-    if (completionUserId) {
-      dispatchWebhooks(completionUserId, {
-        event: "episode.completed",
-        timestamp: new Date().toISOString(),
-        data: {
-          episodeId,
-          showId,
-          seoScore: seoAnalysis.score,
-          assetCount: assetsResult.ok ? assetsResult.output.assets.length : 0,
-        },
-      }, getTriggerClient()).catch(() => {});
-    }
-
-    const processingTimeMs = Date.now() - startTime;
-    logger.info("Post-transcription pipeline completed", {
-      episodeId,
-      processingTimeMs,
-      processingTimeMinutes: Math.round(processingTimeMs / 60000),
-    });
-
-    return {
-      episodeId,
-      showNotes: showNotesResult.output,
-      assets: assetsResult.ok ? assetsResult.output : { assets: [] },
-      processingTimeMs,
-    };
   },
 });
 
-// --- Shared utility functions (same logic as process-episode.ts) ---
+// --- Shared utility functions ---
 
 async function updateEpisodeStatus(
   episodeId: string,
@@ -252,7 +271,10 @@ function escapeRegExp(string: string): string {
   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-async function performSEOAnalysis(showNotes: string, showNotesHtml?: string): Promise<{
+async function performSEOAnalysis(
+  showNotes: string,
+  showNotesHtml?: string
+): Promise<{
   score: number;
   keyword_density: Record<string, number>;
   readability_score: number;
@@ -269,102 +291,14 @@ async function performSEOAnalysis(showNotes: string, showNotesHtml?: string): Pr
     keyword_density: analysis.keywordDensityMap,
     readability_score: analysis.factors.readability.score,
     header_structure: analysis.factors.headerStructure.score >= 80,
-    suggestions: analysis.suggestions.map(s => s.description),
+    suggestions: analysis.suggestions.map((s) => s.description),
     estimated_position: null,
   };
 }
 
-async function saveProcessingResults(
-  episodeId: string,
-  results: {
-    transcript: string;
-    segments: TranscriptSegment[];
-    showNotes: string;
-    showNotesHtml: string;
-    schemaMarkup: Record<string, unknown>;
-    seoScore: number;
-    seoAnalysis: Record<string, unknown>;
-    viralMoments: ShowNotesResult["viralMoments"];
-    assets: AssetsResult["assets"];
-  }
-): Promise<void> {
-  const supabase = getTriggerClient();
-
-  logger.info("Saving processing results", {
-    episodeId,
-    transcriptLength: results.transcript.length,
-    assetsCount: results.assets.length,
-  });
-
-  const { error: episodeError } = await supabase
-    .from("episodes")
-    .update({
-      transcript: results.transcript,
-      transcript_segments: results.segments,
-      show_notes: results.showNotes,
-      show_notes_html: results.showNotesHtml,
-      schema_markup: results.schemaMarkup,
-      seo_score: results.seoScore,
-      seo_analysis: results.seoAnalysis,
-      viral_moments: results.viralMoments,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", episodeId);
-
-  if (episodeError) {
-    logger.error("Failed to update episode", { episodeId, error: episodeError.message });
-    throw new Error(`Failed to save episode: ${episodeError.message}`);
-  }
-
-  if (results.assets.length > 0) {
-    const assetsToInsert = results.assets.map((asset) => ({
-      episode_id: episodeId,
-      asset_type: asset.assetType,
-      content: asset.content,
-      metadata: asset.metadata || {},
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }));
-
-    const { error: assetsError } = await supabase
-      .from("generated_assets")
-      .insert(assetsToInsert);
-
-    if (assetsError) {
-      logger.error("Failed to insert assets", { episodeId, error: assetsError.message });
-    } else {
-      logger.info("Assets saved", { episodeId, count: results.assets.length });
-    }
-  }
-
-  if (results.segments.length > 0) {
-    const sectionsToInsert = results.segments.map((segment) => ({
-      episode_id: episodeId,
-      content: segment.text,
-      start_time: segment.start,
-      end_time: segment.end,
-      speaker: segment.speaker || null,
-      metadata: {},
-      created_at: new Date().toISOString(),
-    }));
-
-    const { error: sectionsError } = await supabase
-      .from("episode_sections")
-      .insert(sectionsToInsert);
-
-    if (sectionsError) {
-      logger.error("Failed to insert sections", { episodeId, error: sectionsError.message });
-    } else {
-      logger.info("Sections saved", { episodeId, count: results.segments.length });
-    }
-  }
-
-  logger.info("Processing results saved successfully", { episodeId });
-}
-
 /**
  * Look up the user_id for an episode via its parent show.
- * Returns null if the lookup fails (the webhook dispatch is best-effort).
+ * Returns null on failure — callers must treat it as best-effort.
  */
 async function getEpisodeUserId(episodeId: string): Promise<string | null> {
   const supabase = getTriggerClient();
@@ -375,13 +309,184 @@ async function getEpisodeUserId(episodeId: string): Promise<string | null> {
     .single();
 
   if (error || !data) {
-    logger.error("Failed to get user_id for webhook dispatch", { episodeId, error: error?.message });
+    logger.error("Failed to get user_id for webhook dispatch", {
+      episodeId,
+      error: error?.message,
+    });
     return null;
   }
 
   // Supabase returns the joined relation as an object
   const shows = data.shows as unknown as { user_id: string } | null;
   return shows?.user_id ?? null;
+}
+
+/**
+ * Look up the metadata we need to personalize the success/failure email.
+ * Best-effort: returns null on any lookup failure and the caller just
+ * skips the email.
+ *
+ * Implementation note: we deliberately split this into two queries rather
+ * than using a 3-deep PostgREST nested join (`shows(users(email))`).
+ * The split form is clearer, produces more specific log messages when one
+ * hop fails, and avoids subtle failure modes if the public.users row ever
+ * gets out of sync with auth.users.
+ */
+async function getNotificationContext(episodeId: string): Promise<{
+  userId: string;
+  userEmail: string;
+  episodeTitle: string;
+  showName: string;
+  appUrl: string;
+} | null> {
+  const supabase = getTriggerClient();
+
+  // Query 1: episode title + show name + user_id (one FK hop)
+  const { data: episode, error: episodeError } = await supabase
+    .from("episodes")
+    .select("title, shows(name, user_id)")
+    .eq("id", episodeId)
+    .single();
+
+  if (episodeError || !episode) {
+    logger.warn("Could not load notification context (episode lookup)", {
+      episodeId,
+      error: episodeError?.message,
+    });
+    return null;
+  }
+
+  const shows = episode.shows as unknown as
+    | { name: string; user_id: string }
+    | null;
+
+  if (!shows?.user_id) {
+    logger.warn("Episode has no parent show or show has no owner", { episodeId });
+    return null;
+  }
+
+  // Query 2: user email from the public.users table (separate hop)
+  const { data: user, error: userError } = await supabase
+    .from("users")
+    .select("email")
+    .eq("id", shows.user_id)
+    .single();
+
+  if (userError || !user?.email) {
+    logger.warn("Could not load notification context (user lookup)", {
+      episodeId,
+      userId: shows.user_id,
+      error: userError?.message,
+    });
+    return null;
+  }
+
+  return {
+    userId: shows.user_id,
+    userEmail: user.email,
+    episodeTitle: (episode.title as string) || "Your episode",
+    showName: shows.name || "your show",
+    appUrl: process.env.NEXT_PUBLIC_APP_URL || "https://getpodbrain.ai",
+  };
+}
+
+/**
+ * Dispatch success notifications (email + webhooks). Fire-and-forget:
+ * failures here must not turn a successful pipeline into a failed one.
+ */
+async function notifySuccess(
+  episodeId: string,
+  showId: string,
+  seoScore: number,
+  assetCount: number
+): Promise<void> {
+  try {
+    const ctx = await getNotificationContext(episodeId);
+    if (!ctx) return;
+
+    const episodeUrl = `${ctx.appUrl}/episodes/${episodeId}`;
+
+    await sendProcessingCompleteEmail({
+      to: ctx.userEmail,
+      episodeTitle: ctx.episodeTitle,
+      showName: ctx.showName,
+      episodeUrl,
+      assetCount,
+    }).catch((err) => {
+      logger.warn("Success email failed (non-fatal)", {
+        episodeId,
+        error: err instanceof Error ? err.message : "Unknown",
+      });
+    });
+
+    dispatchWebhooks(
+      ctx.userId,
+      {
+        event: "episode.completed",
+        timestamp: new Date().toISOString(),
+        data: {
+          episodeId,
+          showId,
+          seoScore,
+          assetCount,
+        },
+      },
+      getTriggerClient()
+    ).catch(() => {});
+  } catch (err) {
+    logger.warn("notifySuccess unexpected error (non-fatal)", {
+      episodeId,
+      error: err instanceof Error ? err.message : "Unknown",
+    });
+  }
+}
+
+/**
+ * Dispatch failure notifications (email + webhooks). Fire-and-forget.
+ */
+async function notifyFailure(
+  episodeId: string,
+  showId: string,
+  errorMessage: string
+): Promise<void> {
+  try {
+    const ctx = await getNotificationContext(episodeId);
+    if (!ctx) return;
+
+    const episodeUrl = `${ctx.appUrl}/episodes/${episodeId}`;
+
+    await sendProcessingFailedEmail({
+      to: ctx.userEmail,
+      episodeTitle: ctx.episodeTitle,
+      showName: ctx.showName,
+      episodeUrl,
+      errorMessage,
+    }).catch((err) => {
+      logger.warn("Failure email failed (non-fatal)", {
+        episodeId,
+        error: err instanceof Error ? err.message : "Unknown",
+      });
+    });
+
+    dispatchWebhooks(
+      ctx.userId,
+      {
+        event: "episode.failed",
+        timestamp: new Date().toISOString(),
+        data: {
+          episodeId,
+          showId,
+          reason: errorMessage,
+        },
+      },
+      getTriggerClient()
+    ).catch(() => {});
+  } catch (err) {
+    logger.warn("notifyFailure unexpected error (non-fatal)", {
+      episodeId,
+      error: err instanceof Error ? err.message : "Unknown",
+    });
+  }
 }
 
 export default postTranscriptionPipelineTask;

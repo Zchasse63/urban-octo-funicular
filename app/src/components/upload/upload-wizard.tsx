@@ -872,8 +872,8 @@ export const UploadWizard = ({
   const removeItem = useCallback((localId: string) => {
     setLocalQueue(prev => prev.filter(i => i.localId !== localId));
   }, []);
-  const audioLimitReached = usage ? usage.audioHours.percentage >= 100 : false;
-  const audioLimitApproaching = usage ? usage.audioHours.percentage >= 80 && usage.audioHours.percentage < 100 : false;
+  const audioLimitReached = usage ? usage.audioMinutes.percentage >= 100 : false;
+  const audioLimitApproaching = usage ? usage.audioMinutes.percentage >= 80 && usage.audioMinutes.percentage < 100 : false;
   const canProceed = localQueue.length > 0 && !audioLimitReached;
   /**
    * Process a single queue item: upload (if file source), create episode
@@ -1114,20 +1114,20 @@ export const UploadWizard = ({
             {currentStep === 1 && <>
               {audioLimitReached && (
                 <UpgradePrompt
-                  title="Audio hours limit reached"
+                  title="Audio minutes limit reached"
                   description="Upgrade your plan to continue processing episodes."
-                  currentUsage={usage!.audioHours.used}
-                  limit={usage!.audioHours.limit}
+                  currentUsage={usage!.audioMinutes.used}
+                  limit={usage!.audioMinutes.limit}
                   variant="banner"
                   className="mb-4"
                 />
               )}
               {audioLimitApproaching && (
                 <UpgradePrompt
-                  title="Approaching audio hours limit"
-                  description={`You've used ${usage!.audioHours.used} of ${usage!.audioHours.limit} audio hours this period.`}
-                  currentUsage={usage!.audioHours.used}
-                  limit={usage!.audioHours.limit}
+                  title="Approaching audio minutes limit"
+                  description={`You've used ${usage!.audioMinutes.used} of ${usage!.audioMinutes.limit} minutes this period.`}
+                  currentUsage={usage!.audioMinutes.used}
+                  limit={usage!.audioMinutes.limit}
                   variant="banner"
                   className="mb-4"
                 />

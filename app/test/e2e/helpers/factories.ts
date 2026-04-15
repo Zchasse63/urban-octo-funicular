@@ -152,3 +152,93 @@ export async function createVocabularyTerm(
   }
   return data.id
 }
+
+// ─── Subscription State ───────────────────────────────────────────────────────
+
+export interface SubscriptionState {
+  status: 'trialing' | 'active' | 'past_due' | 'trial_expired' | 'canceled'
+  tier?: 'pro' | 'creator' | 'agency'
+  /** Defaults: trialing → now+14d, all others → now-7d */
+  trialEndsAt?: Date
+  pastDueSince?: Date | null
+  /**
+   * If set, creates a backdated episode with this many minutes of audio so
+   * that getAudioMinutesUsed() returns the expected value within the current
+   * calendar-month billing period. Requires the user to already have a show.
+   */
+  minutesConsumed?: number
+}
+
+/**
+ * Set a test user's subscription state directly in the database.
+ *
+ * Use this instead of triggering Stripe webhooks in E2E tests — all state
+ * transitions that normally occur via webhooks (payment_succeeded, payment_failed,
+ * subscription.deleted, cron expiry) are simulated by calling this helper
+ * before the test signs in.
+ *
+ * @param userId - The Supabase user ID to update
+ * @param state  - The desired subscription state
+ */
+export async function setSubscriptionState(
+  userId: string,
+  state: SubscriptionState,
+): Promise<void> {
+  const admin = getAdminClient()
+  const now = new Date()
+
+  const defaultTrialEnd = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
+  const pastDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+
+  const trialEndsAt =
+    state.trialEndsAt ?? (state.status === 'trialing' ? defaultTrialEnd : pastDate)
+
+  const { error } = await admin
+    .from('users')
+    .update({
+      subscription_status: state.status,
+      subscription_tier: state.tier ?? 'pro',
+      trial_ends_at: trialEndsAt.toISOString(),
+      past_due_since: state.pastDueSince?.toISOString() ?? null,
+    })
+    .eq('id', userId)
+
+  if (error) throw new Error(`setSubscriptionState failed: ${error.message}`)
+
+  // Optionally create a backdated episode to simulate audio minute consumption.
+  // The episode is inserted with created_at = start of the current month so
+  // getAudioMinutesUsed() (which filters by billing period start) picks it up.
+  if (state.minutesConsumed !== undefined && state.minutesConsumed > 0) {
+    const { data: shows } = await admin
+      .from('shows')
+      .select('id')
+      .eq('user_id', userId)
+      .limit(1)
+
+    if (!shows || shows.length === 0) {
+      throw new Error(
+        'setSubscriptionState: minutesConsumed requires the user to have at least one show'
+      )
+    }
+
+    const billingStart = new Date(now.getFullYear(), now.getMonth(), 1)
+
+    const { error: epError } = await admin
+      .from('episodes')
+      .insert({
+        show_id: shows[0].id,
+        title: '[TEST] Synthetic usage episode',
+        audio_url: 'https://example.test/synthetic.mp3',
+        audio_duration_seconds: state.minutesConsumed * 60,
+        status: 'completed',
+        created_at: billingStart.toISOString(),
+        metadata: {},
+      })
+
+    if (epError) {
+      throw new Error(
+        `setSubscriptionState: failed to create usage episode: ${epError.message}`
+      )
+    }
+  }
+}
