@@ -564,6 +564,50 @@ None — this is a standing backlog.
 
 ---
 
+### BUG-LP-6 — Production has been returning 500 on every request for multiple commits (pre-existing, caught by first smoke test run)
+- **Discovered in:** Stage 5 of DEPLOYMENT-RUNBOOK — the very first run of `post-deploy-smoke.mjs` against `https://podbrain.netlify.app` (2026-04-15, post-PR-#1-merge)
+- **Severity:** **P0** — every production request was returning HTTP 500 with an `[ENV FATAL]` error body. The app literally could not boot.
+- **Evidence:**
+  ```
+  HTTP/1.1 500
+  An error occurred while loading instrumentation hook: [ENV FATAL] Missing required environment variables:
+    - NEXT_PUBLIC_SENTRY_DSN: Sentry client-side DSN — required in prod so client errors are captured
+    - SENTRY_DSN: Sentry server-side DSN — required in prod
+  ```
+- **Root cause:** `app/src/lib/env.ts` marked both Sentry DSNs as `productionOnly: true`, which gets promoted to `required` when `NODE_ENV === 'production'`. The Next.js instrumentation hook calls `validateEnv()` at startup and throws on missing required vars. Since a Sentry project had never been created for PodBrain, neither DSN was in Netlify's env vars, so every cold-start of a Netlify Function threw FATAL and returned 500.
+- **Duration of outage:** Uncertain — the check was added in an earlier commit (before this session), and no one had run a smoke test against the deployed URL until round 2's smoke script was built. Looking at the Netlify deploy history, `bb186232` and `79d06407` (previous main commits) also showed `state=ready` (build succeeded) but would have had the same runtime 500 because they too didn't have Sentry DSNs. **Production has probably been 500 for at least 2 prior deploys without anyone noticing.** This is exactly the class of bug the smoke script was designed to catch.
+- **Fix applied 2026-04-15:** Changed `productionOnly: true` → removed for both Sentry entries in `env.ts`. Sentry is now "strongly recommended but not enforced" until a Sentry project is created. Added inline comments pointing at this BUG-LP-6 entry so whoever tightens it back later knows why it was loosened.
+- **Long-term fix (Phase H2):** Create a real Sentry project, push `NEXT_PUBLIC_SENTRY_DSN` + `SENTRY_DSN` to Netlify env (all 4 contexts), verify Sentry captures a test error, then tighten the env.ts check back to `productionOnly: true` so future deploys without DSNs fail loud again.
+- **Takeaway:** The smoke script has already paid for itself. Without it, PodBrain's public launch would have been "ship → watch every user hit a 500 → scramble to diagnose". With it, we caught the outage before a single real user touched the site, and now we have a documented procedure to catch the same class of bug on every future deploy.
+- **Status:** ✅ FIXED (code change); 🟡 DEFERRED (real Sentry setup is Phase H2)
+
+---
+
+### BUG-LP-5 — GitHub Actions CI has been red on main for 2+ consecutive commits (pre-existing)
+- **Discovered in:** Pre-merge CI check on PR #1 (2026-04-15)
+- **Severity:** **P1** — Not a runtime bug, but it means CI is not a reliable pre-flight gate. The project has been shipping despite CI red for multiple commits.
+- **Evidence:**
+  - Main's last 3 CI runs all failed with the same classes of errors (run 24464020403, 24401002219, 22685074052)
+  - PR #1's CI had 8 Lint errors + E2E failures — all 8 Lint errors traced to files/code NOT modified in round 2 (confirmed via targeted eslint run on touched files only)
+  - PR #1's CI was actually BETTER than main (Unit Tests now pass; main's Unit Tests failed)
+- **Failure classes:**
+  - **Lint errors (8)**: `react-hooks/set-state-in-effect`, `react-hooks/static-components`, `react/no-unescaped-entities`, `@typescript-eslint/no-explicit-any` — all in pre-existing code (SuggestionCard icon rendering, terms sync effects, SubscriptionTab effects, QueueItemRow icon, etc.)
+  - **E2E failures**: Missing CI env vars (XAI_API_KEY, ASSEMBLYAI_API_KEY, TRIGGER_SECRET_KEY, STRIPE_*) — the CI runner doesn't have production secrets populated, so tests that need real services fail
+  - **Unit Tests (main only)**: stale `RELEVANCE → EXACTNESS` assertion in taddy-client.test.ts, FIXED in round 2
+- **Proposed fix (two-part):**
+  - **Part A — Lint cleanup**: Fix all 8 lint errors as a dedicated focused session. Most are 1-line fixes. The `react-hooks/set-state-in-effect` ones need small refactors (use `useMemo` or move the setState into an event handler). Should be 1-2 hours of scoped work.
+  - **Part B — CI env setup**: Either (a) populate GitHub Actions secrets with the required env vars for E2E tests, or (b) split the E2E suite so only the tests that don't need external services run in CI, and the rest run as a scheduled job against the deployed prod environment using `post-deploy-smoke.mjs`.
+- **Status:** OPEN — Phase H addition (treat as Phase H6: "Restore CI green gate")
+- **Decision on PR #1 merge:** We merged PR #1 on 2026-04-15 despite CI red because:
+  1. Local pre-flight was green (tsc, vitest, next build)
+  2. All 8 lint errors are pre-existing and not introduced by this PR
+  3. Main has been shipping despite CI red for multiple commits already
+  4. PR #1 actually improved the state (Unit Tests went from red to green)
+  5. The `post-deploy-smoke.mjs` script provides an alternative end-to-end verification gate
+- **Why this matters long-term:** Until CI is green, we can't rely on GitHub Actions as an automated pre-merge gate. Every deploy needs the local pre-flight + manual `post-deploy-smoke.mjs` instead. This is sustainable but less efficient — automated CI is the eventual target state.
+
+---
+
 ### BUG-LP-4 — Audio duration stored correctly but `transcript_segments` only has 1 segment for a 2:50 monologue
 - **Discovered in:** Pre-merge Phase B smoke test
 - **Severity:** **P3** (not a regression — expected AssemblyAI behavior on single-speaker audio with no diarization events)

@@ -28,7 +28,14 @@ const CLIENT_ENV_VARS: EnvVarConfig[] = [
   { name: 'NEXT_PUBLIC_SUPABASE_URL', required: true, description: 'Supabase project URL' },
   { name: 'NEXT_PUBLIC_SUPABASE_ANON_KEY', required: true, description: 'Supabase anon/public key' },
   { name: 'NEXT_PUBLIC_APP_URL', required: false, productionOnly: true, description: 'Application URL — required in prod so RSS tags, share links, and OAuth redirects resolve correctly' },
-  { name: 'NEXT_PUBLIC_SENTRY_DSN', required: false, productionOnly: true, description: 'Sentry client-side DSN — required in prod so client errors are captured' },
+  // NOTE: Sentry DSNs are strongly recommended in production but NOT enforced
+  // as required. Enforcing them crashed the prod boot when the Sentry project
+  // had not yet been created — the instrumentation hook threw [ENV FATAL]
+  // before the app could serve a single request. See BUG-LP-6 in
+  // specs/plans/LAUNCH-PLAN.md for the post-mortem. Once a Sentry project
+  // exists and the DSN is pushed to Netlify, consider tightening this back
+  // to `productionOnly: true`.
+  { name: 'NEXT_PUBLIC_SENTRY_DSN', required: false, description: 'Sentry client-side DSN — strongly recommended in prod so client errors are captured' },
   { name: 'NEXT_PUBLIC_POSTHOG_KEY', required: false, description: 'PostHog analytics key' },
 ]
 
@@ -69,8 +76,9 @@ const SERVER_ENV_VARS: EnvVarConfig[] = [
   { name: 'BUZZSPROUT_API_KEY', required: false, description: 'Buzzsprout API key' },
   { name: 'TRANSISTOR_API_KEY', required: false, description: 'Transistor API key' },
 
-  // Error tracking — required in prod
-  { name: 'SENTRY_DSN', required: false, productionOnly: true, description: 'Sentry server-side DSN — required in prod' },
+  // Error tracking — strongly recommended but not enforced. See comment on
+  // NEXT_PUBLIC_SENTRY_DSN above for the rationale.
+  { name: 'SENTRY_DSN', required: false, description: 'Sentry server-side DSN — strongly recommended in prod' },
 
   // Webhook auth — required in prod so AssemblyAI callbacks are authenticated
   { name: 'ASSEMBLYAI_WEBHOOK_SECRET', required: false, productionOnly: true, description: 'AssemblyAI webhook token — required in prod so the callback endpoint is authenticated' },
