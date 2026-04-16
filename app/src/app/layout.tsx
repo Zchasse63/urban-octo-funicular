@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     template: "%s | PodBrain",
   },
   description:
-    "Transform your podcast into SEO-optimized show notes, 30+ content assets, and guest promotion packages with AI that learns your show.",
+    "Transform your podcast into SEO-optimized show notes, 12+ content assets, and guest promotion packages with AI that learns your show.",
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_APP_URL || "https://getpodbrain.ai"
   ),
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     siteName: "PodBrain",
     title: "PodBrain — AI-Powered Podcast Content Platform",
     description:
-      "Transform your podcast into SEO-optimized show notes, 30+ content assets, and guest promotion packages.",
+      "Transform your podcast into SEO-optimized show notes, 12+ content assets, and guest promotion packages.",
     images: [
       {
         url: "/og-image.png",
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "PodBrain — AI-Powered Podcast Content Platform",
     description:
-      "Transform your podcast into SEO-optimized show notes, 30+ content assets, and guest promotion packages.",
+      "Transform your podcast into SEO-optimized show notes, 12+ content assets, and guest promotion packages.",
     images: ["/og-image.png"],
   },
   robots: {

@@ -4,9 +4,20 @@
  * Taddy explicitly permits caching search results.
  *
  * Flow: check cache -> if stale/missing, call API -> store result -> return
+ *
+ * BUG #23 security hardening: writes to `taddy_podcast_cache` and
+ * `taddy_episode_cache` now use the admin (service_role) client so the
+ * RLS policies on those tables can be scoped to service_role only.
+ * Previously they had `WITH CHECK (true)` which let any authenticated
+ * user pollute the shared cache with arbitrary data (cache poisoning
+ * vector). Reads still use the user-session client because the SELECT
+ * policies are fine — reads are not a security issue.
+ *
+ * `guest_appearances` writes continue to use the user-session client
+ * because that table is RLS-scoped per user_id (not a shared cache).
  */
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { getTaddyClient, isTaddyAvailable } from './client';
 import { TADDY_CACHE_TTL_HOURS } from '@/lib/constants';
 import type { TaddyPodcast, TaddyEpisode, TaddyPerson, GuestAppearance } from './types';
@@ -249,7 +260,8 @@ async function getCachedEpisode(uuid: string): Promise<TaddyEpisode | null> {
 }
 
 async function cachePodcast(podcast: TaddyPodcast): Promise<void> {
-  const supabase = await createClient();
+  // BUG #23: admin client for cache writes (policies are service_role only)
+  const supabase = createAdminClient();
 
   await supabase
     .from('taddy_podcast_cache')
@@ -275,7 +287,8 @@ async function cachePodcast(podcast: TaddyPodcast): Promise<void> {
 }
 
 async function cacheEpisode(episode: TaddyEpisode): Promise<void> {
-  const supabase = await createClient();
+  // BUG #23: admin client for cache writes (policies are service_role only)
+  const supabase = createAdminClient();
 
   await supabase
     .from('taddy_episode_cache')
@@ -300,7 +313,8 @@ async function cacheEpisode(episode: TaddyEpisode): Promise<void> {
 }
 
 async function cacheEpisodesInBackground(episodes: TaddyEpisode[]): Promise<void> {
-  const supabase = await createClient();
+  // BUG #23: admin client for cache writes (policies are service_role only)
+  const supabase = createAdminClient();
 
   const rows = episodes.map((episode) => ({
     taddy_uuid: episode.uuid,
@@ -348,7 +362,8 @@ async function cacheEpisodesInBackground(episodes: TaddyEpisode[]): Promise<void
 }
 
 async function cachePodcastsInBackground(podcasts: TaddyPodcast[]): Promise<void> {
-  const supabase = await createClient();
+  // BUG #23: admin client for cache writes (policies are service_role only)
+  const supabase = createAdminClient();
 
   const rows = podcasts.map((podcast) => ({
     taddy_uuid: podcast.uuid,

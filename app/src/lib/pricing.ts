@@ -102,7 +102,7 @@ export const TIER_CONFIGS: Record<SubscriptionTier, TierConfig> = {
       '300 minutes of audio/month',
       '2 podcast shows',
       'AI show notes & chapters',
-      '30+ content assets',
+      '12+ content assets',
       'SEO analysis',
       'Guest promotion packages',
       'Podcasting 2.0 enrichment',

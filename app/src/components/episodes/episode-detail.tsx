@@ -641,46 +641,30 @@ const ShowNotesTab = ({ episode, episodeId, seoScore, seoAnalysis, onSaved }: Sh
 
 // ─── Assets Tab ───────────────────────────────────────────────────────────────
 
-// BUG #14 fix: removed the hardcoded `status` field from every row. The
-// previous version had `status: 'generated'` baked into 8 of the 14 rows,
-// which produced phantom "Ready" badges on every episode regardless of
-// whether the DB actually had the asset. Row state is now derived
-// exclusively from `realAssetContent` in `AssetRow`.
+// BUG #14 fix: removed the hardcoded `status` field from every row. Row
+// state is now derived exclusively from `realAssetContent` in `AssetRow`.
 //
-// BUG #13 fix: removed the two orphan rows whose UI ids could never be
-// matched to a pipeline-written DB row:
-//   - `audiogram-script` (audiogram pipeline is a Remotion scaffold per
-//     CLAUDE.md, no audiogram asset_type is ever written)
-//   - `1-liner` (no AI-summary asset_type is written by any pipeline)
-// And fixed the `instagram-captions` slug — the UI was looking up the
-// `instagram_caption` slug but the pipeline writes `instagram_carousel`.
-// We rename the row to "Instagram Carousel" + remap below.
+// BUG #13 fix (round 2): removed orphan rows that would never match a
+// pipeline-written DB row (audiogram-script, 1-liner).
+//
+// BUG-LP-2 fix (round 3): removed the "Core" category entirely. The
+// show-notes / chapter-markers / episode-description (seo_description)
+// types are NOT written to `generated_assets` — they live directly on
+// the `episodes` row (`show_notes`, `schema_markup.hasPart`,
+// `seo_analysis.description`). The Assets tab's assetMap only reads
+// from `generated_assets`, so those UI slots could never light up. The
+// user already has dedicated tabs for this content: the Show Notes tab
+// (full editor), the Intelligence tab (SEO analysis), and the RSS Tags
+// tab (chapters). Duplicating them here was misleading UX.
+//
+// Also removed the "AI Summary" category — `key_takeaways` lives inside
+// the Intelligence tab next to the viral moments and learning insights.
+//
+// BUG-LP-2 fix (round 3): fixed `newsletter` slug — pipeline writes
+// `newsletter` (not `newsletter_email` as the round 2 fix assumed) and
+// added new rows for `tiktok_hook` and `quote_card` which the pipeline
+// writes but had no UI slots. These move into the Visual category.
 const ASSET_CATEGORIES: AssetCategory[] = [{
-  id: 'core',
-  label: 'Core',
-  dot: 'bg-emerald-500',
-  iconBg: 'bg-emerald-50 border-emerald-200/60',
-  countColor: 'text-emerald-600 bg-emerald-50 border-emerald-200/60',
-  assets: [{
-    id: 'show-notes',
-    label: 'Show Notes',
-    icon: FileText,
-    description: 'Full editorial show notes with timestamps',
-    accentColor: 'text-emerald-600'
-  }, {
-    id: 'chapter-markers',
-    label: 'Chapter Markers',
-    icon: Hash,
-    description: 'Timestamped chapter titles for podcast apps',
-    accentColor: 'text-emerald-600'
-  }, {
-    id: 'episode-description',
-    label: 'Episode Description',
-    icon: AlignLeft,
-    description: 'RSS feed description (500 chars)',
-    accentColor: 'text-emerald-600'
-  }]
-}, {
   id: 'social',
   label: 'Social',
   dot: 'bg-sky-500',
@@ -745,7 +729,7 @@ const ASSET_CATEGORIES: AssetCategory[] = [{
   }]
 }, {
   id: 'visual',
-  label: 'Visual',
+  label: 'Visual & Video',
   dot: 'bg-rose-500',
   iconBg: 'bg-rose-50 border-rose-200/60',
   countColor: 'text-rose-600 bg-rose-50 border-rose-200/60',
@@ -755,19 +739,18 @@ const ASSET_CATEGORIES: AssetCategory[] = [{
     icon: Youtube,
     description: 'Full YT description with timestamps',
     accentColor: 'text-rose-600'
-  }]
-}, {
-  id: 'ai-summary',
-  label: 'AI Summary',
-  dot: 'bg-stone-500',
-  iconBg: 'bg-muted border-border',
-  countColor: 'text-muted-foreground bg-muted border-border',
-  assets: [{
-    id: 'tldr',
-    label: 'TL;DR Bullets',
-    icon: AlignLeft,
-    description: '5 key takeaways from the episode',
-    accentColor: 'text-muted-foreground'
+  }, {
+    id: 'tiktok-hooks',
+    label: 'TikTok Hooks',
+    icon: Zap,
+    description: '3 viral opening hooks for short-form video',
+    accentColor: 'text-rose-600'
+  }, {
+    id: 'quote-cards',
+    label: 'Quote Cards',
+    icon: MessageSquare,
+    description: 'Shareable pull quotes from the episode',
+    accentColor: 'text-rose-600'
   }]
 }];
 
@@ -1030,28 +1013,30 @@ const CategoryCard = ({
 
 // Map from UI asset IDs to database asset_type values.
 //
-// BUG #13 fix: every entry in this map MUST correspond to a slug the
-// pipeline actually writes (see `app/src/app/api/seed/route.ts` and
-// `app/src/lib/content/asset-prompts.ts`). The previous version had:
-//   - 'instagram-captions' → 'instagram_caption' (pipeline writes carousel)
-//   - 'audiogram-script'   → 'audiogram_clips' (pipeline never writes)
-//   - '1-liner'            → 'ai_summary_short' (pipeline never writes)
-// All three would orphan their UI rows forever. They have been removed
-// or remapped — instagram is now `instagram-carousel` → `instagram_carousel`,
-// and the two never-written entries are gone entirely.
+// BUG #13 + BUG-LP-2: every entry MUST match a slug the pipeline actually
+// writes. Confirmed against the real pipeline output in the post-deploy
+// smoke test on 2026-04-15: pipeline produces exactly these 8 types in
+// `generated_assets`:
+//   linkedin_post, twitter_thread, instagram_carousel, newsletter,
+//   blog_post, youtube_description, tiktok_hook, quote_card
+// Plus guest_bio_short and guest_promo_kit when the episode has a guest.
+//
+// Core content types (show_notes, chapter_markers, seo_description,
+// key_takeaways) live directly on the `episodes` row and are NOT in
+// generated_assets. They're surfaced via dedicated tabs (Show Notes,
+// Intelligence, RSS Tags) instead of here — see ASSET_CATEGORIES
+// comment above.
 const UI_ID_TO_DB_TYPE: Record<string, string> = {
-  'show-notes': 'show_notes',
-  'chapter-markers': 'chapter_markers',
-  'episode-description': 'seo_description',
   'twitter-thread': 'twitter_thread',
   'linkedin-post': 'linkedin_post',
   'instagram-carousel': 'instagram_carousel',
   'blog-post': 'blog_post',
-  'newsletter': 'newsletter_email',
+  'newsletter': 'newsletter',
   'guest-bio': 'guest_bio_short',
   'guest-email': 'guest_promo_kit',
   'youtube-desc': 'youtube_description',
-  'tldr': 'key_takeaways',
+  'tiktok-hooks': 'tiktok_hook',
+  'quote-cards': 'quote_card',
 };
 
 interface AssetsTabProps {

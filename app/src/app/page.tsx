@@ -97,7 +97,7 @@ export default function LandingPage() {
             </h1>
 
             <p className="mx-auto mt-6 max-w-2xl font-serif text-lg leading-relaxed text-muted-foreground sm:text-xl">
-              AI-powered show notes, 30+ content assets, and guest promotion
+              AI-powered show notes, 12+ content assets, and guest promotion
               packages — generated in minutes, not hours.
             </p>
 
@@ -209,7 +209,7 @@ export default function LandingPage() {
                 },
                 {
                   icon: Layers,
-                  title: "30+ Content Assets",
+                  title: "12+ Content Assets",
                   description:
                     "Social posts, blog drafts, email newsletters, pull quotes, and more from a single episode.",
                 },
@@ -283,7 +283,7 @@ export default function LandingPage() {
                   icon: Sparkles,
                   title: "AI Processes Everything",
                   description:
-                    "PodBrain transcribes, analyzes, and generates show notes plus 30+ content assets in minutes.",
+                    "PodBrain transcribes, analyzes, and generates show notes plus 12+ content assets in minutes.",
                 },
                 {
                   step: "03",
