@@ -564,6 +564,39 @@ None — this is a standing backlog.
 
 ---
 
+### BUG-LP-7 — Blog post and YouTube description hallucinate on short inputs
+- **Discovered in:** Phase G content quality grading (2026-04-15)
+- **Severity:** P1 — these are the two worst-scoring assets from the LLM judge (3/10 each) and they fabricate entire structures that don't exist in the source (brand names, episode series, fake timestamps, invented resource links).
+- **Evidence:** Full grading report at [`specs/reports/content-quality-grades-2026-04-15.md`](../reports/content-quality-grades-2026-04-15.md). Raw JSON at [`specs/reports/content-quality-grades-2026-04-15.json`](../reports/content-quality-grades-2026-04-15.json).
+- **Repro:** Any short (<5 min) or unscripted audio file produces these hallucinations consistently. The Grok model pattern-matches to "what a good blog post looks like" instead of staying grounded in the transcript.
+- **Proposed fix:**
+  - **A — input-length gating** (simplest): if `transcript.length < N` or `audio_duration < M min`, skip `blog_post` and `youtube_description` entirely and return a "content too short for long-form" placeholder. Better UX than a confidently wrong output.
+  - **B — "Beta" labeling in UI**: mark both assets with a "may hallucinate on short content" warning until the prompts are hardened.
+  - **C — post-generation grounding check** (see BUG-LP-9 below).
+- **Status:** OPEN, P1, should fix before charging real customers for these assets.
+
+---
+
+### BUG-LP-8 — Asset prompts need explicit tone-preservation instruction
+- **Discovered in:** Phase G content quality grading (2026-04-15)
+- **Severity:** P1 — average tone-fit score was 4.63/10 across all assets. The pipeline translates a quiet, intimate personal monologue into upbeat marketing copy with "🚀 CRUSH IT" energy on every asset type. A paying customer recording a raw solo episode would be horrified by the output.
+- **Evidence:** Every asset in the grading run except show notes and Twitter thread scored ≤ 6/10 on tone fit. The grader's notes consistently called out "over-polished", "marketing voice", "sensationalized", "clashes with source".
+- **Root cause:** `app/src/lib/content/asset-prompts.ts` prompts describe the DESIRED format of each asset ("write a LinkedIn post with professional hooks") but don't instruct the model to preserve the SOURCE voice. Without that constraint, Grok defaults to generic "optimized" marketing prose.
+- **Proposed fix:** Add a system-level instruction to every asset prompt:
+  > "CRITICAL: Preserve the tone of the original speaker. If the source is casual and intimate, the output must also be casual and intimate. If the source is formal and expert, the output must be formal and expert. Do NOT upgrade to marketing voice. Do NOT add promotional CTAs that aren't in the source."
+- **Status:** OPEN, P1.
+
+---
+
+### BUG-LP-9 — No factual-grounding check in the asset pipeline
+- **Discovered in:** Phase G content quality grading (2026-04-15)
+- **Severity:** P1 — multiple assets invented facts that aren't in the transcript (e.g., blog post fabricated STAR method reference, quote card fabricated an entire quote, LinkedIn post fabricated "Rob's role ends in 10 days").
+- **Proposed fix:** After each asset is generated, run a second Grok call that cross-references the asset content against the transcript and flags any statements that can't be supported by the source. Reject and regenerate on mismatch (bounded retry). Adds ~10s + 1 LLM call per asset = 70s + 8 LLM calls per episode, but prevents the fabrication class of bug entirely.
+- **Alternative:** Have the asset prompts themselves require a citation for every factual claim (e.g., "Every statistic, quote, or specific detail you include must appear verbatim in the transcript"). Cheaper but less reliable.
+- **Status:** OPEN, P1, most impactful fix for BUG-LP-7 and BUG-LP-8 combined.
+
+---
+
 ### BUG-LP-6 — Production has been returning 500 on every request for multiple commits (pre-existing, caught by first smoke test run)
 - **Discovered in:** Stage 5 of DEPLOYMENT-RUNBOOK — the very first run of `post-deploy-smoke.mjs` against `https://podbrain.netlify.app` (2026-04-15, post-PR-#1-merge)
 - **Severity:** **P0** — every production request was returning HTTP 500 with an `[ENV FATAL]` error body. The app literally could not boot.

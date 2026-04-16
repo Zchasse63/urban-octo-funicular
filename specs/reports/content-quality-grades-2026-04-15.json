@@ -1,0 +1,158 @@
+{
+  "episode": "[SMOKE-reuse] 2026-04-16T01-19-21-318Z",
+  "gradedAt": "2026-04-16T01:22:37.462Z",
+  "judge": "claude-sonnet-4-5",
+  "artifacts": 9,
+  "graded": 8,
+  "failed": 1,
+  "averages": {
+    "overall": 5.38,
+    "accuracy": 6.88,
+    "specificity": 7,
+    "actionability": 6,
+    "toneFit": 4.63,
+    "lengthDiscipline": 5.75
+  },
+  "best": [
+    {
+      "name": "show_notes",
+      "overall": 7,
+      "topProblem": "Tone mismatch — transforms an informal, personal audio diary into promotional podcast marketing material with SEO language and calls-to-action that don't fit the source content's casual nature."
+    },
+    {
+      "name": "asset_twitter_thread",
+      "overall": 7,
+      "topProblem": "Tone mismatch—overwrought social media hype doesn't honor the genuine, slightly self-deprecating authenticity of the speaker"
+    },
+    {
+      "name": "asset_instagram_carousel",
+      "overall": 6,
+      "topProblem": "Tone mismatch — the original is deliberately low-key and conversational ('bored,' 'crazy lady,' just talking to fill time), but this carousel manufactures urgency and influencer-style polish that undermines the podcast's genuine, unpolished charm."
+    }
+  ],
+  "worst": [
+    {
+      "name": "asset_blog_post",
+      "overall": 3,
+      "topProblem": "Fabricates a podcast brand, episode structure, recurring audience, and professional content framework where only a single spontaneous recording exists."
+    },
+    {
+      "name": "asset_youtube_description",
+      "overall": 3,
+      "topProblem": "Completely fabricated metadata (timestamps, links, video structure) that doesn't match the source material at all"
+    },
+    {
+      "name": "asset_quote_card",
+      "overall": 5,
+      "topProblem": "Card 5 is entirely fabricated—none of those words appear in the transcript, violating fundamental accuracy requirements."
+    }
+  ],
+  "results": [
+    {
+      "name": "show_notes",
+      "accuracy": 9,
+      "specificity": 9,
+      "actionability": 8,
+      "toneFit": 6,
+      "lengthDiscipline": 5,
+      "overall": 7,
+      "critique": "The content accurately captures all key details from the transcript with impressive specificity (times, dates, process steps). However, it significantly over-formalizes a casual, rambling personal podcast into polished marketing copy with SEO hooks and subscription CTAs that clash with the intimate, unscripted tone. The length and structure feel bloated for what was a 2-minute stream-of-consciousness recording.",
+      "topProblem": "Tone mismatch — transforms an informal, personal audio diary into promotional podcast marketing material with SEO language and calls-to-action that don't fit the source content's casual nature."
+    },
+    {
+      "name": "asset_linkedin_post",
+      "assetType": "linkedin_post",
+      "accuracy": 3,
+      "specificity": 6,
+      "actionability": 2,
+      "toneFit": 4,
+      "lengthDiscipline": 5,
+      "critique": "The post fabricates critical details (Rob's role doesn't 'end in 10 days'—the transcript says 'as of the 14th'), misattributes the 'crazy lady' quote as humor when it's anxious self-reflection, and invents a call-to-action ('subscribe,' 'drop it below') nowhere in the source. The breathless emoji-heavy tone clashes with the original's quiet, uncertain candor.",
+      "topProblem": "Fabricated urgency claim ('role ends in 10 days') contradicts the transcript's 'as of the 14th' timeline."
+    },
+    {
+      "name": "asset_twitter_thread",
+      "assetType": "twitter_thread",
+      "accuracy": 9,
+      "specificity": 8,
+      "actionability": 7,
+      "toneFit": 6,
+      "lengthDiscipline": 7,
+      "overall": 7,
+      "critique": "Accurately captures the transcript's key details (interview timing, 4 candidates to 2, job ending on the 14th, resume expansion advice) with strong specificity. However, the hyped-up Twitter voice with heavy emoji use and phrases like 'REAL AF,' 'Tension is REAL,' and promotional CTAs feels forced and doesn't match the authentic, conversational, self-aware tone of the original podcast.",
+      "topProblem": "Tone mismatch—overwrought social media hype doesn't honor the genuine, slightly self-deprecating authenticity of the speaker"
+    },
+    {
+      "name": "asset_instagram_carousel",
+      "assetType": "instagram_carousel",
+      "accuracy": 9,
+      "specificity": 8,
+      "actionability": 7,
+      "toneFit": 5,
+      "lengthDiscipline": 6,
+      "overall": 6,
+      "critique": "The carousel accurately captures transcript details (4 candidates, 14th deadline, interview at 4pm, hockey game) and the emotional stakes, but the tone is significantly too polished and Instagram-slick for what was an intimate, rambling, low-key solo podcast. The casual 'figured I'd try out this high tech podcasting' vibe gets transformed into over-produced social media energy with excessive emojis and graphics that don't match the source material's authenticity.",
+      "topProblem": "Tone mismatch — the original is deliberately low-key and conversational ('bored,' 'crazy lady,' just talking to fill time), but this carousel manufactures urgency and influencer-style polish that undermines the podcast's genuine, unpolished charm."
+    },
+    {
+      "name": "asset_newsletter",
+      "assetType": "newsletter",
+      "accuracy": 9,
+      "specificity": 8,
+      "actionability": 7,
+      "toneFit": 5,
+      "lengthDiscipline": 6,
+      "overall": 6,
+      "critique": "The newsletter accurately captures the transcript's content with good specificity (interview timeline, the 14th deadline, suit detail), but the tone misses the mark—transforming a quiet, vulnerable personal monologue into upbeat marketing copy with exclamation points and 'crush it' energy. The format also adds promotional elements (listen links, PS tip) and packaging that feel inauthentic to the source material's intimate, unpolished nature.",
+      "topProblem": "Tone mismatch—converts raw vulnerability into peppy marketing speak"
+    },
+    {
+      "name": "asset_blog_post",
+      "assetType": "blog_post",
+      "accuracy": 3,
+      "specificity": 4,
+      "actionability": 5,
+      "toneFit": 2,
+      "lengthDiscipline": 3,
+      "overall": 3,
+      "critique": "The blog post invents entire personas and structure (podcast episode title, multiple episodes, community/subscribers) that don't exist in the transcript. It dramatically misrepresents a raw, uncertain personal audio journal as polished content marketing, adding fabricated advice sections (STAR method, labor stats, hockey gear budgets) and internal links to non-existent posts. The tone transforms an intimate, anxious monologue into slick lifestyle blogging that would embarrass the original speaker.",
+      "topProblem": "Fabricates a podcast brand, episode structure, recurring audience, and professional content framework where only a single spontaneous recording exists."
+    },
+    {
+      "name": "asset_youtube_description",
+      "assetType": "youtube_description",
+      "accuracy": 4,
+      "specificity": 5,
+      "actionability": 3,
+      "toneFit": 2,
+      "lengthDiscipline": 2,
+      "overall": 3,
+      "critique": "This description drastically misrepresents a casual, intimate audio journal as a high-stakes viral YouTube video complete with fabricated timestamps, fake resource links, and SEO-optimized clickbait. The tone shift from genuine vulnerability to aggressive promotional language destroys authenticity, and the invented structure (timestamps for a 6+ minute video when the source is ~3 minutes) demonstrates fundamental misalignment with the actual content.",
+      "topProblem": "Completely fabricated metadata (timestamps, links, video structure) that doesn't match the source material at all"
+    },
+    {
+      "name": "asset_tiktok_hook",
+      "assetType": "tiktok_hook",
+      "accuracy": 8,
+      "specificity": 7,
+      "actionability": 6,
+      "toneFit": 5,
+      "lengthDiscipline": 9,
+      "overall": 6,
+      "critique": "The hooks accurately capture transcript moments (job ending on the 14th, 4 candidates, resume expansion advice, 'crazy lady' comment) with solid word-count discipline. However, the sensationalized tone ('JOBLESS,' 'PANIC,' villain emojis) clashes with the speaker's measured, introspective Sunday-afternoon voice, and generic trending-sound suggestions lack platform-specific insight that would make these immediately shippable.",
+      "topProblem": "Tone mismatch—the transcript is anxious but grounded; the hooks are clickbait-dramatic with sensational capitalization and emojis that don't reflect the speaker's actual delivery."
+    },
+    {
+      "name": "asset_quote_card",
+      "assetType": "quote_card",
+      "accuracy": 4,
+      "specificity": 7,
+      "actionability": 5,
+      "toneFit": 6,
+      "lengthDiscipline": 8,
+      "overall": 5,
+      "critique": "Multiple accuracy failures undermine an otherwise well-formatted set. Card 3 fabricates a 'phone call' step and misrepresents the timeline; Card 5 invents a quote wholesale rather than using actual transcript language. The visual style prescriptions are creative and platform-appropriate, but inaccurate content cannot be published.",
+      "topProblem": "Card 5 is entirely fabricated—none of those words appear in the transcript, violating fundamental accuracy requirements."
+    }
+  ]
+}

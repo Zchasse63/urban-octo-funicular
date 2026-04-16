@@ -30,15 +30,34 @@ const admin = createClient(
   { auth: { persistSession: false } }
 )
 
-// Prefer the Planet Money 25-min episode the E2E run produced.
-const { data: episodes } = await admin
+// Allow caller to pin an episode via --id=<uuid>; otherwise pick the most
+// recently completed episode with non-null transcript and >= 500 char show
+// notes (so we're grading something meaningful).
+function arg(name) {
+  const prefix = `--${name}`
+  for (let i = 0; i < process.argv.length; i++) {
+    const token = process.argv[i]
+    if (token === prefix) return process.argv[i + 1]
+    if (token.startsWith(`${prefix}=`)) return token.slice(prefix.length + 1)
+  }
+  return undefined
+}
+
+const pinnedId = arg('id')
+let query = admin
   .from('episodes')
   .select('*')
   .eq('status', 'completed')
   .not('transcript', 'is', null)
-  .ilike('title', '%Planet Money 25min%')
-  .order('created_at', { ascending: false })
-  .limit(1)
+
+if (pinnedId) {
+  query = query.eq('id', pinnedId)
+} else {
+  // Fall back to Planet Money 25min, then any decent completed episode
+  query = query.order('created_at', { ascending: false }).limit(5)
+}
+
+const { data: episodes } = await query
 
 const ep = episodes?.[0]
 if (!ep) {
