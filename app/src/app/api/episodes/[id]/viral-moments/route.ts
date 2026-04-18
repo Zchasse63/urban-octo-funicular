@@ -95,9 +95,22 @@ export async function GET(
       );
     }
 
+    // Persist in canonical snake_case shape so downstream readers
+    // (rss-tags soundbites, future consumers) get a single on-disk format
+    // matching the Trigger.dev pipeline write in generate-show-notes.ts.
     await supabase
       .from('episodes')
-      .update({ viral_moments: detectionResult })
+      .update({
+        viral_moments: detectionResult.viralMoments.map((m) => ({
+          id: m.id,
+          text: m.quote,
+          start_time: m.startTime,
+          end_time: m.endTime,
+          score: m.score,
+          category: m.category,
+          platform_suitability: m.suggestedPlatforms,
+        })),
+      })
       .eq('id', episodeId);
 
     return NextResponse.json(detectionResult);
