@@ -323,3 +323,27 @@ Format per entry:
 - **Final pass rate:** 34/34 (100%)
 - **Bugs documented:** 1 CRITICAL (fixed) — webhooks used anon client blocked by RLS
 - **Verdict:** BULLETPROOF (with fix shipped)
+
+## QA Run: auth-and-rls
+- **Started:** 2026-04-18T18:00:00Z
+- **Orchestrator:** qa-council (in-process: Task sub-agent tool unavailable, all 6 roles executed sequentially by the orchestrator with explicit role-definition loads)
+- **Target URL:** http://localhost:3001
+- **Request:** Bulletproof QA of authentication and row-level security — Supabase auth (login, register, magic link, OAuth callback, forgot-password, email confirm), middleware session refresh + protected-route redirects, requireAuth/verifyShowOwnership utilities, RLS policies on all 16 public tables. Auto-fix authorized, including schema migrations.
+- **Feature slug:** `auth-and-rls`
+
+### Phase progression
+- [x] Phase 1: qa-analyst — 2026-04-18T18:00Z — selectors inventoried from source (no live browser snapshot needed — auth pages are simple forms with stable labels), 17 workflows, 23 edge cases, 0 open questions → `specs/features/auth-and-rls-analysis.md`
+- [x] Phase 2: qa-architect — 2026-04-18T18:05Z — 9 P0 E2E + 7 P0 RLS + 6 P1 + 1 P2 = 23 plan items (54 leaf tests in implementation); 3 new POMs → `specs/plans/auth-and-rls-test-plan.md`
+- [x] Phase 3: qa-engineer — 2026-04-18T18:12Z — 3 POMs + 1 E2E spec (14 tests) + 1 Vitest RLS spec (40 tests); tsc clean, eslint clean → `app/test/e2e/pages/login-page.ts`, `app/test/e2e/pages/register-page.ts`, `app/test/e2e/pages/forgot-password-page.ts`, `app/test/e2e/flows/auth-advanced.spec.ts`, `app/test/integration/rls/auth-and-rls.test.ts`
+- [x] Phase 4: qa-sentinel — 2026-04-18T18:15Z — **PASS** (0 critical, 3 low-severity warnings non-blocking, tsc clean, lint clean, all planned tests present, all selectors traceable to analyst inventory) → `specs/audits/auth-and-rls-audit.md`
+- [x] Phase 5: qa-healer — 2026-04-18T18:35Z — Run 1: RLS setup fail (bracket in email); Run 2: 39/40 (T-024 comment false match); Run 3: **40/40 RLS PASS**; Run 4: 11/14 E2E (3 rate-limit / HttpOnly); Run 5: **14/14 E2E PASS**; Run 6: **8/8 existing auth-edge-cases PASS regression**. 0 application bugs found. → `specs/healing/auth-and-rls-healing-log.md`, `specs/bugs/auth-and-rls-bugs.md`
+- [x] Phase 6: qa-scribe — 2026-04-18T18:40Z — Consolidated report published. **Final: 62/62 pass, 0 real bugs, BULLETPROOF verdict.** → `specs/reports/auth-and-rls-report.md`
+
+### QA Pipeline complete: auth-and-rls
+- **Completed:** 2026-04-18T18:40Z
+- **Duration:** ~40 min wall-clock
+- **Phases:** Analyst → Architect → Engineer → Sentinel (1 cycle, PASS) → Healer (4 test-code heals across 6 runs) → Scribe
+- **Final pass rate:** 62/62 (100%) — 40 Vitest RLS + 14 E2E auth-advanced + 8 E2E auth-edge-cases regression
+- **Bugs documented:** 0 application bugs
+- **Verdict:** BULLETPROOF
+
