@@ -44,7 +44,9 @@ export class UploadWizardPage {
   }
 
   urlInput(): Locator {
-    return this.page.getByPlaceholder(/youtube.com\/watch/i)
+    // Matches the actual placeholder "https://example.com/episode.mp3"
+    // rendered by the UrlImportPanel component.
+    return this.page.getByPlaceholder(/example\.com\/episode|podcasts?|youtube/i)
   }
 
   addToQueueButton(): Locator {
@@ -132,5 +134,63 @@ export class UploadWizardPage {
 
   async expectNextEnabled(): Promise<void> {
     await expect(this.nextButton()).toBeEnabled()
+  }
+
+  // ── Step 2 locators (added for core-paid-flow) ────────────────────────
+
+  episodeTitleInput(): Locator {
+    return this.page.getByPlaceholder(/Lessons from Marcus Aurelius/i)
+  }
+
+  episodeDescriptionInput(): Locator {
+    return this.page.getByPlaceholder(/Brief summary of what this episode covers/i)
+  }
+
+  guestNameInput(): Locator {
+    return this.page.getByPlaceholder(/Full name or "Solo Episode"/i)
+  }
+
+  guestBioInput(): Locator {
+    return this.page.getByPlaceholder(/Author & Stoic philosopher/i)
+  }
+
+  /**
+   * Fill any subset of the Step 2 expert-context fields. Each field is
+   * located by its component placeholder (stable text tied to the copy
+   * of the wizard — no CSS/XPath, and no placeholder-count-dependent
+   * indexing). Used by the core-paid-flow happy path (T-001).
+   */
+  async fillExpertContext(ctx: {
+    episodeTitle?: string
+    description?: string
+    guestName?: string
+    guestBio?: string
+  }): Promise<void> {
+    if (ctx.episodeTitle) {
+      await this.episodeTitleInput().fill(ctx.episodeTitle)
+    }
+    if (ctx.description) {
+      await this.episodeDescriptionInput().fill(ctx.description)
+    }
+    if (ctx.guestName) {
+      await this.guestNameInput().fill(ctx.guestName)
+    }
+    if (ctx.guestBio) {
+      await this.guestBioInput().fill(ctx.guestBio)
+    }
+  }
+
+  // ── Explicit data-testid accessors ────────────────────────────────────
+
+  /**
+   * Prefer the data-testid-based submit locator when the test knows it's
+   * on step 3. Works for both idle and in-flight labels.
+   */
+  submitButtonByTestId(): Locator {
+    return this.page.getByTestId('upload-submit-button')
+  }
+
+  nextButtonByTestId(): Locator {
+    return this.page.getByTestId('upload-next-button')
   }
 }

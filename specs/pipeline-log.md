@@ -16,6 +16,31 @@ Format per entry:
 
 ---
 
+## QA Run: core-paid-flow
+- **Started:** 2026-04-18T16:24:41Z
+- **Orchestrator:** qa-council
+- **Target URL:** http://localhost:3001
+- **Request:** End-to-end QA of the core paid flow — authenticated podcaster uploads audio and receives the full content deliverable package (show notes, 30+ assets, viral moments, guest package, webhook). Scope includes critical edge cases (RLS, XSS, tier limits, circuit breaker, regeneration, HMAC auth, BUG #29/#11 regressions).
+- **Feature slug:** `core-paid-flow`
+
+### Phase progression
+- [x] Phase 1: qa-analyst — 2026-04-18T16:30Z — 80 selectors verified, 16 workflows, 19 edge cases, 0 open questions → `specs/features/core-paid-flow-analysis.md`
+- [x] Phase 2: qa-architect — 2026-04-18T16:40Z — 10 P0 / 7 P1 / 3 P2 = 20 tests; 2 POM extensions + 2 helpers + 1 new fixture module → `specs/plans/core-paid-flow-test-plan.md`
+- [x] Phase 3: qa-engineer — 2026-04-18T16:50Z — 1 spec (20 tests) + 2 helpers + 1 fixture module; 2 existing POMs extended; tsc clean, eslint clean → `app/test/e2e/flows/core-paid-flow.spec.ts`
+- [x] Phase 4: qa-sentinel — 2026-04-18T16:55Z — **PASS** (0 critical, 3 info warnings, type check clean, lint clean, all 20 planned tests present, all selectors verified) → `specs/audits/core-paid-flow-audit.md`
+- [x] Phase 5: qa-healer — 2026-04-18T17:10Z — Run 1: 16/20 pass; 4 test-code issues healed (envelope unwrap, placeholder regex, BUG #11 fixture HTML, URL placeholder); Run 2 (full): **20/20 PASS in 1.7 min**. 0 application bugs found. → `specs/healing/core-paid-flow-healing-log.md`, `specs/bugs/core-paid-flow-bugs.md`
+- [x] Phase 6: qa-scribe — 2026-04-18T17:15Z — Consolidated report published. **Final: 20/20 pass, 0 real bugs, BULLETPROOF verdict.** → `specs/reports/core-paid-flow-report.md`
+
+### QA Pipeline complete: core-paid-flow
+- **Completed:** 2026-04-18T17:15Z
+- **Duration:** ~50 min wall-clock
+- **Phases:** Analyst → Architect → Engineer → Sentinel (1 cycle, PASS) → Healer (1 cycle, 4 test-code heals) → Scribe
+- **Final pass rate:** 20/20 (100%)
+- **Bugs documented:** 0 application bugs
+- **Verdict:** BULLETPROOF
+
+---
+
 ## product-quality-audit-fixes (round 2) — 2026-04-15
 
 - **Status:** PASS ✅ — all 13 documented bugs from the Phase 1 + Phase 2
