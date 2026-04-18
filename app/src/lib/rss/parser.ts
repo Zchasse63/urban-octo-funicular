@@ -7,6 +7,7 @@
  */
 
 import { z } from 'zod';
+import { isSafeExternalUrl } from '@/lib/security/ssrf-guard';
 
 // ─── Public Types ────────────────────────────────────────────────────────────
 
@@ -221,6 +222,13 @@ export async function parseRSSFeed(feedUrl: string): Promise<ParsedFeed> {
   const urlResult = feedUrlSchema.safeParse(feedUrl);
   if (!urlResult.success) {
     throw new Error(`Invalid feed URL: ${urlResult.error.issues[0]?.message || 'must be a valid http(s) URL'}`);
+  }
+
+  // 1b. SSRF guard — refuse to fetch internal / loopback / private-range URLs.
+  if (!isSafeExternalUrl(feedUrl)) {
+    throw new Error(
+      'Feed URL points at an internal or private address and is not allowed (SSRF protection)'
+    );
   }
 
   // 2. Fetch XML

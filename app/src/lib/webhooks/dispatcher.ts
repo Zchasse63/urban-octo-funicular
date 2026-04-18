@@ -11,6 +11,7 @@
 
 import { createAdminClient } from '@/lib/supabase/server';
 import { decryptString, type EncryptedPayload } from '@/lib/buzzsprout/encryption';
+import { isSafeExternalUrl } from '@/lib/security/ssrf-guard';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
@@ -93,6 +94,16 @@ export async function dispatchWebhooks(
 
     // Fire all webhooks in parallel, don't await collectively
     const deliveryPromises = matchingWebhooks.map(async (webhook) => {
+      // SSRF defense-in-depth. The create/edit endpoints also validate,
+      // but legacy rows or direct DB writes might have slipped an
+      // internal URL through. We re-check on every delivery.
+      if (!isSafeExternalUrl(webhook.url)) {
+        console.error(
+          `[Webhook Dispatcher] Refusing to deliver webhook ${webhook.id}: URL ${webhook.url} is not a safe external address`
+        );
+        return;
+      }
+
       try {
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',

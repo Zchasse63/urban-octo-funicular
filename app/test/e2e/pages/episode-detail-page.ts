@@ -48,4 +48,45 @@ export class EpisodeDetailPage {
     expect(bodyText).not.toMatch(/Marcus Aurelius/i)
     expect(bodyText).not.toMatch(/Meditations/i)
   }
+
+  // ── core-paid-flow extensions ─────────────────────────────────────────
+
+  /**
+   * The Download ZIP anchor on the Assets tab. Only rendered when at
+   * least one generated_asset row exists for the episode. Tests that
+   * need to exercise the 0-assets path should assert this locator is
+   * NOT visible instead of clicking.
+   */
+  downloadZipLink(): Locator {
+    return this.page.locator('a[href*="/api/episodes/"][href$="/assets/download"]')
+  }
+
+  generateAllRemainingButton(): Locator {
+    return this.page.getByRole('button', { name: /Generate All Remaining/i })
+  }
+
+  regenerateShowNotesButton(): Locator {
+    return this.page.getByRole('button', { name: 'Regenerate' })
+  }
+
+  /**
+   * The first transcript segment's timestamp text. Tests use this to
+   * guard against BUG #29 regression (treating milliseconds as seconds).
+   */
+  firstTranscriptTimestamp(): Locator {
+    return this.page.locator('text=/^\\d{2}:\\d{2}$/').first()
+  }
+
+  /**
+   * BUG #11 regression guard: show-notes markdown should never render
+   * the literal "[0:53](0:53)" pattern in the DOM. If it does, the
+   * markdown pipeline is broken again.
+   */
+  async assertNoBrokenTimestampLinks(): Promise<void> {
+    const bodyText = await this.page.locator('body').innerText()
+    expect(
+      bodyText,
+      'BUG #11 regression: literal [N:NN](N:NN) markdown is rendering unparsed'
+    ).not.toMatch(/\[\d+:\d+\]\(\d+:\d+\)/)
+  }
 }

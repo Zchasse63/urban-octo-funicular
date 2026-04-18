@@ -16,6 +16,56 @@ Format per entry:
 
 ---
 
+## QA Run: secondary-content-features
+- **Started:** 2026-04-18T17:30:00Z
+- **Orchestrator:** qa-council
+- **Target URL:** http://localhost:3001
+- **Request:** Bulletproof QA of 12 advanced/differentiator secondary content features (viral moments, SEO, Podcasting 2.0 RSS tags, pre-interview intelligence, related episodes, A/B testing, scheduling, learnings, vocabulary, experts, podcast search, analytics). 40-60 tests across all 12 sub-features. Auto-fix authorized.
+- **Feature slug:** `secondary-content-features`
+
+### Phase progression
+- [x] Phase 1: qa-analyst — 2026-04-18T17:40Z — 12 sub-features mapped, ~30 edge cases, 12 workflows, 0 open questions → `specs/features/secondary-content-features-analysis.md`
+- [x] Phase 2: qa-architect — 2026-04-18T17:50Z — 15 P0 + 18 P1 + 4 P2 = 37 tests; 1 new spec + 1 helpers file + 1 fixtures file → `specs/plans/secondary-content-features-test-plan.md`
+- [x] Phase 3: qa-engineer — 2026-04-18T18:05Z — 1 spec (37 tests: 15 P0 + 18 P1 + 4 P2), 1 helpers file (15 API wrappers), 1 fixtures file (6 seed factories); tsc clean, eslint clean → `app/test/e2e/flows/secondary-content-features.spec.ts`
+- [x] Phase 4: qa-sentinel — 2026-04-18T18:10Z — **PASS** (0 critical, 3 info warnings, tsc clean, eslint clean, all 37 planned tests present, 94 expects, 0 anti-patterns) → `specs/audits/secondary-content-features-audit.md`
+- [x] Phase 5: qa-healer — 2026-04-18T18:45Z — Runs 1–4: fixed 3 test-code issues (T-003/T-004 thresholds, T-203 timing); uncovered 1 real bug (SEC-1: viral_moments shape inconsistency); Run 5 (final): **37/37 PASS in 2.1 min**. → `specs/healing/secondary-content-features-healing-log.md`, `specs/bugs/secondary-content-features-bugs.md`
+- [x] Phase 6: qa-scribe — 2026-04-18T18:55Z — Final report published. **37/37 PASS, 1 real bug (SEC-1 MEDIUM non-blocking), BULLETPROOF verdict.** → `specs/reports/secondary-content-features-report.md`
+
+### QA Pipeline complete: secondary-content-features
+- **Completed:** 2026-04-18T18:55Z
+- **Duration:** ~85 min wall-clock
+- **Phases:** Analyst → Architect → Engineer → Sentinel (1 cycle, PASS) → Healer (4 heal cycles, 3 test-code + 1 bug) → Scribe
+- **Final pass rate:** 37/37 (100%)
+- **Bugs documented:** 1 application bug (SEC-1 MEDIUM, non-blocking)
+- **Verdict:** BULLETPROOF
+
+---
+
+## QA Run: core-paid-flow
+- **Started:** 2026-04-18T16:24:41Z
+- **Orchestrator:** qa-council
+- **Target URL:** http://localhost:3001
+- **Request:** End-to-end QA of the core paid flow — authenticated podcaster uploads audio and receives the full content deliverable package (show notes, 30+ assets, viral moments, guest package, webhook). Scope includes critical edge cases (RLS, XSS, tier limits, circuit breaker, regeneration, HMAC auth, BUG #29/#11 regressions).
+- **Feature slug:** `core-paid-flow`
+
+### Phase progression
+- [x] Phase 1: qa-analyst — 2026-04-18T16:30Z — 80 selectors verified, 16 workflows, 19 edge cases, 0 open questions → `specs/features/core-paid-flow-analysis.md`
+- [x] Phase 2: qa-architect — 2026-04-18T16:40Z — 10 P0 / 7 P1 / 3 P2 = 20 tests; 2 POM extensions + 2 helpers + 1 new fixture module → `specs/plans/core-paid-flow-test-plan.md`
+- [x] Phase 3: qa-engineer — 2026-04-18T16:50Z — 1 spec (20 tests) + 2 helpers + 1 fixture module; 2 existing POMs extended; tsc clean, eslint clean → `app/test/e2e/flows/core-paid-flow.spec.ts`
+- [x] Phase 4: qa-sentinel — 2026-04-18T16:55Z — **PASS** (0 critical, 3 info warnings, type check clean, lint clean, all 20 planned tests present, all selectors verified) → `specs/audits/core-paid-flow-audit.md`
+- [x] Phase 5: qa-healer — 2026-04-18T17:10Z — Run 1: 16/20 pass; 4 test-code issues healed (envelope unwrap, placeholder regex, BUG #11 fixture HTML, URL placeholder); Run 2 (full): **20/20 PASS in 1.7 min**. 0 application bugs found. → `specs/healing/core-paid-flow-healing-log.md`, `specs/bugs/core-paid-flow-bugs.md`
+- [x] Phase 6: qa-scribe — 2026-04-18T17:15Z — Consolidated report published. **Final: 20/20 pass, 0 real bugs, BULLETPROOF verdict.** → `specs/reports/core-paid-flow-report.md`
+
+### QA Pipeline complete: core-paid-flow
+- **Completed:** 2026-04-18T17:15Z
+- **Duration:** ~50 min wall-clock
+- **Phases:** Analyst → Architect → Engineer → Sentinel (1 cycle, PASS) → Healer (1 cycle, 4 test-code heals) → Scribe
+- **Final pass rate:** 20/20 (100%)
+- **Bugs documented:** 0 application bugs
+- **Verdict:** BULLETPROOF
+
+---
+
 ## product-quality-audit-fixes (round 2) — 2026-04-15
 
 - **Status:** PASS ✅ — all 13 documented bugs from the Phase 1 + Phase 2
@@ -270,3 +320,126 @@ Format per entry:
   integration test with deterministic fixtures or real API
   credentials in a staging environment. Tracked in Tier 4 of
   `specs/testing-roadmap.md`.
+
+## QA Run: billing-tier-enforcement
+- **Started:** 2026-04-18T17:30:00Z
+- **Orchestrator:** qa-council
+- **Target URL:** http://localhost:3001
+- **Request:** BULLETPROOF E2E of billing (Stripe checkout/portal/webhooks) + tier enforcement (minutes metering, caps, rate-limit, banners) — user authorized auto-fix of any finding including billing logic
+- **Feature slug:** `billing-tier-enforcement`
+- **Builds on:** `pricing-subscription-refactor` (26+2 tests, tier/banner coverage) and `core-paid-flow` (20 tests, incl. 1 upload tier-cap rejection)
+- **Scope extension:** Stripe checkout routing (8 price IDs × 4 tiers × 2 cycles), portal auth, webhook HMAC + idempotency + state machine, rate limiting, edge cases (99% over-limit, 3DS, bad card, downgrade, duplicate/out-of-order webhooks, missing secret, cancel-at-period-end, customerless portal)
+
+### Phase progression
+(updated by Council as phases complete)
+
+### Phase progression (billing-tier-enforcement)
+- [x] Phase 1: qa-analyst — 2026-04-18T17:30Z — 12 selectors, 11 workflows, 17 edge cases, 0 open questions → `specs/features/billing-tier-enforcement-analysis.md`
+- [x] Phase 2: qa-architect — 2026-04-18T17:35Z — 22 P0 + 8 P1 + 3 P2 = 33 tests across 9 describe blocks; 1 POM extension + 1 new POM + 1 new helper + 1 new Vitest unit test → `specs/plans/billing-tier-enforcement-test-plan.md`
+- [x] Phase 3: qa-engineer — 2026-04-18T17:45Z — 1 spec (32 tests) + 1 unit test file (2 tests) + SubscriptionPage extended + SettingsBillingPage + billing-webhook helper; tsc clean, eslint clean → `app/test/e2e/flows/billing-tier-enforcement.spec.ts`
+- [x] Phase 4: qa-sentinel — 2026-04-18T17:50Z — **PASS** (0 critical, 2 INFO, all selectors verified, all 32+2 tests match plan) → `specs/audits/billing-tier-enforcement-audit.md`
+- [x] Phase 5: qa-healer — 2026-04-18T18:15Z — Run 1: 23/32. Run 2 (after test fixes): 27/32. Root-cause identified BUG #1 (webhooks use anon client → RLS blocks). Fixed in `app/src/lib/stripe/webhooks.ts`. Run 3: **32/32 PASS in 2.0 min**. 1 application bug found + fixed. Vitest baseline 1000/1023 holds. → `specs/healing/billing-tier-enforcement-healing-log.md`, `specs/bugs/billing-tier-enforcement-bugs.md`
+- [x] Phase 6: qa-scribe — 2026-04-18T18:20Z — Consolidated report. **Final: 34/34 pass (32 E2E + 2 unit), 1 CRITICAL prod-breaking bug found + fixed, BULLETPROOF verdict.** → `specs/reports/billing-tier-enforcement-report.md`
+
+### QA Pipeline complete: billing-tier-enforcement
+- **Completed:** 2026-04-18T18:20Z
+- **Duration:** ~50 min wall-clock
+- **Phases:** Analyst → Architect → Engineer → Sentinel (1 cycle, PASS) → Healer (3 cycles — found + fixed BUG #1) → Scribe
+- **Final pass rate:** 34/34 (100%)
+- **Bugs documented:** 1 CRITICAL (fixed) — webhooks used anon client blocked by RLS
+- **Verdict:** BULLETPROOF (with fix shipped)
+
+## QA Run: auth-and-rls
+- **Started:** 2026-04-18T18:00:00Z
+- **Orchestrator:** qa-council (in-process: Task sub-agent tool unavailable, all 6 roles executed sequentially by the orchestrator with explicit role-definition loads)
+- **Target URL:** http://localhost:3001
+- **Request:** Bulletproof QA of authentication and row-level security — Supabase auth (login, register, magic link, OAuth callback, forgot-password, email confirm), middleware session refresh + protected-route redirects, requireAuth/verifyShowOwnership utilities, RLS policies on all 16 public tables. Auto-fix authorized, including schema migrations.
+- **Feature slug:** `auth-and-rls`
+
+### Phase progression
+- [x] Phase 1: qa-analyst — 2026-04-18T18:00Z — selectors inventoried from source (no live browser snapshot needed — auth pages are simple forms with stable labels), 17 workflows, 23 edge cases, 0 open questions → `specs/features/auth-and-rls-analysis.md`
+- [x] Phase 2: qa-architect — 2026-04-18T18:05Z — 9 P0 E2E + 7 P0 RLS + 6 P1 + 1 P2 = 23 plan items (54 leaf tests in implementation); 3 new POMs → `specs/plans/auth-and-rls-test-plan.md`
+- [x] Phase 3: qa-engineer — 2026-04-18T18:12Z — 3 POMs + 1 E2E spec (14 tests) + 1 Vitest RLS spec (40 tests); tsc clean, eslint clean → `app/test/e2e/pages/login-page.ts`, `app/test/e2e/pages/register-page.ts`, `app/test/e2e/pages/forgot-password-page.ts`, `app/test/e2e/flows/auth-advanced.spec.ts`, `app/test/integration/rls/auth-and-rls.test.ts`
+- [x] Phase 4: qa-sentinel — 2026-04-18T18:15Z — **PASS** (0 critical, 3 low-severity warnings non-blocking, tsc clean, lint clean, all planned tests present, all selectors traceable to analyst inventory) → `specs/audits/auth-and-rls-audit.md`
+- [x] Phase 5: qa-healer — 2026-04-18T18:35Z — Run 1: RLS setup fail (bracket in email); Run 2: 39/40 (T-024 comment false match); Run 3: **40/40 RLS PASS**; Run 4: 11/14 E2E (3 rate-limit / HttpOnly); Run 5: **14/14 E2E PASS**; Run 6: **8/8 existing auth-edge-cases PASS regression**. 0 application bugs found. → `specs/healing/auth-and-rls-healing-log.md`, `specs/bugs/auth-and-rls-bugs.md`
+- [x] Phase 6: qa-scribe — 2026-04-18T18:40Z — Consolidated report published. **Final: 62/62 pass, 0 real bugs, BULLETPROOF verdict.** → `specs/reports/auth-and-rls-report.md`
+
+### QA Pipeline complete: auth-and-rls
+- **Completed:** 2026-04-18T18:40Z
+- **Duration:** ~40 min wall-clock
+- **Phases:** Analyst → Architect → Engineer → Sentinel (1 cycle, PASS) → Healer (4 test-code heals across 6 runs) → Scribe
+- **Final pass rate:** 62/62 (100%) — 40 Vitest RLS + 14 E2E auth-advanced + 8 E2E auth-edge-cases regression
+- **Bugs documented:** 0 application bugs
+- **Verdict:** BULLETPROOF
+
+
+---
+
+## QA Run: integrations
+- **Started:** 2026-04-18T00:00:00Z
+- **Orchestrator:** qa-council (in-process)
+- **Target URL:** http://localhost:3001
+- **Request:** Third-party integrations bulletproofing (Taddy, Buzzsprout, Transistor, webhooks, RSS import)
+- **Scope:** lib/taddy, lib/buzzsprout, lib/transistor, lib/webhooks, lib/rss + corresponding API routes
+- **Auto-fix:** Authorized (including crypto, webhook dispatcher, SSRF guards)
+
+### Phase progression
+
+## qa-analyst — integrations
+- **Status:** Complete
+- **Analysis:** specs/features/integrations-analysis.md
+- **Workflows mapped:** 23 (Taddy x5, Buzzsprout x4, Transistor x1, Webhooks x6, AssemblyAI x1, RSS x4, Encryption x2)
+- **Edge cases enumerated:** 14 (incl. 4 critical SSRF findings pre-tests)
+- **Open questions:** 0 (4 feature gaps documented for healer/scribe)
+
+## qa-architect — integrations
+- **Status:** Complete
+- **Plan:** specs/plans/integrations-test-plan.md
+- **Test cases:** 27 P0 / 5 P1 / 2 P2 (34 total)
+- **POMs/helpers:** 2 new (IntegrationsApiClient, WebhookCaptureServer)
+- **Critical path:** T-001 through T-051 — including 3 SSRF expectation tests (T-038, T-043) that will reveal known bugs
+
+## qa-engineer — integrations
+- **Status:** Complete
+- **Files created:** 7 test files (all unit tests)
+  - test/unit/lib/ssrf-guard.test.ts (15 tests)
+  - test/unit/lib/webhook-dispatcher-behavior.test.ts (9 tests)
+  - test/unit/lib/rss-parser-ssrf.test.ts (9 tests)
+  - test/unit/api/webhooks-create-validation.test.ts (9 tests)
+  - test/unit/api/buzzsprout-connect-route.test.ts (6 tests)
+  - test/unit/api/transistor-shows-route.test.ts (3 tests)
+  - test/unit/api/rss-import-route.test.ts (6 tests)
+- **Total test cases:** 43 (26 pass as initial state, 17 fail — all revealing real missing production behavior)
+- **Type check:** PASS
+- **Lint:** not run (will run in Sentinel phase)
+- **Ready for Sentinel:** yes
+
+## qa-sentinel — integrations
+- **Status:** Complete — PASS (no BLOCK)
+- **Audit:** specs/audits/integrations-audit.md
+- **Type check:** PASS
+- **Lint:** 0 errors, 1 cosmetic warning
+- **Anti-patterns:** none found
+- **Scope violations:** none
+
+## qa-healer — integrations
+- **Status:** Complete
+- **Runs:** 3
+- **Final:** 60/60 tests pass (cluster) — 951/951 (project-wide)
+- **Healed:** 17 failures (16 via SSRF production fix, 1 via test-code fix)
+- **Real bugs documented:** 5 (3 fixed, 2 flagged as post-launch)
+- **Healing log:** specs/healing/integrations-healing-log.md
+- **Bugs:** specs/bugs/integrations-bugs.md
+
+## qa-scribe — integrations
+- **Status:** Complete
+- **Final pass rate:** 60/60 cluster, 951/951 project-wide
+- **Bugs found:** 5 (3 fixed, 2 flagged)
+- **Report:** specs/reports/integrations-report.md
+
+### QA Pipeline complete: integrations
+- **Completed:** 2026-04-18T14:00:00Z
+- **Phases:** Analyst → Architect → Engineer → Sentinel (1 cycle, PASS) → Healer (3 runs, 17 healed) → Scribe
+- **Final pass rate:** 60/60 cluster, 951/951 project-wide
+- **Bugs documented:** 5 (3 fixed in-run, 2 flagged for post-launch)
+- **Verdict:** BULLETPROOF (with 2 backlog items)
