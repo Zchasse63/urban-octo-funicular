@@ -6,6 +6,7 @@
  * or passthrough as needed, and string fields are length-bounded.
  */
 import { z } from 'zod';
+import { isSafeExternalUrl, SSRF_GUARD_REFINE_MESSAGE } from '@/lib/security/ssrf-guard';
 
 // ---------------------------------------------------------------------------
 // Shared primitives
@@ -14,17 +15,21 @@ import { z } from 'zod';
 const uuid = z.string().uuid();
 const trimmedString = (max: number) => z.string().trim().min(1).max(max);
 const optionalTrimmed = (max: number) => z.string().trim().max(max).optional();
-const httpUrl = z.string().url().refine(
-  (val) => {
-    try {
-      const u = new URL(val);
-      return u.protocol === 'http:' || u.protocol === 'https:';
-    } catch {
-      return false;
-    }
-  },
-  { message: 'Must be a valid http or https URL' }
-);
+const httpUrl = z
+  .string()
+  .url()
+  .refine(
+    (val) => {
+      try {
+        const u = new URL(val);
+        return u.protocol === 'http:' || u.protocol === 'https:';
+      } catch {
+        return false;
+      }
+    },
+    { message: 'Must be a valid http or https URL' }
+  )
+  .refine(isSafeExternalUrl, { message: SSRF_GUARD_REFINE_MESSAGE });
 
 // ---------------------------------------------------------------------------
 // Shows

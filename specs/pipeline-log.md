@@ -347,3 +347,74 @@ Format per entry:
 - **Bugs documented:** 0 application bugs
 - **Verdict:** BULLETPROOF
 
+
+---
+
+## QA Run: integrations
+- **Started:** 2026-04-18T00:00:00Z
+- **Orchestrator:** qa-council (in-process)
+- **Target URL:** http://localhost:3001
+- **Request:** Third-party integrations bulletproofing (Taddy, Buzzsprout, Transistor, webhooks, RSS import)
+- **Scope:** lib/taddy, lib/buzzsprout, lib/transistor, lib/webhooks, lib/rss + corresponding API routes
+- **Auto-fix:** Authorized (including crypto, webhook dispatcher, SSRF guards)
+
+### Phase progression
+
+## qa-analyst — integrations
+- **Status:** Complete
+- **Analysis:** specs/features/integrations-analysis.md
+- **Workflows mapped:** 23 (Taddy x5, Buzzsprout x4, Transistor x1, Webhooks x6, AssemblyAI x1, RSS x4, Encryption x2)
+- **Edge cases enumerated:** 14 (incl. 4 critical SSRF findings pre-tests)
+- **Open questions:** 0 (4 feature gaps documented for healer/scribe)
+
+## qa-architect — integrations
+- **Status:** Complete
+- **Plan:** specs/plans/integrations-test-plan.md
+- **Test cases:** 27 P0 / 5 P1 / 2 P2 (34 total)
+- **POMs/helpers:** 2 new (IntegrationsApiClient, WebhookCaptureServer)
+- **Critical path:** T-001 through T-051 — including 3 SSRF expectation tests (T-038, T-043) that will reveal known bugs
+
+## qa-engineer — integrations
+- **Status:** Complete
+- **Files created:** 7 test files (all unit tests)
+  - test/unit/lib/ssrf-guard.test.ts (15 tests)
+  - test/unit/lib/webhook-dispatcher-behavior.test.ts (9 tests)
+  - test/unit/lib/rss-parser-ssrf.test.ts (9 tests)
+  - test/unit/api/webhooks-create-validation.test.ts (9 tests)
+  - test/unit/api/buzzsprout-connect-route.test.ts (6 tests)
+  - test/unit/api/transistor-shows-route.test.ts (3 tests)
+  - test/unit/api/rss-import-route.test.ts (6 tests)
+- **Total test cases:** 43 (26 pass as initial state, 17 fail — all revealing real missing production behavior)
+- **Type check:** PASS
+- **Lint:** not run (will run in Sentinel phase)
+- **Ready for Sentinel:** yes
+
+## qa-sentinel — integrations
+- **Status:** Complete — PASS (no BLOCK)
+- **Audit:** specs/audits/integrations-audit.md
+- **Type check:** PASS
+- **Lint:** 0 errors, 1 cosmetic warning
+- **Anti-patterns:** none found
+- **Scope violations:** none
+
+## qa-healer — integrations
+- **Status:** Complete
+- **Runs:** 3
+- **Final:** 60/60 tests pass (cluster) — 951/951 (project-wide)
+- **Healed:** 17 failures (16 via SSRF production fix, 1 via test-code fix)
+- **Real bugs documented:** 5 (3 fixed, 2 flagged as post-launch)
+- **Healing log:** specs/healing/integrations-healing-log.md
+- **Bugs:** specs/bugs/integrations-bugs.md
+
+## qa-scribe — integrations
+- **Status:** Complete
+- **Final pass rate:** 60/60 cluster, 951/951 project-wide
+- **Bugs found:** 5 (3 fixed, 2 flagged)
+- **Report:** specs/reports/integrations-report.md
+
+### QA Pipeline complete: integrations
+- **Completed:** 2026-04-18T14:00:00Z
+- **Phases:** Analyst → Architect → Engineer → Sentinel (1 cycle, PASS) → Healer (3 runs, 17 healed) → Scribe
+- **Final pass rate:** 60/60 cluster, 951/951 project-wide
+- **Bugs documented:** 5 (3 fixed in-run, 2 flagged for post-launch)
+- **Verdict:** BULLETPROOF (with 2 backlog items)
