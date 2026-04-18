@@ -185,4 +185,49 @@ export class SubscriptionPage {
     const body = await response.json().catch(() => ({}))
     return { status: response.status(), body }
   }
+
+  /**
+   * Attempt POST /api/stripe/checkout and return status + body.
+   * Used for Stripe checkout route contract tests (validation, rate limit,
+   * pricing-not-configured errors).
+   */
+  async attemptCheckout(
+    body: { tier?: string; interval?: string } = {},
+  ): Promise<{ status: number; body: { error?: string; clientSecret?: string } }> {
+    const response = await this.page.request.post('/api/stripe/checkout', {
+      data: body,
+    })
+    const parsed = await response.json().catch(() => ({}))
+    return { status: response.status(), body: parsed }
+  }
+
+  /**
+   * Attempt POST /api/stripe/portal and return status + body.
+   * Returns 404 for users without a Stripe customer ID.
+   */
+  async attemptPortal(): Promise<{ status: number; body: { error?: string; url?: string } }> {
+    const response = await this.page.request.post('/api/stripe/portal')
+    const body = await response.json().catch(() => ({}))
+    return { status: response.status(), body }
+  }
+
+  /**
+   * Attempt POST /api/stripe/upgrade-annual and return status + body.
+   * Returns 404 for users without an active subscription.
+   */
+  async attemptUpgradeAnnual(): Promise<{ status: number; body: { error?: string } }> {
+    const response = await this.page.request.post('/api/stripe/upgrade-annual')
+    const body = await response.json().catch(() => ({}))
+    return { status: response.status(), body }
+  }
+
+  /**
+   * Attempt GET /api/stripe/invoices and return status + body.
+   * Returns {data: []} for users without a Stripe customer ID.
+   */
+  async attemptInvoices(): Promise<{ status: number; body: { data?: unknown[]; error?: string } }> {
+    const response = await this.page.request.get('/api/stripe/invoices')
+    const body = await response.json().catch(() => ({}))
+    return { status: response.status(), body }
+  }
 }

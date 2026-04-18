@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 import { stripe } from './client';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { getTierByPriceId } from './products.server';
 
 export async function constructEvent(
@@ -18,7 +18,7 @@ export async function constructEvent(
  * Throws if all retries fail.
  */
 async function updateUserWithRetry(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: ReturnType<typeof createAdminClient>,
   userId: string,
   update: Record<string, unknown>,
   operationName: string
@@ -54,7 +54,12 @@ async function updateUserWithRetry(
 export async function handleCheckoutCompleted(
   session: Stripe.Checkout.Session
 ): Promise<void> {
-  const supabase = await createClient();
+  // Use the admin client: Stripe webhook deliveries are unauthenticated
+  // (no session cookie), so the user-scoped client would be blocked by RLS
+  // policies on `subscriptions` / `users`. The webhook route already verifies
+  // the HMAC signature against STRIPE_WEBHOOK_SECRET, which is the trust
+  // boundary — bypassing RLS is correct here.
+  const supabase = createAdminClient();
 
   const subscriptionId = session.subscription as string;
   const customerId = session.customer as string;
@@ -125,7 +130,12 @@ export async function handleCheckoutCompleted(
 export async function handleSubscriptionUpdated(
   subscription: Stripe.Subscription
 ): Promise<void> {
-  const supabase = await createClient();
+  // Use the admin client: Stripe webhook deliveries are unauthenticated
+  // (no session cookie), so the user-scoped client would be blocked by RLS
+  // policies on `subscriptions` / `users`. The webhook route already verifies
+  // the HMAC signature against STRIPE_WEBHOOK_SECRET, which is the trust
+  // boundary — bypassing RLS is correct here.
+  const supabase = createAdminClient();
 
   const priceId = subscription.items.data[0]?.price.id;
   const tier = priceId ? getTierByPriceId(priceId) : null;
@@ -218,7 +228,12 @@ export async function handleSubscriptionUpdated(
 export async function handleSubscriptionDeleted(
   subscription: Stripe.Subscription
 ): Promise<void> {
-  const supabase = await createClient();
+  // Use the admin client: Stripe webhook deliveries are unauthenticated
+  // (no session cookie), so the user-scoped client would be blocked by RLS
+  // policies on `subscriptions` / `users`. The webhook route already verifies
+  // the HMAC signature against STRIPE_WEBHOOK_SECRET, which is the trust
+  // boundary — bypassing RLS is correct here.
+  const supabase = createAdminClient();
 
   const { data: existingSub, error: fetchError } = await supabase
     .from('subscriptions')
@@ -257,7 +272,12 @@ export async function handleSubscriptionDeleted(
 export async function handleInvoicePaymentSucceeded(
   invoice: Stripe.Invoice
 ): Promise<void> {
-  const supabase = await createClient();
+  // Use the admin client: Stripe webhook deliveries are unauthenticated
+  // (no session cookie), so the user-scoped client would be blocked by RLS
+  // policies on `subscriptions` / `users`. The webhook route already verifies
+  // the HMAC signature against STRIPE_WEBHOOK_SECRET, which is the trust
+  // boundary — bypassing RLS is correct here.
+  const supabase = createAdminClient();
 
   // Extract subscription ID from the invoice.
   // Stripe.Invoice historically had `subscription` as `string | Stripe.Subscription | null`
@@ -314,7 +334,12 @@ export async function handleInvoicePaymentSucceeded(
 export async function handleInvoicePaymentFailed(
   invoice: Stripe.Invoice
 ): Promise<void> {
-  const supabase = await createClient();
+  // Use the admin client: Stripe webhook deliveries are unauthenticated
+  // (no session cookie), so the user-scoped client would be blocked by RLS
+  // policies on `subscriptions` / `users`. The webhook route already verifies
+  // the HMAC signature against STRIPE_WEBHOOK_SECRET, which is the trust
+  // boundary — bypassing RLS is correct here.
+  const supabase = createAdminClient();
 
   // See handleInvoicePaymentSucceeded for explanation of this cast pattern.
   const subscriptionField = (invoice as unknown as { subscription?: string | { id: string } | null }).subscription;

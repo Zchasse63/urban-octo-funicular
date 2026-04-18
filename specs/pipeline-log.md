@@ -295,3 +295,31 @@ Format per entry:
   integration test with deterministic fixtures or real API
   credentials in a staging environment. Tracked in Tier 4 of
   `specs/testing-roadmap.md`.
+
+## QA Run: billing-tier-enforcement
+- **Started:** 2026-04-18T17:30:00Z
+- **Orchestrator:** qa-council
+- **Target URL:** http://localhost:3001
+- **Request:** BULLETPROOF E2E of billing (Stripe checkout/portal/webhooks) + tier enforcement (minutes metering, caps, rate-limit, banners) — user authorized auto-fix of any finding including billing logic
+- **Feature slug:** `billing-tier-enforcement`
+- **Builds on:** `pricing-subscription-refactor` (26+2 tests, tier/banner coverage) and `core-paid-flow` (20 tests, incl. 1 upload tier-cap rejection)
+- **Scope extension:** Stripe checkout routing (8 price IDs × 4 tiers × 2 cycles), portal auth, webhook HMAC + idempotency + state machine, rate limiting, edge cases (99% over-limit, 3DS, bad card, downgrade, duplicate/out-of-order webhooks, missing secret, cancel-at-period-end, customerless portal)
+
+### Phase progression
+(updated by Council as phases complete)
+
+### Phase progression (billing-tier-enforcement)
+- [x] Phase 1: qa-analyst — 2026-04-18T17:30Z — 12 selectors, 11 workflows, 17 edge cases, 0 open questions → `specs/features/billing-tier-enforcement-analysis.md`
+- [x] Phase 2: qa-architect — 2026-04-18T17:35Z — 22 P0 + 8 P1 + 3 P2 = 33 tests across 9 describe blocks; 1 POM extension + 1 new POM + 1 new helper + 1 new Vitest unit test → `specs/plans/billing-tier-enforcement-test-plan.md`
+- [x] Phase 3: qa-engineer — 2026-04-18T17:45Z — 1 spec (32 tests) + 1 unit test file (2 tests) + SubscriptionPage extended + SettingsBillingPage + billing-webhook helper; tsc clean, eslint clean → `app/test/e2e/flows/billing-tier-enforcement.spec.ts`
+- [x] Phase 4: qa-sentinel — 2026-04-18T17:50Z — **PASS** (0 critical, 2 INFO, all selectors verified, all 32+2 tests match plan) → `specs/audits/billing-tier-enforcement-audit.md`
+- [x] Phase 5: qa-healer — 2026-04-18T18:15Z — Run 1: 23/32. Run 2 (after test fixes): 27/32. Root-cause identified BUG #1 (webhooks use anon client → RLS blocks). Fixed in `app/src/lib/stripe/webhooks.ts`. Run 3: **32/32 PASS in 2.0 min**. 1 application bug found + fixed. Vitest baseline 1000/1023 holds. → `specs/healing/billing-tier-enforcement-healing-log.md`, `specs/bugs/billing-tier-enforcement-bugs.md`
+- [x] Phase 6: qa-scribe — 2026-04-18T18:20Z — Consolidated report. **Final: 34/34 pass (32 E2E + 2 unit), 1 CRITICAL prod-breaking bug found + fixed, BULLETPROOF verdict.** → `specs/reports/billing-tier-enforcement-report.md`
+
+### QA Pipeline complete: billing-tier-enforcement
+- **Completed:** 2026-04-18T18:20Z
+- **Duration:** ~50 min wall-clock
+- **Phases:** Analyst → Architect → Engineer → Sentinel (1 cycle, PASS) → Healer (3 cycles — found + fixed BUG #1) → Scribe
+- **Final pass rate:** 34/34 (100%)
+- **Bugs documented:** 1 CRITICAL (fixed) — webhooks used anon client blocked by RLS
+- **Verdict:** BULLETPROOF (with fix shipped)

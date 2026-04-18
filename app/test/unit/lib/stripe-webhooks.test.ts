@@ -23,23 +23,35 @@ const mockChain = {
   single: vi.fn(),
 };
 
-vi.mock('@/lib/supabase/server', () => ({
-  createClient: vi.fn().mockResolvedValue(new Proxy({}, {
-    get: (_, prop) => {
-      if (prop === 'from') return (...args: unknown[]) => {
-        mockSupabase.from(...args);
-        // Reset the chain for each from() call
-        mockChain.select.mockReturnThis();
-        mockChain.insert.mockReturnThis();
-        mockChain.upsert.mockReturnThis();
-        mockChain.update.mockReturnThis();
-        mockChain.eq.mockReturnThis();
-        return mockChain;
-      };
-      return undefined;
-    },
-  })),
-}));
+vi.mock('@/lib/supabase/server', () => {
+  // Defined inside factory so vi.mock hoisting doesn't tripwire on TDZ.
+  const makeClient = () =>
+    new Proxy(
+      {},
+      {
+        get: (_, prop) => {
+          if (prop === 'from')
+            return (...args: unknown[]) => {
+              mockSupabase.from(...args);
+              mockChain.select.mockReturnThis();
+              mockChain.insert.mockReturnThis();
+              mockChain.upsert.mockReturnThis();
+              mockChain.update.mockReturnThis();
+              mockChain.eq.mockReturnThis();
+              return mockChain;
+            };
+          return undefined;
+        },
+      },
+    );
+  return {
+    // Both exports return the same mock-client shape. The webhook handlers
+    // now use createAdminClient (synchronous) to bypass RLS for webhook
+    // deliveries, which have no authenticated user session.
+    createClient: vi.fn().mockResolvedValue(makeClient()),
+    createAdminClient: vi.fn().mockReturnValue(makeClient()),
+  };
+});
 
 // Mock Stripe client
 const mockRetrieve = vi.fn();
